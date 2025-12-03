@@ -71,7 +71,7 @@
 
 {%- comment -%} Load Quiz CSS and JavaScript Bundle {%- endcomment -%}
 {%- assign app_url = block.settings.app_url -%}
-{%- if app_url != blank and app_url != 'https://your-app-url.com' -%}
+{%- if app_url != blank and app_url != 'https://your-app-url.com' and app_url != '' -%}
   {%- comment -%} Load CSS {%- endcomment -%}
   <link rel="stylesheet" href="{{ app_url }}/quiz-bundle-css" />
   
@@ -81,7 +81,7 @@
       const appUrl = {{ app_url | json }};
       const container = document.getElementById('alledrops-quiz-{{ block.id }}');
       
-      if (!appUrl || appUrl === 'https://your-app-url.com') {
+      if (!appUrl || appUrl === 'https://your-app-url.com' || appUrl === '') {
         if (container) {
           container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #999;">Quiz app URL not configured. Please set the App URL in the block settings.</p>';
         }
@@ -173,7 +173,7 @@
       "type": "text",
       "id": "app_url",
       "label": "App URL",
-      "default": "https://your-app-url.com",
+      "default": "https://alle-drops-quiz-app.fly.dev",
       "info": "Your app's URL (set this after deploying)"
     },
     {

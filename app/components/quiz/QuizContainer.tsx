@@ -484,17 +484,6 @@ export function QuizContainer({ categories, initialEmail = "" }: QuizContainerPr
         isSubmitting={quizState === "submitting"}
       />
 
-      {/* Disclaimer (show on first step only) */}
-      {currentStep === 0 && (
-        <div className={styles.quizContainer__disclaimer}>
-          <p>
-            <strong>Medical Disclaimer:</strong> This assessment is for product recommendation purposes
-            only and does not constitute medical advice. It does not replace consultation with a
-            healthcare provider.
-          </p>
-        </div>
-      )}
-
       {/* Test Mode Button (only visible when enabled) */}
       {showTestMode && (
         <div className={styles.quizContainer__testMode}>
