@@ -1,0 +1,53 @@
+# fly.toml app configuration file generated for alle-drops-quiz-app on 2025-12-01T06:45:52-05:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'alle-drops-quiz-app'
+primary_region = 'iad'
+
+[build]
+
+[env]
+  PORT = '3000'
+  SCOPES = 'read_customers,write_customers'
+  SHOPIFY_APP_URL = 'https://alle-drops-quiz-app.fly.dev'
+  # Note: SHOPIFY_API_KEY is set as a secret (not in env section for security)
+
+[processes]
+  app = 'node ./dbsetup.js npm run docker-start'
+
+[[mounts]]
+  source = 'data'
+  destination = '/data'
+  auto_extend_size_threshold = 80
+  auto_extend_size_increment = '1GB'
+  auto_extend_size_limit = '10GB'
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+# Health check configuration
+# This helps Fly.io detect when the app is ready and keeps it warm
+[[http_service.checks]]
+  grace_period = "10s"
+  interval = "30s"
+  method = "GET"
+  timeout = "5s"
+  path = "/health"
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  
+# Performance optimization: Consider upgrading for better cold start times
+# Options:
+# - cpu_kind = 'dedicated' (faster cold starts, more expensive)
+# - memory = '2gb' (helps with React SSR, faster app startup)
+# - cpus = 2 (better for concurrent requests)

@@ -1,0 +1,233 @@
+{%- comment -%}
+  AlleDrops Symptom Quiz App Block
+  Renders the quiz directly in the theme (no iframe)
+  Inherits CSS from theme variables
+{%- endcomment -%}
+
+{%- style -%}
+  .section-{{ section.id }}-padding {
+    padding-top: {{ block.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ block.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+
+  @media screen and (min-width: 750px) {
+    .section-{{ section.id }}-padding {
+      padding-top: {{ block.settings.padding_top }}px;
+      padding-bottom: {{ block.settings.padding_bottom }}px;
+    }
+  }
+{%- endstyle -%}
+
+<div class="symptom-quiz-wrapper section-{{ section.id }}-padding">
+  <div class="page-width">
+    
+    {%- comment -%} Quiz Header {%- endcomment -%}
+    <div class="symptom-quiz__header">
+      {%- if block.settings.heading != blank -%}
+        <h1 class="symptom-quiz__title">{{ block.settings.heading }}</h1>
+      {%- endif -%}
+      
+      {%- if block.settings.subheading != blank -%}
+        <p class="symptom-quiz__subtitle">{{ block.settings.subheading }}</p>
+      {%- endif -%}
+      
+      {%- if block.settings.show_disclaimer -%}
+        <div class="symptom-quiz__disclaimer">
+          <p>
+            <strong>Medical Disclaimer:</strong> 
+            This assessment is for product recommendation purposes only and does not constitute medical advice. 
+            It does not replace consultation with a healthcare provider.
+          </p>
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- comment -%} Quiz Container - React will render here {%- endcomment -%}
+    <div 
+      id="alledrops-quiz-{{ block.id }}" 
+      class="symptom-quiz"
+      data-alledrops-quiz
+      data-app-url="{{ block.settings.app_url }}"
+    >
+      {%- if block.settings.show_loading -%}
+        <div style="text-align: center; padding: 3rem;">
+          <p>Loading quiz...</p>
+        </div>
+      {%- endif -%}
+    </div>
+    
+    {%- comment -%} Privacy Notice {%- endcomment -%}
+    {%- if block.settings.privacy_policy_url != blank -%}
+      <div class="symptom-quiz__privacy">
+        <p>
+          Your data is protected. Read our 
+          <a href="{{ block.settings.privacy_policy_url }}" target="_blank" rel="noopener">Privacy Policy</a>.
+        </p>
+      </div>
+    {%- endif -%}
+    
+  </div>
+</div>
+
+{%- comment -%} Load Quiz CSS and JavaScript Bundle {%- endcomment -%}
+{%- assign app_url = block.settings.app_url -%}
+{%- if app_url != blank and app_url != 'https://your-app-url.com' -%}
+  {%- comment -%} Load CSS {%- endcomment -%}
+  <link rel="stylesheet" href="{{ app_url }}/quiz-bundle-css" />
+  
+  {%- comment -%} Load JavaScript {%- endcomment -%}
+  <script>
+    (function() {
+      const appUrl = {{ app_url | json }};
+      const container = document.getElementById('alledrops-quiz-{{ block.id }}');
+      
+      if (!appUrl || appUrl === 'https://your-app-url.com') {
+        if (container) {
+          container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #999;">Quiz app URL not configured. Please set the App URL in the block settings.</p>';
+        }
+        return;
+      }
+      
+      // Load the quiz bundle from the app
+      const script = document.createElement('script');
+      script.src = appUrl + '/quiz-bundle-js'; // Dash instead of dot for React Router
+      script.async = true;
+      script.crossOrigin = 'anonymous';
+      script.onerror = function() {
+        if (container) {
+          container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #999;">Unable to load quiz. Please check your app URL configuration.</p>';
+        }
+      };
+      document.head.appendChild(script);
+    })();
+  </script>
+{%- else -%}
+  <script>
+    document.getElementById('alledrops-quiz-{{ block.id }}').innerHTML = '<p style="text-align: center; padding: 2rem; color: #999;">Quiz app URL not configured. Please set the App URL in the block settings.</p>';
+  </script>
+{%- endif -%}
+
+{%- comment -%} Configuration for quiz {%- endcomment -%}
+{%- assign clean_app_url = block.settings.app_url | strip | split: '/' | join: '/' -%}
+{%- if clean_app_url contains 'trycloudflare.com/' -%}
+  {%- assign clean_app_url = clean_app_url | remove_last: '/' -%}
+{%- endif -%}
+<script>
+  (function() {
+    var appUrl = {{ block.settings.app_url | json }};
+    var cloudflareWorkerUrl = {{ block.settings.cloudflare_worker_url | json }};
+    
+    // Remove trailing slash if present
+    if (appUrl && appUrl.endsWith('/')) {
+      appUrl = appUrl.slice(0, -1);
+    }
+    if (cloudflareWorkerUrl && cloudflareWorkerUrl.endsWith('/')) {
+      cloudflareWorkerUrl = cloudflareWorkerUrl.slice(0, -1);
+    }
+    
+    window.AlleDropsQuizConfig = {
+      appUrl: appUrl,
+      shopUrl: {{ shop.url | json }},
+      // Use Cloudflare Worker if configured, otherwise fall back to app API
+      apiEndpoint: cloudflareWorkerUrl || (appUrl + '/api/quiz/submit'),
+      cloudflareWorkerUrl: cloudflareWorkerUrl,
+      testMode: {{ block.settings.enable_test_mode | json }}
+    };
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "AlleDrops Symptom Quiz",
+  "target": "section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Quiz Content"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "AlleDrops Symptom Assessment",
+      "info": "Optional heading above the quiz"
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Take our comprehensive assessment to find the right regional allergy drops for your symptoms.",
+      "info": "Optional subheading below the heading"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_disclaimer",
+      "label": "Show Medical Disclaimer",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "App Configuration"
+    },
+    {
+      "type": "text",
+      "id": "app_url",
+      "label": "App URL",
+      "default": "https://your-app-url.com",
+      "info": "Your app's URL (set this after deploying)"
+    },
+    {
+      "type": "text",
+      "id": "cloudflare_worker_url",
+      "label": "Cloudflare Worker URL (Optional)",
+      "info": "If set, quiz submissions will go through your Cloudflare Worker for customer metafield updates. Leave blank to use the app's API."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_loading",
+      "label": "Show Loading Message",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_test_mode",
+      "label": "Enable Test Mode",
+      "default": false,
+      "info": "Shows a test button to auto-complete the quiz (for development/testing)"
+    },
+    {
+      "type": "header",
+      "content": "Privacy"
+    },
+    {
+      "type": "url",
+      "id": "privacy_policy_url",
+      "label": "Privacy Policy URL"
+    },
+    {
+      "type": "header",
+      "content": "Section Padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "Top Padding",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "Bottom Padding",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "default": 36
+    }
+  ]
+}
+{% endschema %}

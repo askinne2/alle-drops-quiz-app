@@ -1,0 +1,353 @@
+/**
+ * AlleDrops Symptom Quiz Theme Styles
+ * Inherits CSS variables from Shopify theme
+ * Mobile-first responsive design
+ */
+
+/* ==========================================================================
+   CSS Custom Properties (Quiz-Specific Variables)
+   Mobile-first: smaller values by default, scale up on larger screens
+   ========================================================================== */
+
+:root {
+  /* Mobile-first spacing (compact) */
+  --quiz-spacing-xs: 4px;
+  --quiz-spacing-sm: 8px;
+  --quiz-spacing-md: 12px;
+  --quiz-spacing-lg: 16px;
+  --quiz-spacing-xl: 20px;
+  --quiz-spacing-xxl: 28px;
+  
+  /* Quiz-specific border radius */
+  --quiz-border-radius: 6px;
+  
+  /* Quiz-specific transitions */
+  --quiz-transition: 300ms ease-in-out;
+  
+  /* Quiz-specific shadows (using theme shadow color if available) */
+  --quiz-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --quiz-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+  
+  /* Quiz-specific accent colors (fallbacks if theme doesn't define) */
+  --quiz-color-success: #4CAF50;
+  --quiz-color-warning: #FF9800;
+  --quiz-color-error: #F44336;
+}
+
+/* Tablet and up - increase spacing */
+@media screen and (min-width: 750px) {
+  :root {
+    --quiz-spacing-xs: 8px;
+    --quiz-spacing-sm: 12px;
+    --quiz-spacing-md: 16px;
+    --quiz-spacing-lg: 24px;
+    --quiz-spacing-xl: 32px;
+    --quiz-spacing-xxl: 48px;
+    --quiz-border-radius: 8px;
+  }
+}
+
+/* ==========================================================================
+   Base Styles - Inherit from Theme
+   ========================================================================== */
+
+.symptom-quiz-wrapper,
+.quiz-results-wrapper {
+  /* Inherit font family from theme */
+  font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif);
+  /* Inherit font size from theme - smaller on mobile */
+  font-size: var(--font-body-size, 1.4rem);
+  /* Inherit line height from theme */
+  line-height: var(--font-body-line-height, 1.5);
+  /* Inherit text color from theme */
+  color: rgba(var(--color-foreground), 0.75);
+}
+
+@media screen and (min-width: 750px) {
+  .symptom-quiz-wrapper,
+  .quiz-results-wrapper {
+    font-size: var(--font-body-size, 1.6rem);
+    line-height: var(--font-body-line-height, 1.6);
+  }
+}
+
+/* Inherit background from theme gradient class 
+.symptom-quiz-wrapper.gradient,
+.quiz-results-wrapper.gradient {
+  background: var(--gradient-background, rgb(var(--color-background)));
+}
+  */
+
+/* ==========================================================================
+   Quiz Header
+   ========================================================================== */
+
+.symptom-quiz__header {
+  text-align: center;
+  margin-bottom: var(--quiz-spacing-lg);
+}
+
+@media screen and (min-width: 750px) {
+  .symptom-quiz__header {
+    margin-bottom: var(--quiz-spacing-xl);
+  }
+}
+
+.symptom-quiz__title {
+  /* Inherit heading font from theme */
+  font-family: var(--font-heading-family, var(--font-body-family));
+  font-size: calc(var(--font-heading-scale, 1) * 1.8rem);
+  font-weight: var(--font-heading-weight, 700);
+  /* Use theme foreground color */
+  color: rgb(var(--color-foreground));
+  margin: 0 0 var(--quiz-spacing-sm);
+  line-height: 1.2;
+}
+
+@media screen and (min-width: 750px) {
+  .symptom-quiz__title {
+    font-size: calc(var(--font-heading-scale, 1) * 2.8rem);
+    margin-bottom: var(--quiz-spacing-md);
+  }
+}
+
+@media screen and (min-width: 990px) {
+  .symptom-quiz__title {
+    font-size: calc(var(--font-heading-scale, 1) * 3.2rem);
+  }
+}
+
+.symptom-quiz__subtitle {
+  font-size: var(--font-body-size, 1.4rem);
+  /* Use theme foreground with reduced opacity */
+  color: rgba(var(--color-foreground), 0.6);
+  margin: 0 0 var(--quiz-spacing-md);
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media screen and (min-width: 750px) {
+  .symptom-quiz__subtitle {
+    font-size: var(--font-body-size, 1.6rem);
+    margin-bottom: var(--quiz-spacing-lg);
+  }
+}
+
+.symptom-quiz__disclaimer {
+  /* Use theme background with slight opacity */
+  background-color: rgba(var(--color-foreground), 0.03);
+  border-left: 3px solid var(--quiz-color-warning);
+  padding: var(--quiz-spacing-sm) var(--quiz-spacing-md);
+  border-radius: var(--quiz-border-radius);
+  margin-top: var(--quiz-spacing-md);
+  text-align: left;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media screen and (min-width: 750px) {
+  .symptom-quiz__disclaimer {
+    border-left-width: 4px;
+    padding: var(--quiz-spacing-md);
+    margin-top: var(--quiz-spacing-lg);
+  }
+}
+
+.symptom-quiz__disclaimer p {
+  margin: 0;
+  font-size: var(--font-body-size, 1.2rem);
+  /* Use theme foreground color */
+  color: rgba(var(--color-foreground), 0.75);
+}
+
+@media screen and (min-width: 750px) {
+  .symptom-quiz__disclaimer p {
+    font-size: var(--font-body-size, 1.4rem);
+  }
+}
+
+.symptom-quiz__privacy {
+  text-align: center;
+  margin-top: var(--quiz-spacing-md);
+  font-size: var(--font-body-size, 1.2rem);
+  /* Use theme foreground with reduced opacity */
+  color: rgba(var(--color-foreground), 0.6);
+}
+
+@media screen and (min-width: 750px) {
+  .symptom-quiz__privacy {
+    margin-top: var(--quiz-spacing-lg);
+    font-size: var(--font-body-size, 1.4rem);
+  }
+}
+
+.symptom-quiz__privacy a {
+  /* Use theme link color */
+  color: rgb(var(--color-link));
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   Quiz Form Container
+   ========================================================================== */
+
+.symptom-quiz {
+  margin: 0 auto;
+  /* Use theme background */
+  background-color: rgb(var(--color-background));
+  /* Minimal padding on mobile */
+  padding: var(--quiz-spacing-sm);
+  border-radius: var(--quiz-border-radius);
+}
+
+/* Inherit gradient background when gradient class is applied */
+.symptom-quiz.gradient {
+  background: var(--gradient-background, rgb(var(--color-background)));
+}
+
+@media screen and (min-width: 480px) {
+  .symptom-quiz {
+    padding: var(--quiz-spacing-md);
+  }
+}
+
+@media screen and (min-width: 750px) {
+  .symptom-quiz {
+    padding: var(--quiz-spacing-xl);
+  }
+}
+
+@media screen and (min-width: 990px) {
+  .symptom-quiz {
+    padding: var(--quiz-spacing-xxl);
+  }
+}
+
+/* ==========================================================================
+   Override React component styles to use theme variables
+   ========================================================================== */
+
+/* Make sure React components inherit theme styles */
+.symptom-quiz :global(*) {
+  box-sizing: border-box;
+}
+
+.symptom-quiz :global(button) {
+  /* Use theme button colors */
+  background-color: rgb(var(--color-button));
+  color: rgb(var(--color-button-text));
+  border: none;
+  border-radius: var(--quiz-border-radius);
+  /* Compact padding on mobile */
+  padding: var(--quiz-spacing-sm) var(--quiz-spacing-lg);
+  font-size: var(--font-body-size, 1.4rem);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--quiz-transition);
+  min-height: 44px;
+}
+
+@media screen and (min-width: 750px) {
+  .symptom-quiz :global(button) {
+    padding: var(--quiz-spacing-md) var(--quiz-spacing-xl);
+    font-size: var(--font-body-size, 1.6rem);
+  }
+}
+
+.symptom-quiz :global(button:hover) {
+  background-color: rgba(var(--color-button), 0.9);
+  box-shadow: var(--quiz-shadow-hover);
+}
+
+.symptom-quiz :global(button:focus) {
+  outline: 3px solid rgb(var(--color-button));
+  outline-offset: 2px;
+}
+
+.symptom-quiz :global(button:disabled) {
+  background-color: rgba(var(--color-foreground), 0.2);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.symptom-quiz :global(input[type="text"]),
+.symptom-quiz :global(input[type="email"]) {
+  width: 100%;
+  padding: var(--quiz-spacing-sm) var(--quiz-spacing-md);
+  /* Use theme foreground with opacity for border */
+  border: 2px solid rgba(var(--color-foreground), 0.15);
+  border-radius: var(--quiz-border-radius);
+  font-size: var(--font-body-size, 1.4rem);
+  /* Inherit font family from theme */
+  font-family: var(--font-body-family);
+  /* Use theme background */
+  background-color: rgb(var(--color-background));
+  /* Use theme foreground color */
+  color: rgba(var(--color-foreground), 0.75);
+  transition: border-color var(--quiz-transition);
+  min-height: 44px;
+}
+
+@media screen and (min-width: 750px) {
+  .symptom-quiz :global(input[type="text"]),
+  .symptom-quiz :global(input[type="email"]) {
+    padding: var(--quiz-spacing-md);
+    font-size: var(--font-body-size, 1.6rem);
+  }
+}
+
+.symptom-quiz :global(input:focus) {
+  outline: none;
+  /* Use theme button color for focus */
+  border-color: rgb(var(--color-button));
+  box-shadow: 0 0 0 3px rgba(var(--color-button), 0.1);
+}
+
+.symptom-quiz :global(input::placeholder) {
+  /* Use theme foreground with reduced opacity */
+  color: rgba(var(--color-foreground), 0.4);
+}
+
+/* ==========================================================================
+   Accessibility & Print Styles
+   ========================================================================== */
+
+@media print {
+  .symptom-quiz :global(button) {
+    display: none;
+  }
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .symptom-quiz :global(button),
+  .symptom-quiz :global(input) {
+    border-width: 3px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "quiz": {
+    "loading": "Loading quiz...",
+    "error": "Unable to load quiz. Please try again later."
+  }
+}
+
+
+

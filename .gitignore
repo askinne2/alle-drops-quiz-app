@@ -1,0 +1,74 @@
+# Dependencies
+node_modules
+package-lock.json
+
+# Build outputs
+/.cache
+/build
+/app/build
+/public/build/
+/public/_dev
+/app/public/build
+/extensions/*/dist
+
+# Database files
+/prisma/dev.sqlite
+/prisma/dev.sqlite-journal
+database.sqlite
+*.sqlite
+*.sqlite-journal
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Shopify files created during app dev
+.shopify/*
+.shopify.lock
+
+# React Router generated files
+.react-router/
+
+# IDE and editor files
+.cursor/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Testing
+coverage
+.nyc_output
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Fly.io (keep fly.toml but ignore local state)
+.fly/
+
+# Misc
+*.pem
+*.key
+*.cert

@@ -1,0 +1,31 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "50649e96ebe691d70569e0b75ea051b4"
+name = "AlleDrops Quiz App"
+application_url = "https://alle-drops-quiz-app.fly.dev"
+embedded = true
+
+[webhooks]
+api_version = "2026-01"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,write_customers"
+
+[auth]
+redirect_urls = [
+  "https://alle-drops-quiz-app.fly.dev/auth/callback",
+  "https://alle-drops-quiz-app.fly.dev/auth/shopify/callback",
+  "https://alle-drops-quiz-app.fly.dev/api/auth/callback"
+]
+
+[build]
+automatically_update_urls_on_dev = true

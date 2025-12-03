@@ -1,0 +1,41 @@
+api_version = "2025-01"
+
+[[extensions]]
+name = "Quiz History"
+handle = "quiz-history"
+type = "ui_extension"
+uid = "quiz-history-extension"
+
+# Profile block - appears in customer account profile page
+[[extensions.targeting]]
+module = "./src/QuizHistoryBlock.jsx"
+target = "customer-account.profile.block.render"
+
+[extensions.capabilities]
+api_access = true
+
+# Metafields the extension needs access to
+[[extensions.metafields]]
+namespace = "alledrops"
+key = "quiz_history"
+
+[[extensions.metafields]]
+namespace = "alledrops"
+key = "symptom_profile_id"
+
+[[extensions.metafields]]
+namespace = "alledrops"
+key = "quiz_score"
+
+[[extensions.metafields]]
+namespace = "alledrops"
+key = "severity_level"
+
+[[extensions.metafields]]
+namespace = "alledrops"
+key = "quiz_region"
+
+[[extensions.metafields]]
+namespace = "alledrops"
+key = "quiz_date"
+
