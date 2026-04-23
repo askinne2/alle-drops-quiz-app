@@ -1,371 +1,258 @@
 # AlleDrops Quiz App - MVP Launch Checklist
 
-**Target**: Launch custom app on production store (not dev store)  
-**App Type**: Custom app (single store, not public Shopify App Store)  
-**Created**: December 1, 2024
+**Target**: Launch the clinical quiz on the production store  
+**App Type**: Custom Shopify app  
+**Updated**: April 23, 2026
 
 ---
 
-## 🎯 Pre-Launch Summary
+## Pre-Launch Summary
 
-### What's Ready ✅
-- Quiz frontend (React components)
-- Backend API (`/api/quiz/submit`)
-- Customer metafield updates
-- Theme block extension (`quiz-block`)
-- Scoring and severity calculations
-- Product recommendations by region
-- Mobile responsive CSS (just updated!)
+### What's Ready
 
-### What Needs Attention ⚠️
-1. Google Sheets script needs redeployment
-2. Theme bundle needs rebuild with new CSS
-3. End-to-end testing on production store
-4. Clear Cloudflare Worker URL from theme block
+- Clinical quiz frontend
+- Backend submission route at `POST /api/quiz/submit`
+- Shopify customer metafield updates
+- Theme block extension
+- Score bracket routing (`0-2`, `3-6`, `7+`)
+- Tennessee/Texas product path
+- Admin dashboard filtering by score bracket and state
 
----
+### What Still Needs Verification
 
-## 📋 Launch Checklist
-
-### Step 1: Fix Google Sheets Integration 🔴 CRITICAL
-
-The Google Apps Script needs to be redeployed with the fixed version:
-
-1. Open your Google Sheet (the one storing quiz data)
-2. Go to **Extensions → Apps Script**
-3. **Replace ALL code** with the contents from:
-   ```
-   allergist-on-demand/google-apps-script/Code.gs
-   ```
-4. Click **Deploy → Manage deployments**
-5. Click ✏️ (edit) on current deployment
-6. Set version to **"New version"**
-7. Click **Deploy**
-8. Copy the new Web App URL if it changed
-9. Update `.env` file with `GOOGLE_SHEETS_WEB_APP_URL=<new-url>` if needed
-
-**Test**: Submit a quiz and verify data appears in Google Sheets
+1. Google Sheets deployment and row mapping
+2. End-to-end storefront testing on production
+3. Fresh metafield verification in Shopify admin
+4. Theme block still pointing to the app instead of any legacy worker/proxy
 
 ---
 
-### Step 2: Rebuild Theme Bundle 🔴 CRITICAL
+## Launch Checklist
 
-The CSS was just updated for better mobile responsiveness. Rebuild:
+### Step 1: Verify Google Sheets Integration
+
+1. Open the Google Sheet that receives quiz submissions
+2. Open **Extensions -> Apps Script**
+3. Confirm the deployed script matches the current expected column order:
+   - profile ID
+   - name
+   - email
+   - phone
+   - DOB
+   - state
+   - score
+   - score bracket
+   - quiz date
+   - completion time
+   - answers JSON
+   - personal history JSON
+   - family history JSON
+4. Redeploy the Apps Script if the live deployment is stale
+5. Confirm `GOOGLE_SHEETS_WEB_APP_URL` points to the active deployment
+
+**Test**: Submit a quiz and verify a new row appears with `state` and `score_bracket` populated correctly.
+
+---
+
+### Step 2: Rebuild Theme Bundle
 
 ```bash
-cd /Users/andrewskinner/Local\ Sites/alle-drops-quiz-app
+cd "/Users/andrewskinner/Local Sites/alle-drops-quiz-app"
 npm run build:theme
 ```
 
-This creates:
-- `public/quiz-bundle.js`
-- `public/quiz-bundle.css`
+Verify that:
 
-**Verify**: Check that both files exist and have recent timestamps
+- `public/quiz-bundle.js` exists
+- `public/quiz-bundle.css` exists
+- both files have current timestamps
 
 ---
 
-### Step 3: Deploy App to Production Store 🔴 CRITICAL
-
-#### Option A: Deploy via Shopify CLI (Recommended)
+### Step 3: Deploy the App
 
 ```bash
-# From app directory
-cd /Users/andrewskinner/Local\ Sites/alle-drops-quiz-app
-
-# Deploy the app
+cd "/Users/andrewskinner/Local Sites/alle-drops-quiz-app"
 shopify app deploy
-
-# This will:
-# 1. Build the app
-# 2. Deploy extensions (quiz-block, quiz-history)
-# 3. Update app configuration
 ```
 
 When prompted:
-- Select your **production store** (not dev store)
-- Confirm deployment
 
-#### Option B: Manual Production Setup
-
-If this is your first production deploy:
-
-1. **Install on Production Store**:
-   ```bash
-   shopify app install --store=your-production-store.myshopify.com
-   ```
-
-2. **Deploy Extensions**:
-   ```bash
-   shopify app deploy
-   ```
+- choose the production store
+- confirm the deployment
 
 ---
 
-### Step 4: Configure Theme Block 🔴 CRITICAL
+### Step 4: Confirm Theme Block Settings
 
-After deployment, configure the quiz block in your theme:
+After deployment:
 
-1. Go to **Shopify Admin → Online Store → Customize**
-2. Navigate to your **Quiz page** (or wherever quiz is embedded)
-3. Find the **"Symptom Quiz" block** (from AlleDrops Quiz App)
-4. In block settings:
-   - **App URL**: Should auto-populate (e.g., `https://your-app-url.shopify.com`)
-   - **Cloudflare Worker URL**: **LEAVE EMPTY** ← This is important!
-5. **Save** the theme
-
-**Why clear Cloudflare URL?**: The app now handles everything. Leaving the Cloudflare URL would send submissions to the old worker instead of the app.
+1. Go to **Shopify Admin -> Online Store -> Customize**
+2. Open the page where the quiz block is embedded
+3. Find the **Symptom Quiz** app block
+4. Confirm:
+   - **App URL** is correct
+   - any legacy worker/proxy URL field is empty
+5. Save the theme
 
 ---
 
-### Step 5: Verify Environment Variables 🟡 IMPORTANT
+### Step 5: Verify Environment Variables
 
-Ensure your production `.env` has:
+Production configuration should include:
 
 ```env
-# Required
 SHOPIFY_API_KEY=<your-api-key>
 SHOPIFY_API_SECRET=<your-api-secret>
 SCOPES=read_customers,write_customers
-
-# Google Sheets (from Step 1)
-GOOGLE_SHEETS_WEB_APP_URL=https://script.google.com/macros/s/<your-deployment-id>/exec
-
-# Database (if using Prisma/SQLite)
+GOOGLE_SHEETS_WEB_APP_URL=https://script.google.com/macros/s/<deployment-id>/exec
 DATABASE_URL="file:./dev.sqlite"
 ```
 
 ---
 
-### Step 6: End-to-End Testing 🟡 IMPORTANT
+### Step 6: End-to-End Testing
 
-Test the complete flow on your production store:
+#### Test 1: Tennessee patient
 
-#### Test 1: New Customer Quiz
-1. Open an incognito/private browser window
-2. Go to your quiz page
-3. Fill out all questions (select different severities)
-4. Enter a **test email** (e.g., `test-launch@example.com`)
-5. Submit the quiz
-6. **Verify**:
-   - ✅ Results page shows score and severity
-   - ✅ Product recommendation appears (if score ≥ 10)
-   - ✅ Profile ID is displayed
+1. Open the quiz in an incognito window
+2. Choose Tennessee in `StateGate`
+3. Complete the patient info step
+4. Complete Parts 1-5
+5. Submit through one of the bracket paths
+6. Verify:
+   - results page shows the numeric score
+   - results page shows the correct bracket
+   - Tennessee path messaging is correct
+   - profile ID is shown
 
-#### Test 2: Check Shopify Admin
-1. Go to **Shopify Admin → Customers**
-2. Search for the test email
-3. Click the customer
-4. Scroll to **Metafields** section
-5. **Verify alledrops metafields exist**:
+#### Test 2: Texas patient
+
+Repeat the same flow with Texas selected and verify the Texas product path remains correct.
+
+#### Test 3: Check Shopify admin metafields
+
+1. Open **Shopify Admin -> Customers**
+2. Find the test customer
+3. Open the customer record
+4. Verify the `alledrops` metafields:
    - `symptom_profile_id`
    - `quiz_score`
-   - `severity_level`
-   - `quiz_region`
+   - `state`
+   - `score_bracket`
    - `quiz_date`
    - `quiz_history`
 
-#### Test 3: Check Google Sheets
-1. Open your quiz data Google Sheet
-2. Look for the new row with test submission
-3. **Verify all columns populated**:
-   - Timestamp, email, name, profile ID
-   - Region, score, severity
-   - All 35 question responses
+#### Test 4: Check Google Sheets
 
-#### Test 4: Test Existing Customer (Repeat Quiz)
-1. Submit another quiz with **same email**
-2. Check `quiz_history` metafield has 2 entries
-3. Check Google Sheets has a new row
+Verify the new row contains:
 
-#### Test 5: Mobile Testing
-1. Open quiz on a real mobile device
-2. Complete quiz and submit
-3. Verify layout looks good throughout
+- profile ID
+- name and email
+- state
+- score
+- score bracket
+- answers JSON
 
----
+#### Test 5: Repeat quiz history
 
-### Step 7: Admin Dashboard Access 🟢 OPTIONAL FOR MVP
+1. Submit another quiz with the same email
+2. Confirm `quiz_history` now contains two entries
+3. Confirm each entry uses `score_bracket` and `state`
+4. Confirm legacy data, if present, is not broken by the new entry
 
-Verify you can access the admin interface:
+#### Test 6: Bracket coverage
 
-1. Go to **Shopify Admin → Apps → AlleDrops Quiz App**
-2. Click to open the app
-3. Should see the dashboard with:
-   - Quick action cards
-   - "View Quiz Results" button
-4. Click "View Quiz Results"
-5. Verify customer data appears
+Run at least one submission through each bracket:
 
----
+- `0-2`
+- `3-6`
+- `7+`
 
-## 🔒 Security Checklist
+Confirm the expected storefront flow is triggered for each bracket.
 
-### Already Handled ✅
-- [x] **Shopify OAuth**: Built into app framework
-- [x] **Session Management**: Handled by Shopify/Remix
-- [x] **CORS**: Configured in API routes
-- [x] **Input Validation**: Quiz data validation in place
-- [x] **API Scopes**: Minimal scopes (`read_customers,write_customers`)
-- [x] **SSL/HTTPS**: Shopify enforces this
-- [x] **Bot Prevention**: Honeypot field in quiz form
+#### Test 7: Mobile testing
 
-### Verify These
-- [ ] No sensitive data in client-side code
-- [ ] API keys not exposed in frontend bundle
-- [ ] Error messages don't leak internal details
+Complete the quiz on a real mobile device and confirm the flow remains usable from state gate through submission.
 
 ---
 
-## ⚡ Performance Checklist
+### Step 7: Admin Dashboard Verification
 
-### Already Handled ✅
-- [x] CSS optimized (just did mobile improvements)
-- [x] React bundle is production build
-- [x] Lazy loading for quiz questions
-- [x] Efficient API calls (single submission endpoint)
+1. Open **Shopify Admin -> Apps -> AlleDrops Quiz App**
+2. Open **View Quiz Results**
+3. Verify:
+   - new submissions appear
+   - search works
+   - score bracket filter works
+   - state filter works
+   - quiz history displays correctly
 
-### Verify These
-- [ ] Quiz bundle loads quickly (check Network tab)
+---
+
+## Security Checklist
+
+### Already handled
+
+- [x] Shopify OAuth
+- [x] Session handling
+- [x] Server-side payload validation
+- [x] DOB excluded from Shopify metafields
+- [x] HTTPS via Shopify/Fly
+
+### Verify before launch
+
+- [ ] No secrets exposed in the frontend bundle
+- [ ] Error states do not leak internal implementation details
+- [ ] Protected customer data limitations are understood for the target store
+
+---
+
+## Performance Checklist
+
+### Already handled
+
+- [x] Production React bundle
+- [x] Single submission endpoint
+- [x] Theme bundle build pipeline
+
+### Verify before launch
+
 - [ ] No console errors during quiz flow
-- [ ] Results page renders without delay
-
-### Optional Optimizations (Post-MVP)
-- [ ] Add loading spinners for slow connections
-- [ ] Implement retry logic for failed submissions
-- [ ] Add offline handling / queue submissions
+- [ ] Results render quickly
+- [ ] Submission response is reliable on mobile and desktop
 
 ---
 
-## 🚀 Go-Live Procedure
+## Post-Launch Monitoring
 
-### Day of Launch
+### First week
 
-1. **Morning**:
-   - Complete all checklist items above
-   - Do final end-to-end test
+- [ ] Confirm daily submissions continue arriving in Google Sheets
+- [ ] Spot-check Shopify metafields on fresh customers
+- [ ] Watch app logs for submission warnings
+- [ ] Review dashboard filters with live data
 
-2. **Before Going Live**:
-   - Back up any existing quiz data
-   - Note the Cloudflare Worker logs (for comparison)
-   - Clear browser cache
+### First month
 
-3. **Go Live**:
-   - Save theme with app block configured
-   - Monitor first few submissions
-
-4. **After Launch (First Hour)**:
-   - Watch for errors in:
-     - Browser console (on quiz page)
-     - App logs (via `shopify app logs`)
-     - Google Sheets (data arriving?)
-   - Test on different devices
-
-5. **After Launch (First Day)**:
-   - Check Shopify admin for new quiz customers
-   - Verify Google Sheets has all submissions
-   - Review any error notifications
+- [ ] Review bracket distribution
+- [ ] Review any stale legacy customer records
+- [ ] Identify admin dashboard follow-up needs
 
 ---
 
-## 🔧 Troubleshooting Common Issues
+## Final Launch Gate
 
-### Quiz Doesn't Load
-- Check browser console for errors
-- Verify theme block is added to page
-- Check that `quiz-bundle.js` is being served
-- Try hard refresh (Ctrl+Shift+R)
-
-### Submission Fails
-- Check browser Network tab for API errors
-- Verify app is deployed and running
-- Check API endpoint URL is correct
-- Look at app logs: `shopify app logs`
-
-### No Product Recommendations
-- Verify score is ≥ 10
-- Check product handles match your products
-- Look for errors in browser console
-
-### Google Sheets Not Receiving Data
-- Verify Apps Script is deployed (Step 1)
-- Check `.env` has correct URL
-- Test Apps Script URL directly in browser
-- Check Apps Script execution logs
-
-### Metafields Not Updating
-- Verify customer was created/found
-- Check API scopes include `write_customers`
-- Look at app logs for GraphQL errors
-
----
-
-## 📊 Post-Launch Monitoring
-
-### Daily Checks (First Week)
-- [ ] Verify quiz submissions are working
-- [ ] Check Google Sheets for new data
-- [ ] Review admin dashboard
-- [ ] Monitor for customer complaints
-
-### Weekly Checks (First Month)
-- [ ] Review any error patterns
-- [ ] Check app performance metrics
-- [ ] Verify data integrity
-- [ ] Gather user feedback
-
----
-
-## 🔮 Post-MVP Enhancements (Future)
-
-After successful MVP launch, consider:
-
-1. **Admin Dashboard Improvements**:
-   - Search by email/name
-   - Filter by severity/region/date
-   - Customer detail view
-   - CSV export
-
-2. **Customer Account Extension**:
-   - Debug why extension isn't showing data
-   - Alternative: Keep using Liquid section
-
-3. **Analytics**:
-   - Quiz completion rates
-   - Average scores by region
-   - Conversion tracking
-
-4. **Deprecate Old Infrastructure**:
-   - Remove Cloudflare Worker (app handles everything)
-   - Clean up unused theme files
-
----
-
-## ✅ Final Checklist Before Launch
-
+```text
+[ ] Google Sheets deployment verified
+[ ] Theme bundle rebuilt
+[ ] App deployed
+[ ] Theme block pointed at app endpoint
+[ ] Tennessee flow passed
+[ ] Texas flow passed
+[ ] 0-2 / 3-6 / 7+ flows passed
+[ ] Shopify metafields updating
+[ ] Google Sheets receiving rows
+[ ] Admin dashboard shows new submissions
+[ ] No blocking console or app-log errors
 ```
-[ ] Google Apps Script redeployed and tested
-[ ] Theme bundle rebuilt (npm run build:theme)
-[ ] App deployed (shopify app deploy)
-[ ] Theme block configured (Cloudflare URL cleared)
-[ ] End-to-end test passed
-[ ] Mobile test passed
-[ ] Google Sheets receiving data
-[ ] Customer metafields updating
-[ ] Admin dashboard accessible
-[ ] No console errors
-```
-
-Once all boxes are checked, you're ready to launch! 🚀
-
----
-
-## 📞 Support
-
-If you run into issues:
-
-1. **Check app logs**: `shopify app logs --store=your-store.myshopify.com`
-2. **Check browser console**: F12 → Console tab
-3. **Check Network tab**: F12 → Network tab (look for failed requests)
-4. **Review this checklist**: Most issues are configuration-related
-
