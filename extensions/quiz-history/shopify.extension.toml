@@ -29,11 +29,11 @@ key = "quiz_score"
 
 [[extensions.metafields]]
 namespace = "alledrops"
-key = "severity_level"
+key = "score_bracket"
 
 [[extensions.metafields]]
 namespace = "alledrops"
-key = "quiz_region"
+key = "state"
 
 [[extensions.metafields]]
 namespace = "alledrops"

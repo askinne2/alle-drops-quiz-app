@@ -4,32 +4,20 @@
  */
 
 import type { LoaderFunctionArgs, HeadersFunction } from "react-router";
-import { useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { QuizContainer } from "../components/quiz/QuizContainer";
-import {
-  getHardcodedQuestions,
-  groupQuestionsByCategory,
-} from "../lib/quiz/questions";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-  
-  // Load quiz questions
-  const questions = getHardcodedQuestions();
-  const categories = groupQuestionsByCategory(questions);
-
-  return { categories };
+  return {};
 };
 
 export default function QuizPage() {
-  const { categories } = useLoaderData<typeof loader>();
-  
   return (
     <s-page heading="Symptom Assessment Quiz">
       <s-section>
-        <QuizContainer categories={categories} />
+        <QuizContainer />
       </s-section>
     </s-page>
   );
@@ -38,4 +26,3 @@ export default function QuizPage() {
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-

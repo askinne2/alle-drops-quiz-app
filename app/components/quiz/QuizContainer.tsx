@@ -1,502 +1,491 @@
 /**
- * Quiz Container Component
- * Main wrapper that manages quiz state and coordinates all components
- * 
- * Flow matches allergist-on-demand/docs/quiz-questions-schema.md:
- * 1. Demographics (Region + Timing) - first step
- * 2. Nasal Symptoms
- * 3. Eye Symptoms
- * 4. Respiratory Symptoms
- * 5. Skin Symptoms
- * 6. Throat & Mouth Symptoms
- * 7. Contact Information (last)
+ * Quiz Container — clinical questionnaire flow (TN/TX gate, parts 1–5, outcomes, optional part 6 + consent).
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { QuizProgress } from "./QuizProgress";
-import { QuestionCategory } from "./QuestionCategory";
-import { RegionSelector, type USRegion } from "./RegionSelector";
-import { QuizNavigation } from "./QuizNavigation";
+import { StateGate } from "./StateGate";
+import { IneligibleMessage } from "./IneligibleMessage";
+import { PatientInfoStep, validatePatientInfoStep, type PatientInfoValues } from "./PatientInfoStep";
+import { QuizPartRenderer, isPartComplete } from "./QuizPartRenderer";
+import { ConsentStep } from "./ConsentStep";
 import { ResultsDisplay } from "./ResultsDisplay";
-import { type QuizCategory } from "../../lib/quiz/types";
+import { QUIZ_PARTS, PART6_MEDICAL_HISTORY, ALL_SCORED_QUESTIONS } from "../../lib/quiz/questions";
 import {
-  SEASONAL_TIMING_OPTIONS,
-  DURATION_OPTIONS,
-} from "../../lib/quiz/questions";
-import {
-  calculateScore,
-  determineSeverityLevel,
+  calculateTotalScore,
+  getScoreBracket,
   generateSymptomProfileId,
+  type ScoreBracket,
 } from "../../lib/quiz/scoring";
+import { type QuizAnswers } from "../../lib/quiz/types";
+import { PRODUCT_HANDLE_BY_STATE } from "../../lib/quiz/product-links";
 import styles from "../../styles/quiz.module.css";
 
-interface QuizContainerProps {
-  categories: QuizCategory[];
-  initialEmail?: string;
-}
+type FlowStep =
+  | "state_gate"
+  | "patient_info"
+  | "quiz_parts"
+  | "outcome"
+  | "medical_history"
+  | "consent"
+  | "ineligible"
+  | "submitting"
+  | "completed"
+  | "error";
 
-type QuizState = "active" | "submitting" | "completed" | "error";
-
-// Enable test mode via URL param or config
 const isTestModeEnabled = () => {
   if (typeof window === "undefined") return false;
   const params = new URLSearchParams(window.location.search);
-  return params.get("test") === "1" || (window as any).AlleDropsQuizConfig?.testMode === true;
+  return params.get("test") === "1" || (window as unknown as { AlleDropsQuizConfig?: { testMode?: boolean } }).AlleDropsQuizConfig?.testMode === true;
 };
 
-export function QuizContainer({ categories, initialEmail = "" }: QuizContainerProps) {
-  // Total steps = 1 (demographics: region + timing) + symptom categories + 1 (contact)
-  const totalSteps = 1 + categories.length + 1;
-  const contactStep = 1 + categories.length;
+async function postQuiz(payload: Record<string, unknown>): Promise<{ success: boolean; error?: string }> {
+  const apiEndpoint =
+    (typeof window !== "undefined" &&
+      (window as unknown as { AlleDropsQuizConfig?: { apiEndpoint?: string } }).AlleDropsQuizConfig?.apiEndpoint) ||
+    "/api/quiz/submit";
+  const response = await fetch(apiEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const result = (await response.json()) as { success?: boolean; error?: string };
+  if (!response.ok || !result.success) {
+    throw new Error(result.error || `Request failed (${response.status})`);
+  }
+  return { success: true };
+}
 
-  const [currentStep, setCurrentStep] = useState(0);
-  const [responses, setResponses] = useState<Record<string, number>>({});
-  const [region, setRegion] = useState<USRegion | "">("");
-  const [seasonalTiming, setSeasonalTiming] = useState("");
-  const [duration, setDuration] = useState("");
-  const [email, setEmail] = useState(initialEmail);
-  const [customerName, setCustomerName] = useState("");
-  const [consent, setConsent] = useState(false);
-  const [quizState, setQuizState] = useState<QuizState>("active");
-  const [startTime] = useState(Date.now());
-  const [submissionResult, setSubmissionResult] = useState<{
-    score: number;
-    severityLevel: string;
-    region: string;
-    customerId?: string;
-    symptomProfileId?: string;
-  } | null>(null);
+export function QuizContainer() {
+  const [step, setStep] = useState<FlowStep>("state_gate");
+  const [patientState, setPatientState] = useState<"tennessee" | "texas" | null>(null);
+  const [patientInfo, setPatientInfo] = useState<PatientInfoValues>({
+    name: "",
+    dob: "",
+    email: "",
+    phone: "",
+  });
+  const [patientInfoShowErrors, setPatientInfoShowErrors] = useState(false);
+  const [answers, setAnswers] = useState<QuizAnswers>({});
+  const [currentPartIndex, setCurrentPartIndex] = useState(0);
+  const [score, setScore] = useState<number | null>(null);
+  const [scoreBracket, setScoreBracket] = useState<ScoreBracket | null>(null);
+  const [symptomProfileId, setSymptomProfileId] = useState<string | null>(null);
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [startTime] = useState(() => Date.now());
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [showTestMode, setShowTestMode] = useState(false);
+  const [savedToServer, setSavedToServer] = useState(false);
 
-  // Check for test mode on mount
+  const autoSubmit0to2Attempted = useRef(false);
+
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setShowTestMode(isTestModeEnabled());
-    }
+    if (typeof window !== "undefined") setShowTestMode(isTestModeEnabled());
   }, []);
 
-  // Test Mode: Auto-complete quiz with sample data
-  const runTestMode = useCallback(async () => {
-    if (!confirm("🧪 Test Mode: This will auto-fill and submit the quiz with sample data. Continue?")) {
-      return;
-    }
+  useEffect(() => {
+    if (step !== "medical_history") return;
+    setAnswers((prev) => ({
+      ...prev,
+      history_personal: Array.isArray(prev.history_personal) ? prev.history_personal : [],
+      history_family: Array.isArray(prev.history_family) ? prev.history_family : [],
+    }));
+  }, [step]);
 
-    console.log("🧪 Test Mode: Starting auto-fill...");
-
-    // Test data - simulates a severe symptom case
-    const testResponses: Record<string, number> = {
-      // Nasal symptoms (all severe = 3)
-      nasal_runny: 3,
-      nasal_stuffy: 3,
-      nasal_sneezing: 3,
-      nasal_postnasal: 3,
-      nasal_smell_loss: 3,
-      // Eye symptoms (all severe = 3)
-      eye_watery: 3,
-      eye_itchy: 3,
-      eye_red: 3,
-      eye_swollen: 3,
-      // Respiratory symptoms (all severe = 3)
-      respiratory_cough: 3,
-      respiratory_wheeze: 3,
-      respiratory_tight: 3,
-      respiratory_breath: 3,
-      // Skin symptoms (all severe = 3)
-      skin_rash: 3,
-      skin_hives: 3,
-      skin_itching: 3,
-      skin_eczema: 3,
-      // Throat symptoms (all severe = 3)
-      throat_itchy: 3,
-      throat_sore: 3,
-      throat_mouth_itchy: 3,
-    };
-
-    // Set all responses
-    setResponses(testResponses);
-    setRegion("northwest");
-    setSeasonalTiming("spring");
-    setDuration("1_3yrs");
-    setCustomerName("Test User");
-    setEmail("test@example.com");
-    setConsent(true);
-
-    // Navigate through all steps quickly for visual feedback
-    for (let i = 0; i <= contactStep; i++) {
-      setCurrentStep(i);
-      await new Promise((resolve) => setTimeout(resolve, 300));
-    }
-
-    console.log("🧪 Test Mode: Ready to submit!");
-    alert("🧪 Test data filled! Click 'Submit Assessment' to complete the test.");
-  }, [contactStep]);
-
-  // Get current symptom category index (0-based, offset by 1 for demographics step)
-  const currentCategoryIndex = currentStep - 1;
-
-  // Check if current step is complete
-  const isCurrentStepComplete = useCallback(() => {
-    // Step 0: Demographics (Region + Timing)
-    if (currentStep === 0) {
-      return region !== "" && seasonalTiming !== "" && duration !== "";
-    }
-    
-    // Symptom categories (steps 1 to categories.length)
-    if (currentStep >= 1 && currentStep <= categories.length) {
-      const categoryIndex = currentStep - 1;
-      const category = categories[categoryIndex];
-      return category?.questions.every((q) => responses[q.id] !== undefined) ?? false;
-    }
-    
-    // Contact step
-    if (currentStep === contactStep) {
-      const isEmailValid = email.includes("@") && email.includes(".");
-      return customerName.trim() !== "" && isEmailValid && consent;
-    }
-    
-    return false;
-  }, [currentStep, region, seasonalTiming, duration, categories, responses, contactStep, email, customerName, consent]);
-
-  // Handle response change
-  const handleResponseChange = useCallback((questionId: string, value: number) => {
-    setResponses((prev) => ({ ...prev, [questionId]: value }));
-  }, []);
-
-  // Navigate to previous step
-  const handlePrevious = useCallback(() => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-      // Scroll to top of quiz container
-      setTimeout(() => {
-        const quizContainer = document.querySelector('[data-alledrops-quiz]');
-        if (quizContainer) {
-          quizContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      }, 50);
-    }
-  }, [currentStep]);
-
-  // Navigate to next step
-  const handleNext = useCallback(() => {
-    if (isCurrentStepComplete() && currentStep < totalSteps - 1) {
-      setCurrentStep(currentStep + 1);
-      // Scroll to top of quiz container
-      setTimeout(() => {
-        const quizContainer = document.querySelector('[data-alledrops-quiz]');
-        if (quizContainer) {
-          quizContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      }, 50);
-    }
-  }, [currentStep, totalSteps, isCurrentStepComplete]);
-
-  // Handle quiz submission
-  const handleSubmit = useCallback(async () => {
-    if (!isCurrentStepComplete()) {
-      alert("Please complete all required fields.");
-      return;
-    }
-
-    // Calculate score
-    const score = calculateScore(responses);
-    const severityLevel = determineSeverityLevel(score);
-    const completionTime = Math.round((Date.now() - startTime) / 1000);
-    const symptomProfileId = generateSymptomProfileId();
-
-    // Prepare submission data
-    const submissionData = {
-      email,
-      customer_name: customerName,
-      symptom_profile_id: symptomProfileId,
-      quiz_score: score,
-      quiz_region: region,
-      severity_level: severityLevel,
-      quiz_date: new Date().toISOString(),
-      quiz_responses: Object.values(responses),
-      completion_time: completionTime,
-      timing_seasonal: seasonalTiming,
-      timing_duration: duration,
-    };
-
-    // Submit via fetch API
-    setQuizState("submitting");
-    setSubmissionError(null);
-
-    try {
-      // Get API endpoint from config (set by theme block)
-      const apiEndpoint = (window as any).AlleDropsQuizConfig?.apiEndpoint || "/api/quiz/submit";
-      
-      const response = await fetch(apiEndpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(submissionData),
-      });
-
-      const result = await response.json();
-      
-      // Log response for debugging
-      console.log("Quiz submission response:", result);
-      console.log("Response status:", response.status);
-
-      if (result.success) {
-        console.log("✅ Quiz submitted successfully:", {
-          customerId: result.customerId,
-          message: result.message,
-        });
-        setSubmissionResult({
-          score,
-          severityLevel,
-          region,
-          customerId: result.customerId,
-          symptomProfileId: symptomProfileId,
-        });
-        setQuizState("completed");
-      } else {
-        console.error("❌ Quiz submission failed:", result);
-        setSubmissionError(result.error || "Failed to submit quiz");
-        setQuizState("error");
+  const handleAnswerChange = useCallback((questionId: string, value: string | string[] | number) => {
+    setAnswers((prev) => {
+      const next = { ...prev, [questionId]: value };
+      if (questionId === "taking_meds" && value === "no") {
+        delete next.med_list;
+        delete next.med_control;
       }
-    } catch (error) {
-      setSubmissionError(error instanceof Error ? error.message : "Network error");
-      setQuizState("error");
+      return next;
+    });
+  }, []);
+
+  const buildPayload = useCallback(
+    (extra?: { personal_history?: string[]; family_history?: string[] }) => {
+      if (!patientState || !symptomProfileId) throw new Error("Missing patient context");
+      const s = score ?? calculateTotalScore(ALL_SCORED_QUESTIONS, answers);
+      const b = scoreBracket ?? getScoreBracket(s);
+      return {
+        state: patientState,
+        name: patientInfo.name.trim(),
+        dob: patientInfo.dob,
+        email: patientInfo.email.trim(),
+        phone: patientInfo.phone,
+        symptom_profile_id: symptomProfileId,
+        quiz_score: s,
+        score_bracket: b,
+        quiz_date: new Date().toISOString(),
+        answers,
+        completion_time: Math.round((Date.now() - startTime) / 1000),
+        ...extra,
+      };
+    },
+    [patientState, symptomProfileId, patientInfo, answers, score, scoreBracket, startTime]
+  );
+
+  const submitPayload = useCallback(
+    async (extra?: { personal_history?: string[]; family_history?: string[] }) => {
+      const payload = buildPayload(extra);
+      await postQuiz(payload as unknown as Record<string, unknown>);
+    },
+    [buildPayload]
+  );
+
+  // Auto-save assessments for 0-2 bracket once results are shown
+  useEffect(() => {
+    if (step !== "outcome" || scoreBracket !== "0-2" || autoSubmit0to2Attempted.current) return;
+    if (!symptomProfileId || !patientState) return;
+    autoSubmit0to2Attempted.current = true;
+    void (async () => {
+      try {
+        await submitPayload();
+        setSavedToServer(true);
+      } catch (e) {
+        console.error(e);
+        autoSubmit0to2Attempted.current = false;
+        setSubmissionError(e instanceof Error ? e.message : "Could not save assessment");
+      }
+    })();
+  }, [step, scoreBracket, symptomProfileId, patientState, submitPayload]);
+
+  const goToOutcome = useCallback(() => {
+    const s = calculateTotalScore(ALL_SCORED_QUESTIONS, answers);
+    const b = getScoreBracket(s);
+    setScore(s);
+    setScoreBracket(b);
+    setStep("outcome");
+  }, [answers]);
+
+  const onEligible = (state: "tennessee" | "texas") => {
+    setPatientState(state);
+    setStep("patient_info");
+  };
+
+  const onIneligible = () => setStep("ineligible");
+
+  const patientInfoFieldChange = (field: keyof PatientInfoValues, value: string) => {
+    setPatientInfo((p) => ({ ...p, [field]: value }));
+  };
+
+  const handleScheduleConsult = useCallback(async () => {
+    if (!patientState || !symptomProfileId || score === null || !scoreBracket) return;
+    if (!(scoreBracket === "0-2" && savedToServer)) {
+      try {
+        await submitPayload();
+        setSavedToServer(true);
+      } catch (e) {
+        console.error(e);
+        alert(e instanceof Error ? e.message : "Could not save assessment. Please try again.");
+        return;
+      }
     }
-  }, [email, customerName, region, responses, startTime, seasonalTiming, duration, isCurrentStepComplete]);
+    window.location.assign("/pages/consult");
+  }, [submitPayload, patientState, symptomProfileId, score, scoreBracket, savedToServer]);
 
-  // Show results if completed
-  if (quizState === "completed" && submissionResult) {
-    return (
-      <ResultsDisplay
-        score={submissionResult.score}
-        severityLevel={submissionResult.severityLevel as any}
-        region={submissionResult.region}
-        customerId={submissionResult.customerId}
-        symptomProfileId={submissionResult.symptomProfileId}
-      />
+  const handleTestFirst = useCallback(async () => {
+    if (!patientState || !symptomProfileId || score === null || !scoreBracket) return;
+    try {
+      await submitPayload();
+      setSavedToServer(true);
+    } catch (e) {
+      console.error(e);
+      alert(e instanceof Error ? e.message : "Could not save assessment. Please try again.");
+      return;
+    }
+    window.location.assign("/pages/test-options");
+  }, [submitPayload, patientState, symptomProfileId, score, scoreBracket]);
+
+  const handleProceedToPurchase = useCallback(() => {
+    setConsentChecked(false);
+    setStep("consent");
+  }, []);
+
+  const handleProceedWithoutTesting = useCallback(() => {
+    const ok = window.confirm(
+      "Although testing is recommended, based on your score severity, you may choose to move forward with sublingual immunotherapy after completing our Medical History Questionnaire. Do you wish to proceed?"
     );
-  }
+    if (ok) {
+      setConsentChecked(false);
+      setStep("medical_history");
+    } else {
+      window.location.assign("/pages/test-options");
+    }
+  }, []);
 
-  // Show error state
-  if (quizState === "error") {
+  const handleConsentSubmit = useCallback(async () => {
+    if (!consentChecked) return;
+    setStep("submitting");
+    setSubmissionError(null);
+    try {
+      const personal = Array.isArray(answers.history_personal) ? (answers.history_personal as string[]) : undefined;
+      const family = Array.isArray(answers.history_family) ? (answers.history_family as string[]) : undefined;
+      await submitPayload({ personal_history: personal, family_history: family });
+      setSavedToServer(true);
+      setStep("completed");
+    } catch (e) {
+      setSubmissionError(e instanceof Error ? e.message : "Submit failed");
+      setStep("error");
+    }
+  }, [consentChecked, submitPayload, answers]);
+
+  const currentPartQuestions = QUIZ_PARTS[currentPartIndex] ?? [];
+  const quizPartsTotal = QUIZ_PARTS.length;
+
+  const renderNavRow = (children: ReactNode) => (
+    <div className={styles.quizNavigation} style={{ marginTop: "1.5rem" }}>
+      <div className={styles.quizNavigation__buttons}>{children}</div>
+    </div>
+  );
+
+  if (step === "error") {
     return (
       <div className={styles.quizError}>
         <h2>Error</h2>
         <p>{submissionError || "There was an error submitting your quiz. Please try again."}</p>
-        <button onClick={() => { setQuizState("active"); setSubmissionError(null); }}>
-          Retry
+        <button type="button" onClick={() => setStep("consent")}>
+          Back
         </button>
       </div>
     );
   }
 
-  // Render step content
-  const renderStepContent = () => {
-    // Step 0: Demographics (Region + Timing)
-    if (currentStep === 0) {
-      return (
-        <div className={styles.quizContainer__demographics}>
-          {/* Region Selection */}
-          <div className={styles.questionCard}>
-            <label className={styles.questionCard__label}>
-              Where do you live most of the year? <span className={styles.required}>*</span>
-            </label>
-            <p className={styles.questionCard__subtitle}>
-              Our Regional Allergy Drops are formulated for specific areas of the United States.
-            </p>
-            <RegionSelector
-              value={region}
-              onChange={setRegion}
-              disabled={quizState === "submitting"}
-              required
-            />
-          </div>
-          
-          {/* Seasonal Timing */}
-          <div className={styles.questionCard}>
-            <label className={styles.questionCard__label}>
-              When do your allergy symptoms usually flare up? <span className={styles.required}>*</span>
-            </label>
-            <p className={styles.questionCard__subtitle}>
-              This helps us understand your allergy pattern.
-            </p>
-            <div className={styles.questionCard__optionsVertical}>
-              {SEASONAL_TIMING_OPTIONS.map((option) => (
-                <label
-                  key={option.value}
-                  className={`${styles.questionCard__optionVertical} ${
-                    seasonalTiming === option.value ? styles.questionCard__optionSelected : ""
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="seasonal_timing"
-                    value={option.value}
-                    checked={seasonalTiming === option.value}
-                    onChange={(e) => setSeasonalTiming(e.target.value)}
-                    disabled={quizState === "submitting"}
-                  />
-                  <span>{option.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          
-          {/* Duration */}
-          <div className={styles.questionCard}>
-            <label className={styles.questionCard__label}>
-              How long have you been experiencing allergy symptoms? <span className={styles.required}>*</span>
-            </label>
-            <div className={styles.questionCard__optionsVertical}>
-              {DURATION_OPTIONS.map((option) => (
-                <label
-                  key={option.value}
-                  className={`${styles.questionCard__optionVertical} ${
-                    duration === option.value ? styles.questionCard__optionSelected : ""
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="duration"
-                    value={option.value}
-                    checked={duration === option.value}
-                    onChange={(e) => setDuration(e.target.value)}
-                    disabled={quizState === "submitting"}
-                  />
-                  <span>{option.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
-    // Symptom categories (steps 1 to categories.length)
-    if (currentStep >= 1 && currentStep <= categories.length) {
-      const categoryIndex = currentStep - 1;
-      const category = categories[categoryIndex];
-      if (!category) return null;
-      
-      return (
-        <QuestionCategory
-          category={category}
-          responses={responses}
-          onResponseChange={handleResponseChange}
-          isActive={true}
-          disabled={quizState === "submitting"}
-        />
-      );
-    }
-    
-    // Contact step (last)
-    if (currentStep === contactStep) {
-      return (
-        <div className={styles.quizContainer__contact}>
-          <h2 className={styles.questionCategory__title}>Contact Information</h2>
-          <p className={styles.quizContainer__subtitle}>
-            We need your information to provide personalized recommendations.
+  if (step === "completed") {
+    return (
+      <div className={styles.quizContainer}>
+        <h2 className={styles.questionCategory__title}>Thank you</h2>
+        <p className={styles.quizContainer__subtitle}>
+          Your information has been submitted. {symptomProfileId && <>Profile ID: {symptomProfileId}</>}
+        </p>
+        <button type="button" className={styles.button} onClick={() => window.location.assign("/")}>
+          Return home
+        </button>
+        {patientState && (
+          <p style={{ marginTop: "1rem" }}>
+            <a className={styles.button} href={`/products/${PRODUCT_HANDLE_BY_STATE[patientState]}`}>
+              Go to AlleDrops product page
+            </a>
           </p>
-          
-          {/* Full Name */}
-          <div className={styles.quizContainer__field}>
-            <label htmlFor="customer-name">
-              Your Full Name <span className={styles.required}>*</span>
-            </label>
-            <input
-              id="customer-name"
-              type="text"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="John Smith"
-              required
-              disabled={quizState === "submitting"}
-              className={styles.quizContainer__input}
-            />
-          </div>
-          
-          {/* Email */}
-          <div className={styles.quizContainer__field}>
-            <label htmlFor="customer-email">
-              Your Email Address <span className={styles.required}>*</span>
-            </label>
-            <input
-              id="customer-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="john.smith@example.com"
-              required
-              disabled={quizState === "submitting"}
-              className={styles.quizContainer__input}
-            />
-          </div>
-          
-          {/* Consent */}
-          <div className={styles.quizContainer__consent}>
-            <label className={styles.quizContainer__consentLabel}>
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-                disabled={quizState === "submitting"}
-                required
-              />
-              <span>
-                I consent to AlleDrops storing my symptom information for product recommendation 
-                purposes. I understand this assessment does not constitute medical advice and 
-                does not replace consultation with a healthcare provider.
-              </span>
-            </label>
-          </div>
-        </div>
-      );
-    }
-    
-    return null;
-  };
+        )}
+      </div>
+    );
+  }
+
+  if (step === "submitting") {
+    return (
+      <div className={styles.quizContainer}>
+        <p>Submitting…</p>
+      </div>
+    );
+  }
 
   return (
-    <div className={styles.quizContainer}>
-      {/* Progress */}
-      <QuizProgress currentCategory={currentStep} totalCategories={totalSteps} />
+    <div className={styles.quizContainer} data-alledrops-quiz>
+      {step === "quiz_parts" && (
+        <QuizProgress currentCategory={currentPartIndex} totalCategories={quizPartsTotal} />
+      )}
 
-      {/* Step Content */}
       <div className={styles.quizContainer__questions}>
-        {renderStepContent()}
+        {step === "state_gate" && <StateGate onEligible={onEligible} onIneligible={onIneligible} />}
+
+        {step === "ineligible" && <IneligibleMessage onBack={() => setStep("state_gate")} />}
+
+        {step === "patient_info" && (
+          <>
+            <PatientInfoStep
+              values={patientInfo}
+              onChange={patientInfoFieldChange}
+              showErrors={patientInfoShowErrors}
+            />
+            {renderNavRow(
+              <>
+                <button type="button" className={styles.quizNavigation__buttonPrev} onClick={() => setStep("state_gate")}>
+                  ← Previous
+                </button>
+                <button
+                  type="button"
+                  className={styles.quizNavigation__buttonNext}
+                  onClick={() => {
+                    if (!validatePatientInfoStep(patientInfo)) {
+                      setPatientInfoShowErrors(true);
+                      return;
+                    }
+                    setSymptomProfileId(generateSymptomProfileId());
+                    setCurrentPartIndex(0);
+                    setStep("quiz_parts");
+                  }}
+                >
+                  Next →
+                </button>
+              </>
+            )}
+          </>
+        )}
+
+        {step === "quiz_parts" && (
+          <>
+            <QuizPartRenderer
+              questions={currentPartQuestions}
+              answers={answers}
+              onAnswerChange={handleAnswerChange}
+            />
+            {renderNavRow(
+              <>
+                {currentPartIndex > 0 ? (
+                  <button
+                    type="button"
+                    className={styles.quizNavigation__buttonPrev}
+                    onClick={() => setCurrentPartIndex((i) => i - 1)}
+                  >
+                    ← Previous
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.quizNavigation__buttonPrev}
+                    onClick={() => setStep("patient_info")}
+                  >
+                    ← Previous
+                  </button>
+                )}
+                {currentPartIndex < quizPartsTotal - 1 ? (
+                  <button
+                    type="button"
+                    className={styles.quizNavigation__buttonNext}
+                    disabled={!isPartComplete(currentPartQuestions, answers)}
+                    onClick={() => isPartComplete(currentPartQuestions, answers) && setCurrentPartIndex((i) => i + 1)}
+                  >
+                    Next →
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={styles.quizNavigation__buttonNext}
+                    disabled={!isPartComplete(currentPartQuestions, answers)}
+                    onClick={() => isPartComplete(currentPartQuestions, answers) && goToOutcome()}
+                  >
+                    See results
+                  </button>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        {step === "outcome" &&
+          patientState &&
+          symptomProfileId &&
+          score !== null &&
+          scoreBracket !== null && (
+            <ResultsDisplay
+              score={score}
+              scoreBracket={scoreBracket}
+              patientState={patientState}
+              symptomProfileId={symptomProfileId}
+              onScheduleConsult={handleScheduleConsult}
+              onProceedToPurchase={handleProceedToPurchase}
+              onTestFirst={handleTestFirst}
+              onProceedWithoutTesting={handleProceedWithoutTesting}
+            />
+          )}
+
+        {step === "medical_history" && (
+          <>
+            <h2 className={styles.questionCategory__title}>Medical history</h2>
+            <QuizPartRenderer
+              questions={PART6_MEDICAL_HISTORY}
+              answers={answers}
+              onAnswerChange={handleAnswerChange}
+            />
+            {renderNavRow(
+              <>
+                <button type="button" className={styles.quizNavigation__buttonPrev} onClick={() => setStep("outcome")}>
+                  ← Previous
+                </button>
+                <button
+                  type="button"
+                  className={styles.quizNavigation__buttonNext}
+                  disabled={!isPartComplete(PART6_MEDICAL_HISTORY, answers)}
+                  onClick={() => isPartComplete(PART6_MEDICAL_HISTORY, answers) && setStep("consent")}
+                >
+                  Next →
+                </button>
+              </>
+            )}
+          </>
+        )}
+
+        {step === "consent" && (
+          <>
+            <ConsentStep checked={consentChecked} onCheckedChange={setConsentChecked} />
+            {renderNavRow(
+              <>
+                <button
+                  type="button"
+                  className={styles.quizNavigation__buttonPrev}
+                  onClick={() => setStep(scoreBracket === "7+" ? "medical_history" : "outcome")}
+                >
+                  ← Previous
+                </button>
+                <button
+                  type="button"
+                  className={styles.quizNavigation__buttonSubmit}
+                  disabled={!consentChecked}
+                  onClick={() => void handleConsentSubmit()}
+                >
+                  Submit
+                </button>
+              </>
+            )}
+          </>
+        )}
       </div>
 
-      {/* Navigation */}
-      <QuizNavigation
-        currentCategory={currentStep}
-        totalCategories={totalSteps}
-        onPrevious={handlePrevious}
-        onNext={handleNext}
-        onSubmit={handleSubmit}
-        canGoPrevious={currentStep > 0}
-        canGoNext={isCurrentStepComplete() && currentStep < totalSteps - 1}
-        canSubmit={isCurrentStepComplete() && currentStep === totalSteps - 1}
-        isSubmitting={quizState === "submitting"}
-      />
-
-      {/* Test Mode Button (only visible when enabled) */}
       {showTestMode && (
         <div className={styles.quizContainer__testMode}>
           <button
             type="button"
-            onClick={runTestMode}
+            onClick={() => {
+              if (!confirm("Test Mode: fill sample data and jump to outcome?")) return;
+              setPatientState("tennessee");
+              setPatientInfo({
+                name: "Test User",
+                dob: "1990-01-02",
+                email: "test@example.com",
+                phone: "6155551212",
+              });
+              setSymptomProfileId(generateSymptomProfileId());
+              const sample: QuizAnswers = {
+                symptoms_nasal: ["sneezing", "runny_nose"],
+                symptoms_eye: ["itchy_eyes"],
+                symptoms_sinus: [],
+                timing_season: ["year_round"],
+                timing_triggers: ["dust"],
+                severity_nasal_congestion: 3,
+                severity_sneezing: 3,
+                severity_runny_nose: 2,
+                severity_nasal_itching: 2,
+                severity_eye_itching: 2,
+                impact_sleep: 3,
+                impact_daily: 3,
+                impact_concentrate: 2,
+                impact_social: 2,
+                bother_overall: 3,
+                taking_meds: "no",
+              };
+              setAnswers(sample);
+              const s = calculateTotalScore(ALL_SCORED_QUESTIONS, sample);
+              const b = getScoreBracket(s);
+              setScore(s);
+              setScoreBracket(b);
+              setStep("outcome");
+            }}
             className={styles.quizContainer__testButton}
           >
-            🧪 Test Mode: Auto-Complete Quiz
+            Test Mode: jump to outcome
           </button>
-          <p className={styles.quizContainer__testNote}>
-            This will automatically fill and submit the quiz with test data
-          </p>
         </div>
       )}
     </div>

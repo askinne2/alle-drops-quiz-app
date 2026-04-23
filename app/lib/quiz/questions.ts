@@ -1,176 +1,268 @@
-/**
- * Quiz Questions Loader
- * Migrated from quiz-config.js
- * Matches order from allergist-on-demand/docs/quiz-questions-schema.md
- */
+import { type QuizQuestion } from "./types";
 
-import { type QuizQuestion, type QuizCategory } from "./types";
+// ─────────────────────────────────────────────
+// PART 1 — Symptom Checklist (checkbox_multi)
+// Scoring: 1 point per checked box
+// ─────────────────────────────────────────────
 
-/**
- * US Regions for product matching
- */
-export const US_REGIONS = [
-  { value: "northwest", label: "Northwest" },
-  { value: "southwest", label: "Southwest" },
-  { value: "north_central", label: "North Central" },
-  { value: "south_central", label: "South Central" },
-  { value: "midwest", label: "Midwest" },
-  { value: "southeast", label: "Southeast" },
-  { value: "northeast", label: "Northeast" },
-] as const;
-
-/**
- * Seasonal timing options
- */
-export const SEASONAL_TIMING_OPTIONS = [
-  { value: "spring", label: "Primarily Spring (March-May)" },
-  { value: "summer", label: "Primarily Summer (June-August)" },
-  { value: "fall", label: "Primarily Fall (September-November)" },
-  { value: "winter", label: "Primarily Winter (December-February)" },
-  { value: "year_round", label: "Year-Round" },
-  { value: "multiple_seasons", label: "Multiple Seasons" },
-] as const;
-
-/**
- * Duration options
- */
-export const DURATION_OPTIONS = [
-  { value: "less_than_1yr", label: "Less than 1 year" },
-  { value: "1_3yrs", label: "1-3 years" },
-  { value: "3_5yrs", label: "3-5 years" },
-  { value: "5_10yrs", label: "5-10 years" },
-  { value: "over_10yrs", label: "More than 10 years" },
-] as const;
-
-/**
- * Hardcoded quiz questions (fallback)
- * Order matches quiz-questions-schema.md:
- * - Section 2: Nasal (20-24)
- * - Section 3: Eye (30-33)
- * - Section 4: Respiratory (40-43)
- * - Section 5: Skin (50-53)
- * - Section 6: Throat (60-62)
- */
-const HARDCODED_QUESTIONS: QuizQuestion[] = [
-  // ============================================
-  // Section 2: Nasal Symptoms (Order 20-24)
-  // Maximum Category Score: 15 points
-  // ============================================
-  { id: "nasal_runny", category: "Nasal Symptoms", text: "Runny Nose", order: 20 },
-  { id: "nasal_stuffy", category: "Nasal Symptoms", text: "Stuffy/Congested Nose", order: 21 },
-  { id: "nasal_sneezing", category: "Nasal Symptoms", text: "Sneezing", order: 22 },
-  { id: "nasal_postnasal", category: "Nasal Symptoms", text: "Postnasal Drip", order: 23 },
-  { id: "nasal_smell_loss", category: "Nasal Symptoms", text: "Loss of Smell", order: 24 },
-
-  // ============================================
-  // Section 3: Eye Symptoms (Order 30-33)
-  // Maximum Category Score: 12 points
-  // ============================================
-  { id: "eye_watery", category: "Eye Symptoms", text: "Watery Eyes", order: 30 },
-  { id: "eye_itchy", category: "Eye Symptoms", text: "Itchy Eyes", order: 31 },
-  { id: "eye_red", category: "Eye Symptoms", text: "Red/Bloodshot Eyes", order: 32 },
-  { id: "eye_swollen", category: "Eye Symptoms", text: "Swollen Eyelids", order: 33 },
-
-  // ============================================
-  // Section 4: Respiratory Symptoms (Order 40-43)
-  // Maximum Category Score: 12 points
-  // ============================================
-  { id: "respiratory_cough", category: "Respiratory Symptoms", text: "Cough", order: 40 },
-  { id: "respiratory_wheeze", category: "Respiratory Symptoms", text: "Wheezing", order: 41 },
-  { id: "respiratory_tight", category: "Respiratory Symptoms", text: "Chest Tightness", order: 42 },
-  { id: "respiratory_breath", category: "Respiratory Symptoms", text: "Shortness of Breath", order: 43 },
-
-  // ============================================
-  // Section 5: Skin Symptoms (Order 50-53)
-  // Maximum Category Score: 12 points
-  // ============================================
-  { id: "skin_rash", category: "Skin Symptoms", text: "Rash", order: 50 },
-  { id: "skin_hives", category: "Skin Symptoms", text: "Hives", order: 51 },
-  { id: "skin_itching", category: "Skin Symptoms", text: "Itching", order: 52 },
-  { id: "skin_eczema", category: "Skin Symptoms", text: "Eczema/Dry Patches", order: 53 },
-
-  // ============================================
-  // Section 6: Throat & Mouth Symptoms (Order 60-62)
-  // Maximum Category Score: 9 points
-  // ============================================
-  { id: "throat_itchy", category: "Throat & Mouth Symptoms", text: "Itchy Throat", order: 60 },
-  { id: "throat_sore", category: "Throat & Mouth Symptoms", text: "Sore Throat", order: 61 },
-  { id: "throat_mouth_itchy", category: "Throat & Mouth Symptoms", text: "Itchy Mouth or Tongue", order: 62 },
+export const PART1_SYMPTOM_CHECKLIST: QuizQuestion[] = [
+  {
+    id: "symptoms_nasal",
+    type: "checkbox_multi",
+    part: 1,
+    text: "Do you experience any of the following nasal symptoms? (Check all that apply)",
+    options: [
+      { value: "sneezing", label: "Sneezing (especially in episodes)" },
+      { value: "runny_nose", label: "Runny nose or nasal drainage" },
+      { value: "nasal_congestion", label: "Nasal congestion or stuffiness" },
+      { value: "itchy_nose", label: "Itchy nose" },
+      { value: "postnasal_drip", label: "Postnasal drip" },
+    ],
+    order: 10,
+  },
+  {
+    id: "symptoms_eye",
+    type: "checkbox_multi",
+    part: 1,
+    text: "Do you experience any of the following eye symptoms? (Check all that apply)",
+    options: [
+      { value: "itchy_eyes", label: "Itchy eyes" },
+      { value: "red_eyes", label: "Red or bloodshot eyes" },
+      { value: "watery_eyes", label: "Watery eyes" },
+      { value: "swollen_eyelids", label: "Swollen eyelids" },
+    ],
+    order: 11,
+  },
+  {
+    id: "symptoms_sinus",
+    type: "checkbox_multi",
+    part: 1,
+    text: "Do you experience any of the following sinus symptoms? (Check all that apply)",
+    options: [
+      { value: "facial_pressure", label: "Facial pressure or pain" },
+      { value: "headaches", label: "Headaches" },
+      { value: "smell_loss", label: "Reduced sense of smell" },
+    ],
+    order: 12,
+  },
 ];
 
-/**
- * Load questions from Shopify Metaobjects (via Storefront API)
- * TODO: Implement when Storefront API access is available
- */
-export async function loadQuestionsFromMetaobjects(
-  shopUrl: string
-): Promise<QuizQuestion[]> {
-  try {
-    // TODO: Implement Storefront API query for metaobjects
-    // const query = `query { metaobjects(type: "quiz_question", first: 100) { ... } }`;
-    // const response = await fetch(`${shopUrl}/api/2024-01/graphql.json`, {...});
-    // Transform and return questions
-    
-    console.warn("Metaobjects loading not yet implemented, using hardcoded questions");
-    return [];
-  } catch (error) {
-    console.error("Error loading metaobjects:", error);
-    return [];
-  }
+// ─────────────────────────────────────────────
+// PART 2 — Symptom Timing & Triggers (radio_multi)
+// Scoring: 1 point per selected (except exclusions)
+// ─────────────────────────────────────────────
+
+export const PART2_TIMING_TRIGGERS: QuizQuestion[] = [
+  {
+    id: "timing_season",
+    type: "radio_multi",
+    part: 2,
+    text: "When do your symptoms occur? (Select all that apply)",
+    options: [
+      { value: "spring", label: "Spring (tree pollen season)" },
+      { value: "summer", label: "Summer (grass pollen season)" },
+      { value: "fall", label: "Fall (ragweed season)" },
+      { value: "year_round", label: "Year-round" },
+      { value: "certain_times", label: "Only at certain times of year" },
+      { value: "only_rarely", label: "Only rarely do I have symptoms" },
+    ],
+    excludeFromScore: ["only_rarely"],
+    order: 20,
+  },
+  {
+    id: "timing_triggers",
+    type: "radio_multi",
+    part: 2,
+    text: "Do your symptoms worsen with exposure to: (Select all that apply)",
+    options: [
+      { value: "pets", label: "Cats, dogs, or other furry pets" },
+      { value: "dust", label: "Dust or dusty environments" },
+      { value: "mold", label: "Mold or damp areas" },
+      { value: "grass", label: "Cut grass or outdoor plants" },
+      { value: "environments", label: "Specific indoor or outdoor environments" },
+      { value: "none", label: "None of the above" },
+    ],
+    excludeFromScore: ["none"],
+    order: 21,
+  },
+];
+
+// ─────────────────────────────────────────────
+// PART 3 — Symptom Severity (severity_0_3)
+// Scoring: None(0) Mild(1) Moderate(2) Severe(3)
+// ─────────────────────────────────────────────
+
+export const PART3_SEVERITY: QuizQuestion[] = [
+  {
+    id: "severity_nasal_congestion",
+    type: "severity_0_3",
+    part: 3,
+    text: "Nasal congestion",
+    subtitle: "Rate your symptoms over the past week",
+    order: 30,
+  },
+  {
+    id: "severity_sneezing",
+    type: "severity_0_3",
+    part: 3,
+    text: "Sneezing",
+    order: 31,
+  },
+  {
+    id: "severity_runny_nose",
+    type: "severity_0_3",
+    part: 3,
+    text: "Runny nose",
+    order: 32,
+  },
+  {
+    id: "severity_nasal_itching",
+    type: "severity_0_3",
+    part: 3,
+    text: "Nasal itching",
+    order: 33,
+  },
+  {
+    id: "severity_eye_itching",
+    type: "severity_0_3",
+    part: 3,
+    text: "Eye itching/redness",
+    order: 34,
+  },
+];
+
+// ─────────────────────────────────────────────
+// PART 4 — Daily Life Impact (frequency_0_4 + bother_0_4)
+// ─────────────────────────────────────────────
+
+export const PART4_IMPACT: QuizQuestion[] = [
+  {
+    id: "impact_sleep",
+    type: "frequency_0_4",
+    part: 4,
+    text: "How often do your nasal or eye symptoms interfere with your sleep quality?",
+    order: 40,
+  },
+  {
+    id: "impact_daily",
+    type: "frequency_0_4",
+    part: 4,
+    text: "How often do they interfere with daily activities (work, school, exercise)?",
+    order: 41,
+  },
+  {
+    id: "impact_concentrate",
+    type: "frequency_0_4",
+    part: 4,
+    text: "How often do they interfere with your ability to concentrate?",
+    order: 42,
+  },
+  {
+    id: "impact_social",
+    type: "frequency_0_4",
+    part: 4,
+    text: "How often do they interfere with social activities or outdoor enjoyment?",
+    order: 43,
+  },
+  {
+    id: "bother_overall",
+    type: "bother_0_4",
+    part: 4,
+    text: "How bothersome are your allergy symptoms overall?",
+    order: 44,
+  },
+];
+
+// ─────────────────────────────────────────────
+// PART 5 — Current Treatment (yesno + control_0_3)
+// ─────────────────────────────────────────────
+
+export const PART5_TREATMENT: QuizQuestion[] = [
+  {
+    id: "taking_meds",
+    type: "yesno",
+    part: 5,
+    text: "Are you currently taking any allergy medications?",
+    order: 50,
+  },
+  {
+    id: "med_list",
+    type: "text_input",
+    part: 5,
+    text: "Please list your current allergy medications:",
+    subtitle: "Only shown if taking_meds = yes",
+    order: 51,
+  },
+  {
+    id: "med_control",
+    type: "control_0_3",
+    part: 5,
+    text: "How well controlled are your symptoms with current treatment?",
+    subtitle: "Only shown if taking_meds = yes",
+    options: [
+      { value: "completely", label: "Completely controlled", score: 0 },
+      { value: "well", label: "Well controlled", score: 0 },
+      { value: "somewhat", label: "Somewhat controlled", score: 1 },
+      { value: "poorly", label: "Poorly controlled", score: 2 },
+      { value: "not_at_all", label: "Not controlled at all", score: 3 },
+    ],
+    order: 52,
+  },
+];
+
+// ─────────────────────────────────────────────
+// PART 6 — Medical History (checkbox_multi, no score)
+// Displayed only if patient chooses to proceed after 7+ result
+// ─────────────────────────────────────────────
+
+export const PART6_MEDICAL_HISTORY: QuizQuestion[] = [
+  {
+    id: "history_personal",
+    type: "checkbox_multi",
+    part: 6,
+    text: "Do you have a personal history of any of the following? (Check all that apply)",
+    options: [
+      { value: "asthma", label: "Asthma" },
+      { value: "eczema", label: "Eczema or atopic dermatitis" },
+      { value: "food_allergies", label: "Food allergies" },
+      { value: "positive_allergy_test", label: "Previous positive allergy testing" },
+      { value: "ed_visits", label: "Previous Emergency Dept visits for allergic reactions" },
+    ],
+    order: 60,
+  },
+  {
+    id: "history_family",
+    type: "checkbox_multi",
+    part: 6,
+    text: "Do you have a family history of any of the following? (Check all that apply)",
+    options: [
+      { value: "rhinitis", label: "Allergic rhinitis (hay fever)" },
+      { value: "asthma", label: "Asthma" },
+      { value: "eczema", label: "Eczema or other allergic conditions" },
+    ],
+    order: 61,
+  },
+];
+
+// All questions for parts 1-5 (used in scoring and main flow)
+export const ALL_SCORED_QUESTIONS: QuizQuestion[] = [
+  ...PART1_SYMPTOM_CHECKLIST,
+  ...PART2_TIMING_TRIGGERS,
+  ...PART3_SEVERITY,
+  ...PART4_IMPACT,
+  ...PART5_TREATMENT,
+];
+
+// Helper: get question by id
+export function getQuestionById(id: string): QuizQuestion | undefined {
+  return [...ALL_SCORED_QUESTIONS, ...PART6_MEDICAL_HISTORY].find((q) => q.id === id);
 }
 
-/**
- * Load questions (hybrid approach)
- * Try Metaobjects first, fallback to hardcoded
- */
-export async function loadQuestions(
-  useMetaobjects: boolean = false,
-  shopUrl: string = ""
-): Promise<QuizQuestion[]> {
-  if (useMetaobjects && shopUrl) {
-    const metaobjectQuestions = await loadQuestionsFromMetaobjects(shopUrl);
-    if (metaobjectQuestions.length > 0) {
-      return metaobjectQuestions;
-    }
-  }
-
-  // Use hardcoded questions
-  return [...HARDCODED_QUESTIONS].sort((a, b) => a.order - b.order);
-}
-
-/**
- * Group questions by category
- * Returns categories in order: Nasal → Eye → Respiratory → Skin → Throat
- */
-export function groupQuestionsByCategory(
-  questions: QuizQuestion[]
-): QuizCategory[] {
-  const categoryMap = new Map<string, QuizQuestion[]>();
-
-  questions.forEach((question) => {
-    const category = question.category;
-    if (!categoryMap.has(category)) {
-      categoryMap.set(category, []);
-    }
-    categoryMap.get(category)!.push(question);
-  });
-
-  // Convert to array and sort by first question's order
-  return Array.from(categoryMap.entries())
-    .map(([name, questions]) => ({
-      name,
-      questions: questions.sort((a, b) => a.order - b.order),
-    }))
-    .sort((a, b) => {
-      const aOrder = a.questions[0]?.order || 0;
-      const bOrder = b.questions[0]?.order || 0;
-      return aOrder - bOrder;
-    });
-}
-
-/**
- * Get all questions (for use in Remix loader)
- */
-export function getHardcodedQuestions(): QuizQuestion[] {
-  return [...HARDCODED_QUESTIONS];
-}
+/** Ordered parts 1–5 for the main quiz flow */
+export const QUIZ_PARTS: QuizQuestion[][] = [
+  PART1_SYMPTOM_CHECKLIST,
+  PART2_TIMING_TRIGGERS,
+  PART3_SEVERITY,
+  PART4_IMPACT,
+  PART5_TREATMENT,
+];

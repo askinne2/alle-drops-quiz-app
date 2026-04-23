@@ -10,6 +10,25 @@ import { useState, useMemo } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 
+type CustomersQueryJson = {
+  errors?: unknown;
+  data?: {
+    customers?: {
+      pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+      edges?: Array<{
+        node: {
+          id: string;
+          email: string | null;
+          firstName: string | null;
+          lastName: string | null;
+          createdAt: string;
+          metafields?: { edges?: Array<{ node: { key: string; value: string } }> };
+        };
+      }>;
+    };
+  };
+};
+
 const CUSTOMERS_WITH_METAFIELDS_QUERY = `
   query GetCustomersWithQuizData($first: Int!, $after: String) {
     customers(first: $first, after: $after) {
@@ -43,9 +62,9 @@ const CUSTOMERS_WITH_METAFIELDS_QUERY = `
 interface QuizHistoryEntry {
   date: string;
   score: number;
-  severity: string;
-  region: string;
-  profileId: string;
+  score_bracket: string;
+  state: string;
+  profile_id: string;
 }
 
 interface QuizCustomer {
@@ -53,8 +72,8 @@ interface QuizCustomer {
   email: string | null;
   name: string;
   quizScore: number | null;
-  severityLevel: string | null;
-  quizRegion: string | null;
+  scoreBracket: string | null;
+  state: string | null;
   quizDate: string | null;
   symptomProfileId: string | null;
   quizHistory: QuizHistoryEntry[] | null;
@@ -78,7 +97,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         variables: { first: 25, after: cursor },
       });
       
-      const data = await result.json();
+      const data = (await result.json()) as CustomersQueryJson;
       
       if (data.errors) {
         console.error("GraphQL errors:", data.errors);
@@ -104,19 +123,34 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           let quizHistory: QuizHistoryEntry[] | null = null;
           if (metafieldMap.quiz_history) {
             try {
-              quizHistory = JSON.parse(metafieldMap.quiz_history);
+              const raw = JSON.parse(metafieldMap.quiz_history) as unknown[];
+              if (Array.isArray(raw)) {
+                quizHistory = raw.map((entry: unknown) => {
+                  const e = entry as Record<string, unknown>;
+                  return {
+                    date: String(e.date ?? ""),
+                    score: Number(e.score ?? 0),
+                    score_bracket: String(e.score_bracket ?? e.severity ?? ""),
+                    state: String(e.state ?? e.region ?? ""),
+                    profile_id: String(e.profile_id ?? ""),
+                  };
+                });
+              }
             } catch {
               quizHistory = null;
             }
           }
-          
+
+          const stateVal = metafieldMap.state || metafieldMap.quiz_region || null;
+          const bracketVal = metafieldMap.score_bracket || metafieldMap.severity_level || null;
+
           allCustomers.push({
             id: customer.id,
             email: customer.email,
             name: [customer.firstName, customer.lastName].filter(Boolean).join(" ") || customer.email || "Unknown",
             quizScore: metafieldMap.quiz_score ? parseInt(metafieldMap.quiz_score, 10) : null,
-            severityLevel: metafieldMap.severity_level || null,
-            quizRegion: metafieldMap.quiz_region || null,
+            scoreBracket: bracketVal,
+            state: stateVal,
             quizDate: metafieldMap.quiz_date || null,
             symptomProfileId: metafieldMap.symptom_profile_id || null,
             quizHistory,
@@ -152,22 +186,22 @@ export default function QuizResultsPage() {
   
   // State for search and filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [severityFilter, setSeverityFilter] = useState<string>("all");
-  const [regionFilter, setRegionFilter] = useState<string>("all");
+  const [bracketFilter, setBracketFilter] = useState<string>("all");
+  const [stateFilter, setStateFilter] = useState<string>("all");
   const [dateFilter, setDateFilter] = useState<string>("all");
   
   // State for customer detail modal
   const [selectedCustomer, setSelectedCustomer] = useState<QuizCustomer | null>(null);
   
   // Get unique values for filter dropdowns
-  const uniqueSeverities = useMemo(() => {
-    const severities = new Set(customers.map(c => c.severityLevel).filter(Boolean));
-    return Array.from(severities).sort();
+  const uniqueBrackets = useMemo(() => {
+    const brackets = new Set(customers.map((c) => c.scoreBracket).filter(Boolean));
+    return Array.from(brackets).sort();
   }, [customers]);
-  
-  const uniqueRegions = useMemo(() => {
-    const regions = new Set(customers.map(c => c.quizRegion).filter(Boolean));
-    return Array.from(regions).sort();
+
+  const uniqueStates = useMemo(() => {
+    const states = new Set(customers.map((c) => c.state).filter(Boolean));
+    return Array.from(states).sort();
   }, [customers]);
   
   // Filter customers based on search and filters
@@ -182,13 +216,11 @@ export default function QuizResultsPage() {
         if (!nameMatch && !emailMatch && !profileMatch) return false;
       }
       
-      // Severity filter
-      if (severityFilter !== "all" && customer.severityLevel !== severityFilter) {
+      if (bracketFilter !== "all" && customer.scoreBracket !== bracketFilter) {
         return false;
       }
-      
-      // Region filter
-      if (regionFilter !== "all" && customer.quizRegion !== regionFilter) {
+
+      if (stateFilter !== "all" && customer.state !== stateFilter) {
         return false;
       }
       
@@ -218,27 +250,28 @@ export default function QuizResultsPage() {
       
       return true;
     });
-  }, [customers, searchTerm, severityFilter, regionFilter, dateFilter]);
+  }, [customers, searchTerm, bracketFilter, stateFilter, dateFilter]);
   
   // Calculate summary stats
   const stats = useMemo(() => {
-    const severityCounts = { minimal: 0, mild: 0, moderate: 0, severe: 0 };
+    const bracketCounts = { b02: 0, b36: 0, b7: 0 };
     let totalScore = 0;
     let scoreCount = 0;
-    
-    filteredCustomers.forEach(c => {
-      if (c.severityLevel && severityCounts.hasOwnProperty(c.severityLevel.toLowerCase())) {
-        severityCounts[c.severityLevel.toLowerCase() as keyof typeof severityCounts]++;
-      }
+
+    filteredCustomers.forEach((c) => {
+      const b = c.scoreBracket;
+      if (b === "0-2") bracketCounts.b02++;
+      else if (b === "3-6") bracketCounts.b36++;
+      else if (b === "7+") bracketCounts.b7++;
       if (c.quizScore !== null) {
         totalScore += c.quizScore;
         scoreCount++;
       }
     });
-    
+
     return {
       total: filteredCustomers.length,
-      ...severityCounts,
+      ...bracketCounts,
       avgScore: scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0,
     };
   }, [filteredCustomers]);
@@ -271,16 +304,14 @@ export default function QuizResultsPage() {
     }
   };
 
-  const getSeverityColor = (severity: string | null) => {
-    switch (severity?.toLowerCase()) {
-      case "minimal":
-        return "#4CAF50"; // Green
-      case "mild":
-        return "#FF9800"; // Orange
-      case "moderate":
-        return "#FF5722"; // Deep Orange
-      case "severe":
-        return "#F44336"; // Red
+  const getBracketColor = (bracket: string | null) => {
+    switch (bracket) {
+      case "0-2":
+        return "#4CAF50";
+      case "3-6":
+        return "#FF9800";
+      case "7+":
+        return "#F44336";
       default:
         return "#666";
     }
@@ -288,13 +319,13 @@ export default function QuizResultsPage() {
   
   // Export to CSV
   const exportToCSV = () => {
-    const headers = ["Name", "Email", "Score", "Severity", "Region", "Quiz Date", "Profile ID", "History Count"];
-    const rows = filteredCustomers.map(c => [
+    const headers = ["Name", "Email", "Score", "Score Bracket", "State", "Quiz Date", "Profile ID", "History Count"];
+    const rows = filteredCustomers.map((c) => [
       c.name,
       c.email || "",
       c.quizScore?.toString() || "",
-      c.severityLevel || "",
-      c.quizRegion || "",
+      c.scoreBracket || "",
+      c.state || "",
       c.quizDate || "",
       c.symptomProfileId || "",
       c.quizHistory?.length?.toString() || "0",
@@ -319,12 +350,13 @@ export default function QuizResultsPage() {
   // Clear all filters
   const clearFilters = () => {
     setSearchTerm("");
-    setSeverityFilter("all");
-    setRegionFilter("all");
+    setBracketFilter("all");
+    setStateFilter("all");
     setDateFilter("all");
   };
-  
-  const hasActiveFilters = searchTerm || severityFilter !== "all" || regionFilter !== "all" || dateFilter !== "all";
+
+  const hasActiveFilters =
+    searchTerm || bracketFilter !== "all" || stateFilter !== "all" || dateFilter !== "all";
 
   return (
     <s-page heading="Quiz Results Dashboard">
@@ -351,8 +383,8 @@ export default function QuizResultsPage() {
             borderRadius: "8px",
             textAlign: "center"
           }}>
-            <div style={{ fontSize: "28px", fontWeight: 700, color: "#4CAF50" }}>{stats.minimal}</div>
-            <div style={{ fontSize: "12px", color: "#6d7175", marginTop: "4px" }}>Minimal</div>
+            <div style={{ fontSize: "28px", fontWeight: 700, color: "#4CAF50" }}>{stats.b02}</div>
+            <div style={{ fontSize: "12px", color: "#6d7175", marginTop: "4px" }}>Bracket 0–2</div>
           </div>
           <div style={{ 
             padding: "16px", 
@@ -360,17 +392,8 @@ export default function QuizResultsPage() {
             borderRadius: "8px",
             textAlign: "center"
           }}>
-            <div style={{ fontSize: "28px", fontWeight: 700, color: "#FF9800" }}>{stats.mild}</div>
-            <div style={{ fontSize: "12px", color: "#6d7175", marginTop: "4px" }}>Mild</div>
-          </div>
-          <div style={{ 
-            padding: "16px", 
-            background: "#ffeee8", 
-            borderRadius: "8px",
-            textAlign: "center"
-          }}>
-            <div style={{ fontSize: "28px", fontWeight: 700, color: "#FF5722" }}>{stats.moderate}</div>
-            <div style={{ fontSize: "12px", color: "#6d7175", marginTop: "4px" }}>Moderate</div>
+            <div style={{ fontSize: "28px", fontWeight: 700, color: "#FF9800" }}>{stats.b36}</div>
+            <div style={{ fontSize: "12px", color: "#6d7175", marginTop: "4px" }}>Bracket 3–6</div>
           </div>
           <div style={{ 
             padding: "16px", 
@@ -378,8 +401,8 @@ export default function QuizResultsPage() {
             borderRadius: "8px",
             textAlign: "center"
           }}>
-            <div style={{ fontSize: "28px", fontWeight: 700, color: "#F44336" }}>{stats.severe}</div>
-            <div style={{ fontSize: "12px", color: "#6d7175", marginTop: "4px" }}>Severe</div>
+            <div style={{ fontSize: "28px", fontWeight: 700, color: "#F44336" }}>{stats.b7}</div>
+            <div style={{ fontSize: "12px", color: "#6d7175", marginTop: "4px" }}>Bracket 7+</div>
           </div>
           <div style={{ 
             padding: "16px", 
@@ -424,14 +447,14 @@ export default function QuizResultsPage() {
             />
           </div>
           
-          {/* Severity Filter */}
+          {/* Score bracket filter */}
           <div style={{ flex: "0 1 150px" }}>
             <label style={{ display: "block", fontSize: "12px", fontWeight: 500, marginBottom: "4px" }}>
-              Severity
+              Score Bracket
             </label>
             <select
-              value={severityFilter}
-              onChange={(e) => setSeverityFilter(e.target.value)}
+              value={bracketFilter}
+              onChange={(e) => setBracketFilter(e.target.value)}
               style={{
                 width: "100%",
                 padding: "8px 12px",
@@ -441,21 +464,23 @@ export default function QuizResultsPage() {
                 background: "white",
               }}
             >
-              <option value="all">All Severities</option>
-              {uniqueSeverities.map(s => (
-                <option key={s} value={s}>{s ? s.charAt(0).toUpperCase() + s.slice(1) : s}</option>
+              <option value="all">All brackets</option>
+              {uniqueBrackets.map((b) => (
+                <option key={b} value={b as string}>
+                  {b}
+                </option>
               ))}
             </select>
           </div>
-          
-          {/* Region Filter */}
+
+          {/* State filter */}
           <div style={{ flex: "0 1 150px" }}>
             <label style={{ display: "block", fontSize: "12px", fontWeight: 500, marginBottom: "4px" }}>
-              Region
+              State
             </label>
             <select
-              value={regionFilter}
-              onChange={(e) => setRegionFilter(e.target.value)}
+              value={stateFilter}
+              onChange={(e) => setStateFilter(e.target.value)}
               style={{
                 width: "100%",
                 padding: "8px 12px",
@@ -465,9 +490,11 @@ export default function QuizResultsPage() {
                 background: "white",
               }}
             >
-              <option value="all">All Regions</option>
-              {uniqueRegions.map(r => (
-                <option key={r} value={r}>{r ? r.charAt(0).toUpperCase() + r.slice(1) : r}</option>
+              <option value="all">All states</option>
+              {uniqueStates.map((s) => (
+                <option key={s} value={s as string}>
+                  {s}
+                </option>
               ))}
             </select>
           </div>
@@ -509,15 +536,15 @@ export default function QuizResultsPage() {
         }}>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <Link to="/app/quiz">
-              <s-button size="small">📝 Take Quiz (Test)</s-button>
+              <s-button>📝 Take Quiz (Test)</s-button>
                 </Link>
             {filteredCustomers.length > 0 && (
-              <s-button variant="secondary" size="small" onClick={exportToCSV}>
+              <s-button variant="secondary" onClick={exportToCSV}>
                 📥 Export CSV
               </s-button>
                 )}
             {hasActiveFilters && (
-              <s-button variant="plain" size="small" onClick={clearFilters}>
+              <s-button variant="tertiary" onClick={clearFilters}>
                 ✕ Clear Filters
               </s-button>
             )}
@@ -528,9 +555,17 @@ export default function QuizResultsPage() {
         </div>
         
         {error && (
-          <s-box padding="base" background="critical-subdued" borderRadius="base" marginBlockEnd="base">
-            <s-text fontWeight="bold" color="critical">Error:</s-text> {error}
-          </s-box>
+          <div
+            style={{
+              padding: "12px 16px",
+              background: "#fce8e8",
+              borderRadius: "8px",
+              marginBottom: "16px",
+              color: "#6d0710",
+            }}
+          >
+            <strong>Error:</strong> {error}
+          </div>
         )}
         
         {filteredCustomers.length === 0 ? (
@@ -542,7 +577,7 @@ export default function QuizResultsPage() {
             </s-paragraph>
           </s-box>
         ) : (
-          <s-box style={{ width: "100%", maxWidth: "100%" }}>
+          <div style={{ width: "100%", maxWidth: "100%" }}>
             <div style={{ overflowX: "auto", width: "100%" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px", minWidth: "800px" }}>
                 <thead>
@@ -550,8 +585,8 @@ export default function QuizResultsPage() {
                     <th style={{ padding: "12px", fontWeight: 600 }}>Customer</th>
                     <th style={{ padding: "12px", fontWeight: 600 }}>Email</th>
                     <th style={{ padding: "12px", fontWeight: 600 }}>Score</th>
-                    <th style={{ padding: "12px", fontWeight: 600 }}>Severity</th>
-                    <th style={{ padding: "12px", fontWeight: 600 }}>Region</th>
+                    <th style={{ padding: "12px", fontWeight: 600 }}>Score Bracket</th>
+                    <th style={{ padding: "12px", fontWeight: 600 }}>State</th>
                     <th style={{ padding: "12px", fontWeight: 600 }}>Quiz Date</th>
                     <th style={{ padding: "12px", fontWeight: 600 }}>Actions</th>
                   </tr>
@@ -578,30 +613,29 @@ export default function QuizResultsPage() {
                         {customer.email || "—"}
                       </td>
                       <td style={{ padding: "12px", fontWeight: 600 }}>
-                        {customer.quizScore !== null ? `${customer.quizScore}/60` : "—"}
+                        {customer.quizScore !== null ? `${customer.quizScore}` : "—"}
                       </td>
                       <td style={{ padding: "12px" }}>
-                        {customer.severityLevel ? (
+                        {customer.scoreBracket ? (
                           <span
                             style={{
                               display: "inline-block",
                               padding: "4px 8px",
                               borderRadius: "4px",
-                              backgroundColor: getSeverityColor(customer.severityLevel) + "20",
-                              color: getSeverityColor(customer.severityLevel),
+                              backgroundColor: getBracketColor(customer.scoreBracket) + "20",
+                              color: getBracketColor(customer.scoreBracket),
                               fontWeight: 600,
-                              textTransform: "capitalize",
                               fontSize: "12px",
                             }}
                           >
-                            {customer.severityLevel}
+                            {customer.scoreBracket}
                           </span>
                         ) : (
                           "—"
                         )}
                       </td>
                       <td style={{ padding: "12px", textTransform: "capitalize" }}>
-                        {customer.quizRegion || "—"}
+                        {customer.state || "—"}
                       </td>
                       <td style={{ padding: "12px", color: "#6d7175" }}>
                         {formatDate(customer.quizDate)}
@@ -629,7 +663,7 @@ export default function QuizResultsPage() {
                 </tbody>
               </table>
             </div>
-          </s-box>
+          </div>
         )}
       </s-section>
       
@@ -712,33 +746,32 @@ export default function QuizResultsPage() {
                   <div>
                     <div style={{ fontSize: "12px", color: "#6d7175", marginBottom: "4px" }}>Score</div>
                     <div style={{ fontSize: "24px", fontWeight: 700 }}>
-                      {selectedCustomer.quizScore !== null ? `${selectedCustomer.quizScore}/60` : "—"}
+                      {selectedCustomer.quizScore !== null ? `${selectedCustomer.quizScore}` : "—"}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: "12px", color: "#6d7175", marginBottom: "4px" }}>Severity</div>
+                    <div style={{ fontSize: "12px", color: "#6d7175", marginBottom: "4px" }}>Score Bracket</div>
                     <div>
-                      {selectedCustomer.severityLevel && (
+                      {selectedCustomer.scoreBracket && (
                         <span
                           style={{
                             display: "inline-block",
                             padding: "4px 10px",
                             borderRadius: "4px",
-                            backgroundColor: getSeverityColor(selectedCustomer.severityLevel) + "20",
-                            color: getSeverityColor(selectedCustomer.severityLevel),
+                            backgroundColor: getBracketColor(selectedCustomer.scoreBracket) + "20",
+                            color: getBracketColor(selectedCustomer.scoreBracket),
                             fontWeight: 600,
-                            textTransform: "capitalize",
                           }}
                         >
-                          {selectedCustomer.severityLevel}
+                          {selectedCustomer.scoreBracket}
                         </span>
                       )}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: "12px", color: "#6d7175", marginBottom: "4px" }}>Region</div>
+                    <div style={{ fontSize: "12px", color: "#6d7175", marginBottom: "4px" }}>State</div>
                     <div style={{ fontSize: "16px", fontWeight: 500, textTransform: "capitalize" }}>
-                      {selectedCustomer.quizRegion || "—"}
+                      {selectedCustomer.state || "—"}
                     </div>
                   </div>
                   <div>
@@ -797,23 +830,22 @@ export default function QuizResultsPage() {
                             fontWeight: 600,
                             minWidth: "50px",
                           }}>
-                            {entry.score}/60
+                            {entry.score}
                           </span>
                           <span
                             style={{
                               padding: "2px 8px",
                               borderRadius: "4px",
-                              backgroundColor: getSeverityColor(entry.severity) + "20",
-                              color: getSeverityColor(entry.severity),
+                              backgroundColor: getBracketColor(entry.score_bracket) + "20",
+                              color: getBracketColor(entry.score_bracket),
                               fontWeight: 500,
-                              textTransform: "capitalize",
                               fontSize: "12px",
                             }}
                           >
-                            {entry.severity}
+                            {entry.score_bracket}
                           </span>
                           <span style={{ color: "#6d7175", textTransform: "capitalize" }}>
-                            {entry.region}
+                            {entry.state}
                           </span>
                         </div>
                         <div style={{ fontSize: "13px", color: "#6d7175" }}>

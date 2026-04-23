@@ -58,7 +58,9 @@ export async function getProductByHandle(handle: string): Promise<ShopifyProduct
 /**
  * Convert region value to product handle
  * Maps region values to product handles
- * 
+ *
+ * @deprecated Legacy US-region quiz flow removed; use `PRODUCT_HANDLE_BY_STATE` in
+ *   `app/lib/quiz/product-links.ts` for TN/TX storefront links. Kept for reference only.
  * @param region - Region value (e.g., 'northwest', 'southeast')
  * @returns Product handle (e.g., 'northwest-alledrops')
  */

@@ -6,10 +6,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QuizContainer } from "./components/quiz/QuizContainer";
-import {
-  getHardcodedQuestions,
-  groupQuestionsByCategory,
-} from "./lib/quiz/questions";
 // Import theme CSS that inherits from Shopify theme variables
 import "./styles/quiz-theme.css";
 
@@ -24,15 +20,10 @@ function initQuiz() {
     
     container.setAttribute("data-quiz-initialized", "true");
     
-    // Load questions
-    const questions = getHardcodedQuestions();
-    const categories = groupQuestionsByCategory(questions);
-    
-    // Render React app
     const root = createRoot(container);
     root.render(
       <StrictMode>
-        <QuizContainer categories={categories} />
+        <QuizContainer />
       </StrictMode>
     );
   });

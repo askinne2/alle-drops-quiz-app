@@ -5,7 +5,6 @@
  */
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
-import { data } from "react-router";
 import { unauthenticated } from "../shopify.server";
 import { validateQuizData, type QuizSubmissionData } from "../lib/quiz-validation";
 import { findOrCreateCustomer } from "../lib/shopify/customers";
@@ -91,11 +90,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       if (requestData.completion_time) {
         requestData.completion_time = Number(requestData.completion_time);
       }
-      if (requestData.quiz_responses && typeof requestData.quiz_responses === "string") {
+      if (requestData.answers && typeof requestData.answers === "string") {
         try {
-          requestData.quiz_responses = JSON.parse(requestData.quiz_responses as string);
+          requestData.answers = JSON.parse(requestData.answers as string);
         } catch {
-          requestData.quiz_responses = (requestData.quiz_responses as string).split(",").map(Number);
+          requestData.answers = {};
         }
       }
     }
@@ -198,8 +197,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         const metafieldData: QuizMetafieldData = {
           symptom_profile_id: quizData.symptom_profile_id,
           quiz_score: quizData.quiz_score,
-          quiz_region: quizData.quiz_region,
-          severity_level: quizData.severity_level,
+          state: quizData.state,
+          score_bracket: quizData.score_bracket,
           quiz_date: quizData.quiz_date || new Date().toISOString(),
         };
 
@@ -240,22 +239,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     if (process.env.GOOGLE_SHEETS_WEB_APP_URL) {
       try {
-        // Build row data matching Google Sheets HEADERS:
-        // Profile ID, Name, Email, Score, Severity, Region, Date, Time, 
-        // then all symptom responses, then timing info
+        // Google Sheets row (update Apps Script column headers to match):
+        // profile_id, name, email, phone, dob, state, score, score_bracket, date, completion_time,
+        // answers_json, personal_history_json, family_history_json
         const rowData = [
           quizData.symptom_profile_id,
-          quizData.customer_name || "",
+          quizData.name,
           quizData.email,
+          quizData.phone,
+          quizData.dob,
+          quizData.state,
           quizData.quiz_score,
-          quizData.severity_level,
-          quizData.quiz_region,
+          quizData.score_bracket,
           quizDate,
           quizData.completion_time || 0,
-          ...(quizData.quiz_responses || []),
-          // Add timing fields if present
-          quizData.timing_seasonal || "",
-          quizData.timing_duration || "",
+          JSON.stringify(quizData.answers ?? {}),
+          JSON.stringify(quizData.personal_history ?? []),
+          JSON.stringify(quizData.family_history ?? []),
         ];
 
         const sheetsResult = await submitToGoogleSheets(

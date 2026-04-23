@@ -38,17 +38,16 @@ export default function Index() {
         </s-paragraph>
         <s-unordered-list>
           <s-list-item>
-            <s-text fontWeight="bold">POST /api/quiz/submit</s-text> - Submit quiz results
+            <strong>POST /api/quiz/submit</strong> — Submit quiz results
           </s-list-item>
         </s-unordered-list>
       </s-section>
 
       <s-section slot="aside" heading="App Features">
         <s-unordered-list>
-          <s-list-item>35 clinical questions across 5 symptom categories</s-list-item>
-          <s-list-item>Smart scoring algorithm (0-60 points)</s-list-item>
-          <s-list-item>Severity classification (minimal/mild/moderate/severe)</s-list-item>
-          <s-list-item>Regional product matching (7 US regions)</s-list-item>
+          <s-list-item>Clinical questionnaire (TN/TX patients)</s-list-item>
+          <s-list-item>Multi-type scoring with outcome brackets (0–2, 3–6, 7+)</s-list-item>
+          <s-list-item>State-specific product paths</s-list-item>
           <s-list-item>Customer metafield storage</s-list-item>
           <s-list-item>Google Sheets integration (optional)</s-list-item>
         </s-unordered-list>

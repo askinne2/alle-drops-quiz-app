@@ -82,8 +82,8 @@ function renderQuizHistory(root, metafields) {
   const latestQuiz = {
     profileId: metafields?.symptom_profile_id?.value || null,
     score: metafields?.quiz_score?.value ? parseInt(metafields.quiz_score.value, 10) : null,
-    severity: metafields?.severity_level?.value || null,
-    region: metafields?.quiz_region?.value || null,
+    scoreBracket: metafields?.score_bracket?.value || metafields?.severity_level?.value || null,
+    state: metafields?.state?.value || metafields?.quiz_region?.value || null,
     date: metafields?.quiz_date?.value || null,
   };
   
@@ -95,7 +95,7 @@ function renderQuizHistory(root, metafields) {
       <s-section heading="Symptom Assessment History">
         <s-stack direction="block" gap="base">
           <s-text>You haven't completed any symptom assessments yet.</s-text>
-          <s-text>Take our assessment to get personalized allergy drop recommendations for your region.</s-text>
+          <s-text>Take our assessment for personalized recommendations.</s-text>
         </s-stack>
       </s-section>
     `;
@@ -114,26 +114,25 @@ function renderQuizHistory(root, metafields) {
       content += `
         <s-stack direction="block" gap="small-200">
           <s-text size="small" appearance="subdued">Score</s-text>
-          <s-text emphasis="bold">${latestQuiz.score}/60</s-text>
+          <s-text emphasis="bold">${latestQuiz.score}</s-text>
         </s-stack>
       `;
     }
     
-    if (latestQuiz.severity) {
-      const severityLabel = latestQuiz.severity.charAt(0).toUpperCase() + latestQuiz.severity.slice(1);
+    if (latestQuiz.scoreBracket) {
       content += `
         <s-stack direction="block" gap="small-200">
-          <s-text size="small" appearance="subdued">Severity</s-text>
-          <s-text emphasis="bold">${severityLabel}</s-text>
+          <s-text size="small" appearance="subdued">Score Bracket</s-text>
+          <s-text emphasis="bold">${latestQuiz.scoreBracket}</s-text>
         </s-stack>
       `;
     }
     
-    if (latestQuiz.region) {
+    if (latestQuiz.state) {
       content += `
         <s-stack direction="block" gap="small-200">
-          <s-text size="small" appearance="subdued">Region</s-text>
-          <s-text>${latestQuiz.region}</s-text>
+          <s-text size="small" appearance="subdued">State</s-text>
+          <s-text>${latestQuiz.state}</s-text>
         </s-stack>
       `;
     }

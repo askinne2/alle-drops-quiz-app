@@ -6,8 +6,8 @@
 export interface QuizMetafieldData {
   symptom_profile_id: string;
   quiz_score: number;
-  quiz_region: string;
-  severity_level: string;
+  state: string;
+  score_bracket: string;
   quiz_date?: string;
 }
 
@@ -15,19 +15,13 @@ export interface QuizHistoryEntry {
   profile_id: string;
   date: string;
   score: number;
-  severity: string;
-  region: string;
+  score_bracket: string;
+  state: string;
 }
 
 /**
  * Get a customer metafield value
  * Migrated from Cloudflare Worker getCustomerMetafield()
- * 
- * @param admin - Shopify Admin API client
- * @param customerId - Shopify customer GID
- * @param namespace - Metafield namespace (e.g., 'alledrops')
- * @param key - Metafield key (e.g., 'quiz_history')
- * @returns Metafield value as JSON string or null
  */
 export async function getCustomerMetafield(
   admin: { graphql: Function },
@@ -64,20 +58,13 @@ export async function getCustomerMetafield(
 
 /**
  * Update customer metafields with quiz data
- * Migrated from Cloudflare Worker updateCustomerMetafields()
- * 
- * @param admin - Shopify Admin API client
- * @param customerId - Shopify customer GID
- * @param data - Quiz data to store
- * @param existingHistoryJson - Existing quiz_history JSON string (optional)
- * @returns Success status and history count
  */
 export async function updateCustomerMetafields(
   admin: { graphql: Function },
   customerId: string,
   data: QuizMetafieldData,
   existingHistoryJson?: string | null
-): Promise<{ success: boolean; error?: string; historyCount?: number; details?: any }> {
+): Promise<{ success: boolean; error?: string; historyCount?: number; details?: unknown }> {
   const mutation = `
     mutation setCustomerMetafields($metafields: [MetafieldsSetInput!]!) {
       metafieldsSet(metafields: $metafields) {
@@ -95,39 +82,39 @@ export async function updateCustomerMetafields(
     }
   `;
 
-  // Parse existing quiz history or create empty array
   let quizHistory: QuizHistoryEntry[] = [];
   if (existingHistoryJson) {
     try {
       const parsed = JSON.parse(existingHistoryJson);
       if (Array.isArray(parsed)) {
-        quizHistory = parsed;
+        quizHistory = parsed.map((entry: Record<string, unknown>) => ({
+          profile_id: String(entry.profile_id ?? ""),
+          date: String(entry.date ?? ""),
+          score: Number(entry.score ?? 0),
+          score_bracket: String(entry.score_bracket ?? entry.severity ?? ""),
+          state: String(entry.state ?? entry.region ?? ""),
+        }));
       }
-    } catch (e) {
-      console.warn("Failed to parse existing quiz history, starting fresh");
+    } catch {
       quizHistory = [];
     }
   }
 
-  // Add new quiz entry to history (store minimal data - full data is in Google Sheets)
   const quizEntry: QuizHistoryEntry = {
     profile_id: data.symptom_profile_id,
     date: data.quiz_date || new Date().toISOString(),
     score: data.quiz_score,
-    severity: data.severity_level,
-    region: data.quiz_region,
+    score_bracket: data.score_bracket,
+    state: data.state,
   };
 
-  // Add to beginning of array (most recent first)
   quizHistory.unshift(quizEntry);
 
-  // Limit history to last 50 quizzes to prevent metafield size issues
   if (quizHistory.length > 50) {
     quizHistory = quizHistory.slice(0, 50);
   }
 
   const metafields = [
-    // Latest quiz data (for quick access)
     {
       ownerId: customerId,
       namespace: "alledrops",
@@ -145,9 +132,9 @@ export async function updateCustomerMetafields(
     {
       ownerId: customerId,
       namespace: "alledrops",
-      key: "quiz_region",
+      key: "state",
       type: "single_line_text_field",
-      value: data.quiz_region,
+      value: data.state,
     },
     {
       ownerId: customerId,
@@ -159,11 +146,10 @@ export async function updateCustomerMetafields(
     {
       ownerId: customerId,
       namespace: "alledrops",
-      key: "severity_level",
+      key: "score_bracket",
       type: "single_line_text_field",
-      value: data.severity_level,
+      value: data.score_bracket,
     },
-    // Quiz history (array of quiz references)
     {
       ownerId: customerId,
       namespace: "alledrops",
@@ -200,6 +186,3 @@ export async function updateCustomerMetafields(
     };
   }
 }
-
-
-

@@ -45,8 +45,5 @@ export default defineConfig({
       "~": new URL("./app", import.meta.url).pathname,
     },
   },
-  css: {
-    inject: false, // Don't inject - we want a separate CSS file
-  },
 });
 
