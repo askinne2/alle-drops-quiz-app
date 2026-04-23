@@ -1596,3 +1596,18 @@
     font-size: var(--font-body-size, 1.4rem);
   }
 }
+
+/* Horizontal likert: hide native radio; label supplies the control */
+.questionCard__options .questionCard__option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.questionCard__options .questionCard__option:has(input[type="radio"]:focus-visible) {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
