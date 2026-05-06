@@ -131,7 +131,9 @@
       // Use Cloudflare Worker if configured, otherwise fall back to app API
       apiEndpoint: cloudflareWorkerUrl || (appUrl + '/api/quiz/submit'),
       cloudflareWorkerUrl: cloudflareWorkerUrl,
-      testMode: {{ block.settings.enable_test_mode | json }}
+      testMode: {{ block.settings.enable_test_mode | json }},
+      consultRedirectUrl: {{ block.settings.consult_redirect_url | json }},
+      testOptionsRedirectUrl: {{ block.settings.test_options_redirect_url | json }}
     };
   })();
 </script>
@@ -194,6 +196,22 @@
       "label": "Enable Test Mode",
       "default": false,
       "info": "Shows a test button to auto-complete the quiz (for development/testing)"
+    },
+    {
+      "type": "header",
+      "content": "Redirects"
+    },
+    {
+      "type": "url",
+      "id": "consult_redirect_url",
+      "label": "Consult redirect URL",
+      "info": "Where to send users when they choose to schedule a consultation (defaults to /pages/consult if blank)."
+    },
+    {
+      "type": "url",
+      "id": "test_options_redirect_url",
+      "label": "Test options redirect URL",
+      "info": "Where to send users when they choose allergy testing first (defaults to /pages/test-options if blank)."
     },
     {
       "type": "header",
