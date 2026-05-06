@@ -65,6 +65,9 @@ tmp/
 temp/
 *.tmp
 
+# Documents (do not commit)
+docs/2026-AOD questionnaire.pdf
+
 # Fly.io (keep fly.toml but ignore local state)
 .fly/
 
