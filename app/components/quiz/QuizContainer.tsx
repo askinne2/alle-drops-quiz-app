@@ -39,6 +39,17 @@ const isTestModeEnabled = () => {
   return params.get("test") === "1" || (window as unknown as { AlleDropsQuizConfig?: { testMode?: boolean } }).AlleDropsQuizConfig?.testMode === true;
 };
 
+function getRedirectUrl(kind: "consult" | "testOptions"): string {
+  if (typeof window === "undefined") return "";
+  const cfg = (
+    window as unknown as {
+      AlleDropsQuizConfig?: { consultRedirectUrl?: string; testOptionsRedirectUrl?: string };
+    }
+  ).AlleDropsQuizConfig;
+  if (!cfg) return "";
+  return kind === "consult" ? (cfg.consultRedirectUrl || "") : (cfg.testOptionsRedirectUrl || "");
+}
+
 async function postQuiz(payload: Record<string, unknown>): Promise<{ success: boolean; error?: string }> {
   const apiEndpoint =
     (typeof window !== "undefined" &&
@@ -182,7 +193,7 @@ export function QuizContainer() {
         return;
       }
     }
-    window.location.assign("/pages/consult");
+    window.location.assign(getRedirectUrl("consult") || "/pages/consult");
   }, [submitPayload, patientState, symptomProfileId, score, scoreBracket, savedToServer]);
 
   const handleTestFirst = useCallback(async () => {
@@ -195,7 +206,7 @@ export function QuizContainer() {
       alert(e instanceof Error ? e.message : "Could not save assessment. Please try again.");
       return;
     }
-    window.location.assign("/pages/test-options");
+    window.location.assign(getRedirectUrl("testOptions") || "/pages/test-options");
   }, [submitPayload, patientState, symptomProfileId, score, scoreBracket]);
 
   const handleProceedToPurchase = useCallback(() => {
@@ -211,7 +222,7 @@ export function QuizContainer() {
       setConsentChecked(false);
       setStep("medical_history");
     } else {
-      window.location.assign("/pages/test-options");
+      window.location.assign(getRedirectUrl("testOptions") || "/pages/test-options");
     }
   }, []);
 
