@@ -1,0 +1,185 @@
+/**
+ * Submissions storage — Cloud SQL Postgres.
+ *
+ * All PHI for AlleDrops symptom assessments lives in this table.
+ * NO PHI may be written to Shopify metafields.
+ *
+ * Lookups for the Customer Account UI extension can use either
+ * customer_id_shopify (preferred) or patient_email (fallback for
+ * submissions where Admin API auth was unavailable at submit time).
+ */
+import { getPool } from "./db";
+import type { QuizSubmissionData } from "./quiz-validation";
+
+export interface InsertSubmissionInput extends QuizSubmissionData {
+  customer_id_shopify?: string | null;
+  consent_version?: string | null;
+  consent_ip_address?: string | null;
+  consent_user_agent?: string | null;
+}
+
+export interface SubmissionRow {
+  id: string;
+  symptom_profile_id: string;
+  created_at: string;
+}
+
+export interface SubmissionLedgerEntry {
+  id: string;
+  symptom_profile_id: string;
+  created_at: string;
+  patient_state: string;
+}
+
+/** Typed full row returned by getSubmissionByIdForCustomer. */
+export interface SubmissionFullRow {
+  id: string;
+  symptom_profile_id: string;
+  customer_id_shopify: string | null;
+  patient_name: string;
+  patient_dob: string;       // DATE returned as string by pg
+  patient_email: string;
+  patient_phone: string;
+  patient_state: string;
+  quiz_score: number;
+  score_bracket: string;
+  answers_json: Record<string, unknown>;
+  personal_history_json: string[] | null;
+  family_history_json: string[] | null;
+  consent_version: string | null;
+  consent_accepted_at: string | null;
+  consent_ip_address: string | null;
+  consent_user_agent: string | null;
+  completion_time_seconds: number | null;
+  created_at: string;
+}
+
+/** Insert a new symptom assessment submission. Returns id + profile_id + timestamp. */
+export async function insertSubmission(
+  input: InsertSubmissionInput
+): Promise<SubmissionRow> {
+  const pool = getPool();
+  const sql = `
+    INSERT INTO submissions (
+      customer_id_shopify,
+      symptom_profile_id,
+      patient_name,
+      patient_dob,
+      patient_email,
+      patient_phone,
+      patient_state,
+      quiz_score,
+      score_bracket,
+      answers_json,
+      personal_history_json,
+      family_history_json,
+      consent_version,
+      consent_accepted_at,
+      consent_ip_address,
+      consent_user_agent,
+      completion_time_seconds
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+    )
+    RETURNING id, symptom_profile_id, created_at
+  `;
+
+  const params = [
+    input.customer_id_shopify ?? null,
+    input.symptom_profile_id,
+    input.name,
+    input.dob,
+    input.email,
+    input.phone,
+    input.state,
+    input.quiz_score,
+    input.score_bracket,
+    JSON.stringify(input.answers ?? {}),
+    input.personal_history && input.personal_history.length > 0
+      ? JSON.stringify(input.personal_history)
+      : null,
+    input.family_history && input.family_history.length > 0
+      ? JSON.stringify(input.family_history)
+      : null,
+    input.consent_version ?? null,
+    input.consent_version ? new Date() : null,
+    input.consent_ip_address ?? null,
+    input.consent_user_agent ?? null,
+    input.completion_time ?? null,
+  ];
+
+  const result = await pool.query<SubmissionRow>(sql, params);
+  return result.rows[0];
+}
+
+/** Backfill customer_id_shopify on rows that previously matched only by email. */
+export async function backfillCustomerIdByEmail(
+  email: string,
+  customer_id_shopify: string
+): Promise<number> {
+  const pool = getPool();
+  const sql = `
+    UPDATE submissions
+       SET customer_id_shopify = $2
+     WHERE patient_email = $1
+       AND customer_id_shopify IS NULL
+  `;
+  const result = await pool.query(sql, [email, customer_id_shopify]);
+  return result.rowCount ?? 0;
+}
+
+/** Ledger view for Customer Account UI extension — non-PHI list of completion records. */
+export async function listSubmissionLedger(args: {
+  customer_id_shopify?: string | null;
+  email?: string | null;
+}): Promise<SubmissionLedgerEntry[]> {
+  const pool = getPool();
+  if (args.customer_id_shopify) {
+    const result = await pool.query<SubmissionLedgerEntry>(
+      `SELECT id, symptom_profile_id, created_at, patient_state
+         FROM submissions
+        WHERE customer_id_shopify = $1
+        ORDER BY created_at DESC`,
+      [args.customer_id_shopify]
+    );
+    return result.rows;
+  }
+  if (args.email) {
+    const result = await pool.query<SubmissionLedgerEntry>(
+      `SELECT id, symptom_profile_id, created_at, patient_state
+         FROM submissions
+        WHERE patient_email = $1
+        ORDER BY created_at DESC`,
+      [args.email]
+    );
+    return result.rows;
+  }
+  return [];
+}
+
+/** Full row for PDF generation. Authorization is the caller's responsibility. */
+export async function getSubmissionByIdForCustomer(args: {
+  id: string;
+  customer_id_shopify?: string | null;
+  email?: string | null;
+}): Promise<SubmissionFullRow | null> {
+  const pool = getPool();
+  // Require ID match AND ownership match (either customer_id or email).
+  const sql = `
+    SELECT *
+      FROM submissions
+     WHERE id = $1
+       AND (
+         ($2::text IS NOT NULL AND customer_id_shopify = $2)
+         OR
+         ($3::text IS NOT NULL AND patient_email = $3)
+       )
+     LIMIT 1
+  `;
+  const result = await pool.query<SubmissionFullRow>(sql, [
+    args.id,
+    args.customer_id_shopify ?? null,
+    args.email ?? null,
+  ]);
+  return result.rows[0] ?? null;
+}

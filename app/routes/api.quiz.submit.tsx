@@ -1,345 +1,190 @@
 /**
  * Quiz Submission API Route
- * Handles quiz submission from theme blocks
- * Includes CORS headers for cross-origin requests
+ *
+ * Flow:
+ *   1. Validate payload.
+ *   2. Resolve Shopify shop + (optionally) customer ID via Admin API.
+ *   3. INSERT full PHI row to Cloud SQL.
+ *   4. Update non-PHI metafields on the customer (last_completed_at, quiz_count) — best effort.
+ *
+ * HIPAA: PHI is written ONLY to Cloud SQL. NO PHI in Shopify metafields.
  */
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { unauthenticated } from "../shopify.server";
 import { validateQuizData, type QuizSubmissionData } from "../lib/quiz-validation";
 import { findOrCreateCustomer } from "../lib/shopify/customers";
-import {
-  getCustomerMetafield,
-  updateCustomerMetafields,
-  type QuizMetafieldData,
-} from "../lib/shopify/metafields";
-import { submitToGoogleSheets } from "../lib/google-sheets";
+import { updateNonPhiQuizMetafields } from "../lib/shopify/metafields";
+import { insertSubmission } from "../lib/submissions";
 
-// CORS headers for cross-origin requests from Shopify stores
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, X-Shopify-Shop-Domain",
 };
 
-// Handle OPTIONS preflight requests
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
-
-  return new Response(
-    JSON.stringify({
-      message: "Quiz submission endpoint. Use POST to submit quiz data.",
-      method: "POST",
-      endpoint: "/api/quiz/submit",
-    }),
-    {
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders,
-      },
-    }
-  );
+  return jsonResponse({
+    message: "Quiz submission endpoint. Use POST to submit quiz data.",
+    method: "POST",
+    endpoint: "/api/quiz/submit",
+  });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  // Handle OPTIONS preflight
   if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
-
   if (request.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      {
-        status: 405,
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders,
-        },
-      }
-    );
+    return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
+  // ---------- 1. Parse + validate ----------
+  let requestData: unknown;
   try {
-    // Parse request body first (before any authentication attempts)
-    let requestData;
-    const contentType = request.headers.get("content-type");
-    
-    if (contentType?.includes("application/json")) {
+    const contentType = request.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
       requestData = await request.json();
     } else {
-      // Handle form data
       const formData = await request.formData();
       const entries: Record<string, unknown> = {};
-      for (const [key, value] of formData.entries()) {
-        entries[key] = value;
+      for (const [key, value] of formData.entries()) entries[key] = value;
+      if (typeof entries.quiz_score === "string") entries.quiz_score = Number(entries.quiz_score);
+      if (typeof entries.completion_time === "string") {
+        entries.completion_time = Number(entries.completion_time);
+      }
+      if (typeof entries.answers === "string") {
+        try {
+          entries.answers = JSON.parse(entries.answers);
+        } catch {
+          entries.answers = {};
+        }
       }
       requestData = entries;
-      
-      if (requestData.quiz_score) {
-        requestData.quiz_score = Number(requestData.quiz_score);
-      }
-      if (requestData.completion_time) {
-        requestData.completion_time = Number(requestData.completion_time);
-      }
-      if (requestData.answers && typeof requestData.answers === "string") {
-        try {
-          requestData.answers = JSON.parse(requestData.answers as string);
-        } catch {
-          requestData.answers = {};
-        }
-      }
     }
+  } catch (err) {
+    console.error("[submit] parse error:", err);
+    return jsonResponse({ error: "Could not parse request body" }, 400);
+  }
 
-    // Validate data first
-    const validation = validateQuizData(requestData);
-    if (!validation.valid) {
-      return new Response(
-        JSON.stringify({ error: validation.error }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders,
-          },
-        }
-      );
-    }
+  const validation = validateQuizData(requestData);
+  if (!validation.valid) {
+    return jsonResponse({ error: validation.error }, 400);
+  }
+  const quizData = requestData as QuizSubmissionData;
 
-    const quizData = requestData as QuizSubmissionData;
+  // ---------- 2. Resolve Shopify shop + customer (best effort) ----------
+  const origin = request.headers.get("origin") || request.headers.get("referer") || "";
+  const myshopifyMatch = origin.match(/([^.\/]+\.myshopify\.com)/);
+  const shop =
+    myshopifyMatch?.[1] ||
+    request.headers.get("x-shopify-shop-domain") ||
+    "";
 
-    // Get shop domain from request
-    const origin = request.headers.get("origin") || request.headers.get("referer") || "";
-    const shopMatch = origin.match(/https?:\/\/([^/]+)/);
-    let shop = shopMatch?.[1] || request.headers.get("x-shopify-shop-domain") || "";
-    
-    // Clean up shop domain
-    if (shop && !shop.includes(".myshopify.com")) {
-      // Try to extract myshopify domain
-      const myshopifyMatch = origin.match(/([^.]+\.myshopify\.com)/);
-      if (myshopifyMatch) {
-        shop = myshopifyMatch[1];
-      }
-    }
+  let customerIdShopify: string | null = null;
+  let customerLinkSkipped = false;
+  let admin: { graphql: (q: string, opts?: { variables?: Record<string, unknown> }) => Promise<{ json: () => Promise<unknown> }> } | null = null;
 
-    if (!shop) {
-      // Return success without customer update if no shop context
-      // This allows the quiz to work without full Shopify integration
-      console.log("No shop domain found, skipping customer metafield update");
-      
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "Quiz submitted (no shop context - customer update skipped)",
-          customerId: null,
-        }),
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders,
-          },
-        }
-      );
-    }
-
-    // Try to get admin API access
-    let admin;
+  if (shop) {
     try {
       const result = await unauthenticated.admin(shop);
-      admin = result.admin;
-    } catch (authError) {
-      console.error("Admin auth failed:", authError);
-      // Return success without customer update
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "Quiz submitted (auth unavailable - customer update skipped)",
-          customerId: null,
-        }),
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders,
-          },
-        }
-      );
+      // The Shopify admin client matches the AdminLike interface used in helpers.
+      admin = result.admin as unknown as typeof admin;
+    } catch (authErr) {
+      console.warn("[submit] admin auth unavailable:", authErr);
+      customerLinkSkipped = true;
     }
 
-    // Try to find or create customer and update metafields
-    // This may fail if app doesn't have protected customer data access
-    let customerId: string | null = null;
-    let historyCount = 0;
-    let customerUpdateSkipped = false;
-
-    try {
-      const customer = await findOrCreateCustomer(admin, quizData.email);
-      
-      if (customer) {
-        customerId = customer.id;
-        
-        // Get existing quiz history
-        const existingHistory = await getCustomerMetafield(
-          admin,
-          customer.id,
-          "alledrops",
-          "quiz_history"
-        );
-
-        // Prepare metafield data
-        const metafieldData: QuizMetafieldData = {
-          symptom_profile_id: quizData.symptom_profile_id,
-          quiz_score: quizData.quiz_score,
-          state: quizData.state,
-          score_bracket: quizData.score_bracket,
-          quiz_date: quizData.quiz_date || new Date().toISOString(),
-        };
-
-        // Update customer metafields
-        const metafieldResult = await updateCustomerMetafields(
-          admin,
-          customer.id,
-          metafieldData,
-          existingHistory
-        );
-
-        if (metafieldResult.success) {
-          historyCount = metafieldResult.historyCount || 0;
-        } else {
-          console.warn("Metafield update failed (non-critical):", metafieldResult.error);
-        }
-      }
-    } catch (customerError: unknown) {
-      // Check if this is a protected customer data error
-      const errorMessage = customerError instanceof Error ? customerError.message : String(customerError);
-      
-      if (errorMessage.includes("not approved to access the Customer object") ||
-          errorMessage.includes("protected-customer-data")) {
-        console.warn("⚠️ Protected Customer Data access not configured. Quiz saved without customer link.");
-        console.warn("   To enable customer metafields, request access at: https://shopify.dev/docs/apps/launch/protected-customer-data");
-        customerUpdateSkipped = true;
-      } else {
-        console.error("Customer operation failed (non-critical):", customerError);
-        customerUpdateSkipped = true;
-      }
-    }
-
-    // Submit to Google Sheets (REQUIRED for HIPAA-compliant full data storage)
-    // Full quiz responses are stored in Google Sheets, only summary is stored in Shopify
-    const quizDate = quizData.quiz_date || new Date().toISOString();
-    let googleSheetsSuccess = false;
-    let googleSheetsError: string | null = null;
-
-    if (process.env.GOOGLE_SHEETS_WEB_APP_URL) {
+    if (admin) {
       try {
-        // Google Sheets row (update Apps Script column headers to match):
-        // profile_id, name, email, phone, dob, state, score, score_bracket, date, completion_time,
-        // answers_json, personal_history_json, family_history_json
-        const rowData = [
-          quizData.symptom_profile_id,
-          quizData.name,
-          quizData.email,
-          quizData.phone,
-          quizData.dob,
-          quizData.state,
-          quizData.quiz_score,
-          quizData.score_bracket,
-          quizDate,
-          quizData.completion_time || 0,
-          JSON.stringify(quizData.answers ?? {}),
-          JSON.stringify(quizData.personal_history ?? []),
-          JSON.stringify(quizData.family_history ?? []),
-        ];
-
-        const sheetsResult = await submitToGoogleSheets(
-          rowData,
-          process.env.GOOGLE_SHEETS_WEB_APP_URL
-        );
-        
-        googleSheetsSuccess = sheetsResult.success;
-        if (!sheetsResult.success) {
-          googleSheetsError = sheetsResult.error || "Unknown error";
-          console.warn("⚠️ Google Sheets submission failed:", sheetsResult.error);
+        const customer = await findOrCreateCustomer(admin, quizData.email);
+        if (customer?.id) customerIdShopify = customer.id;
+      } catch (custErr: unknown) {
+        const msg = custErr instanceof Error ? custErr.message : String(custErr);
+        if (
+          msg.includes("not approved to access the Customer object") ||
+          msg.includes("protected-customer-data")
+        ) {
+          console.warn(
+            "[submit] Protected Customer Data not approved — submission stored without customer link."
+          );
         } else {
-          console.log("✅ Google Sheets submission successful, row:", sheetsResult.rowNumber);
+          console.warn("[submit] customer lookup failed:", custErr);
         }
-      } catch (sheetsError) {
-        googleSheetsError = sheetsError instanceof Error ? sheetsError.message : "Unknown error";
-        console.error("❌ Google Sheets submission error:", sheetsError);
+        customerLinkSkipped = true;
       }
-    } else {
-      console.warn("⚠️ GOOGLE_SHEETS_WEB_APP_URL not configured. Full quiz responses not being stored!");
-      googleSheetsError = "Google Sheets URL not configured";
     }
+  } else {
+    customerLinkSkipped = true;
+  }
 
-    // Success response - quiz is saved even if some updates were skipped
-    let message = "Quiz submitted successfully";
-    const warnings: string[] = [];
-    
-    if (customerUpdateSkipped) {
-      warnings.push("Customer metafields skipped - protected data access needed");
-    }
-    if (!googleSheetsSuccess) {
-      warnings.push(`Google Sheets: ${googleSheetsError || "submission failed"}`);
-    }
-    
-    if (warnings.length > 0) {
-      message = `Quiz submitted with warnings: ${warnings.join("; ")}`;
-    }
-
-    // Log detailed results
-    console.log("📊 Quiz Submission Results:", {
-      customerId,
-      customerUpdateSkipped,
-      metafieldHistoryCount: historyCount,
-      googleSheetsSuccess,
-      googleSheetsError,
-      message,
+  // ---------- 3. INSERT to Cloud SQL (PHI) ----------
+  let submissionId: string;
+  let submissionCreatedAt: string;
+  try {
+    const inserted = await insertSubmission({
+      ...quizData,
+      customer_id_shopify: customerIdShopify,
+      consent_version: null, // wired up when ConsentStep is integrated with PDF version
+      consent_ip_address:
+        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        request.headers.get("cf-connecting-ip") ||
+        null,
+      consent_user_agent: request.headers.get("user-agent"),
     });
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        customerId,
-        message,
-        historyCount,
-        customerUpdateSkipped,
-        googleSheetsSuccess,
-        googleSheetsError,
-        // Debug info
-        debug: {
-          envGoogleSheetsConfigured: !!process.env.GOOGLE_SHEETS_WEB_APP_URL,
-          timestamp: new Date().toISOString(),
-        }
-      }),
+    submissionId = inserted.id;
+    submissionCreatedAt = inserted.created_at;
+  } catch (dbErr) {
+    console.error("[submit] Cloud SQL INSERT failed:", dbErr);
+    return jsonResponse(
       {
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders,
-        },
-      }
-    );
-  } catch (error) {
-    console.error("Quiz submission error:", error);
-    return new Response(
-      JSON.stringify({
-        error: "Internal server error",
-        details: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders,
-        },
-      }
+        error: "Could not save assessment",
+        details: dbErr instanceof Error ? dbErr.message : "Unknown error",
+      },
+      500
     );
   }
+
+  // ---------- 4. Best-effort non-PHI metafields ----------
+  let metafieldsSuccess = false;
+  let quizCount: number | undefined;
+  if (admin && customerIdShopify) {
+    const completedAt = quizData.quiz_date ? new Date(quizData.quiz_date) : new Date();
+    const result = await updateNonPhiQuizMetafields(admin, customerIdShopify, completedAt);
+    metafieldsSuccess = result.success;
+    quizCount = result.quizCount;
+    if (!result.success) {
+      console.warn("[submit] non-PHI metafield update failed:", result.error);
+    }
+  }
+
+  // ---------- 5. Response ----------
+  console.log("[submit] OK", {
+    submissionId,
+    customerLinked: !!customerIdShopify,
+    customerLinkSkipped,
+    metafieldsSuccess,
+  });
+
+  return jsonResponse({
+    success: true,
+    submission_id: submissionId,
+    symptom_profile_id: quizData.symptom_profile_id,
+    created_at: submissionCreatedAt,
+    customer_linked: !!customerIdShopify,
+    quiz_count: quizCount ?? null,
+    warnings: customerLinkSkipped
+      ? ["Customer not linked at submission time — will be linked on first dashboard view."]
+      : [],
+  });
 };

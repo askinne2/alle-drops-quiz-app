@@ -1,8 +1,13 @@
 /**
  * Quiz data validation
  *
- * SECURITY / HIPAA: Date of birth (dob) is validated here and may be sent to Google Sheets only.
- * DOB must NEVER be stored in Shopify customer metafields, customer record fields, or any Shopify Admin API payload.
+ * SECURITY / HIPAA: All identity fields (name, dob, email, phone) and all
+ * health information (score, bracket, answers, history) are PHI. They are
+ * stored in Cloud SQL Postgres only — see app/lib/submissions.ts.
+ *
+ * NEVER write any of these fields to Shopify customer metafields, customer
+ * record fields, or any Shopify Admin API payload. Shopify holds only
+ * non-PHI flags (last_completed_at, quiz_count) — see app/lib/shopify/metafields.ts.
  */
 
 export type QuizState = "tennessee" | "texas";

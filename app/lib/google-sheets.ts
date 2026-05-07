@@ -1,47 +1,19 @@
 /**
- * Google Sheets integration
- * Option A: Keep Google Apps Script (simpler for Phase 1)
- * Option B: Use Google Sheets API directly (for later phases)
+ * DEPRECATED — Google Sheets path is removed for HIPAA compliance.
+ *
+ * PHI is now written exclusively to Cloud SQL Postgres. See:
+ *   - app/lib/submissions.ts
+ *   - app/lib/db.ts
+ *   - migrations/001_create_submissions.sql
+ *
+ * This file remains as a guardrail: any code path that imports the old
+ * function will fail loudly at runtime instead of silently writing PHI
+ * to a non-BAA system.
  */
 
-/**
- * Submit quiz data to Google Sheets via Apps Script
- * Migrated from Google Apps Script integration
- * 
- * @param data - Row data array matching Google Sheets HEADERS format
- * @param webAppUrl - Google Apps Script web app URL
- * @returns Success status and row number
- */
-export async function submitToGoogleSheets(
-  data: unknown[],
-  webAppUrl: string
-): Promise<{ success: boolean; rowNumber?: number; error?: string }> {
-  try {
-    const response = await fetch(webAppUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ data }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Google Sheets API error: ${response.status} ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    console.error("Google Sheets submission error:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
+export function submitToGoogleSheets(): never {
+  throw new Error(
+    "submitToGoogleSheets() has been removed. PHI must be written to Cloud SQL only " +
+      "(see app/lib/submissions.ts). This call indicates a regression — fix the caller."
+  );
 }
-
-
-
-
-
-

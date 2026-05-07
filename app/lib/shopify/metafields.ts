@@ -1,30 +1,34 @@
 /**
- * Metafield operations
- * Migrated from Cloudflare Worker updateCustomerMetafields() and getCustomerMetafield()
+ * Shopify customer metafield operations — NON-PHI ONLY.
+ *
+ * HIPAA: This file must never write health information, identifiers tied
+ * to health data, or any field that — combined with the customer record —
+ * would constitute PHI. Score, score_bracket, state, quiz_history, and
+ * symptom_profile_id are all PHI when attached to an identifiable customer
+ * and have been removed.
+ *
+ * What lives here now:
+ *   alledrops.last_completed_at  (date_time) — when the patient most recently completed
+ *   alledrops.quiz_count         (number_integer) — total completed assessments
+ *
+ * Everything else (PHI) is in Cloud SQL via app/lib/submissions.ts.
  */
 
-export interface QuizMetafieldData {
-  symptom_profile_id: string;
-  quiz_score: number;
-  state: string;
-  score_bracket: string;
-  quiz_date?: string;
+interface AdminLike {
+  graphql: (query: string, opts?: { variables?: Record<string, unknown> }) => Promise<{
+    json: () => Promise<unknown>;
+  }>;
 }
 
-export interface QuizHistoryEntry {
-  profile_id: string;
-  date: string;
-  score: number;
-  score_bracket: string;
-  state: string;
-}
+const NAMESPACE = "alledrops";
+const KEY_LAST_COMPLETED = "last_completed_at";
+const KEY_QUIZ_COUNT = "quiz_count";
 
 /**
- * Get a customer metafield value
- * Migrated from Cloudflare Worker getCustomerMetafield()
+ * Read a single customer metafield value. Generic helper, used for the count read.
  */
 export async function getCustomerMetafield(
-  admin: { graphql: Function },
+  admin: AdminLike,
   customerId: string,
   namespace: string,
   key: string
@@ -41,145 +45,85 @@ export async function getCustomerMetafield(
 
   try {
     const response = await admin.graphql(query, {
-      variables: {
-        customerId: customerId,
-        namespace: namespace,
-        key: key,
-      },
+      variables: { customerId, namespace, key },
     });
-    const data = await response.json();
-
-    return data.data?.customer?.metafield?.value || null;
+    const data = (await response.json()) as {
+      data?: { customer?: { metafield?: { value?: string } } };
+    };
+    return data.data?.customer?.metafield?.value ?? null;
   } catch (error) {
-    console.error("Error fetching metafield:", error);
+    console.error("[metafields] read failed:", error);
     return null;
   }
 }
 
 /**
- * Update customer metafields with quiz data
+ * Update non-PHI quiz tracking metafields after a successful submission.
+ * Only writes last_completed_at and quiz_count. No health information.
  */
-export async function updateCustomerMetafields(
-  admin: { graphql: Function },
+export async function updateNonPhiQuizMetafields(
+  admin: AdminLike,
   customerId: string,
-  data: QuizMetafieldData,
-  existingHistoryJson?: string | null
-): Promise<{ success: boolean; error?: string; historyCount?: number; details?: unknown }> {
+  completedAt: Date = new Date()
+): Promise<{ success: boolean; quizCount?: number; error?: string }> {
+  // Read current count so we can increment it.
+  const existingCountStr = await getCustomerMetafield(
+    admin,
+    customerId,
+    NAMESPACE,
+    KEY_QUIZ_COUNT
+  );
+  const existingCount = Number(existingCountStr) || 0;
+  const newCount = existingCount + 1;
+
   const mutation = `
     mutation setCustomerMetafields($metafields: [MetafieldsSetInput!]!) {
       metafieldsSet(metafields: $metafields) {
-        metafields {
-          id
-          namespace
-          key
-          value
-        }
-        userErrors {
-          field
-          message
-        }
+        metafields { id namespace key value }
+        userErrors { field message }
       }
     }
   `;
 
-  let quizHistory: QuizHistoryEntry[] = [];
-  if (existingHistoryJson) {
-    try {
-      const parsed = JSON.parse(existingHistoryJson);
-      if (Array.isArray(parsed)) {
-        quizHistory = parsed.map((entry: Record<string, unknown>) => ({
-          profile_id: String(entry.profile_id ?? ""),
-          date: String(entry.date ?? ""),
-          score: Number(entry.score ?? 0),
-          score_bracket: String(entry.score_bracket ?? entry.severity ?? ""),
-          state: String(entry.state ?? entry.region ?? ""),
-        }));
-      }
-    } catch {
-      quizHistory = [];
-    }
-  }
-
-  const quizEntry: QuizHistoryEntry = {
-    profile_id: data.symptom_profile_id,
-    date: data.quiz_date || new Date().toISOString(),
-    score: data.quiz_score,
-    score_bracket: data.score_bracket,
-    state: data.state,
-  };
-
-  quizHistory.unshift(quizEntry);
-
-  if (quizHistory.length > 50) {
-    quizHistory = quizHistory.slice(0, 50);
-  }
-
   const metafields = [
     {
       ownerId: customerId,
-      namespace: "alledrops",
-      key: "symptom_profile_id",
-      type: "single_line_text_field",
-      value: data.symptom_profile_id,
-    },
-    {
-      ownerId: customerId,
-      namespace: "alledrops",
-      key: "quiz_score",
-      type: "number_integer",
-      value: data.quiz_score.toString(),
-    },
-    {
-      ownerId: customerId,
-      namespace: "alledrops",
-      key: "state",
-      type: "single_line_text_field",
-      value: data.state,
-    },
-    {
-      ownerId: customerId,
-      namespace: "alledrops",
-      key: "quiz_date",
+      namespace: NAMESPACE,
+      key: KEY_LAST_COMPLETED,
       type: "date_time",
-      value: data.quiz_date || new Date().toISOString(),
+      value: completedAt.toISOString(),
     },
     {
       ownerId: customerId,
-      namespace: "alledrops",
-      key: "score_bracket",
-      type: "single_line_text_field",
-      value: data.score_bracket,
-    },
-    {
-      ownerId: customerId,
-      namespace: "alledrops",
-      key: "quiz_history",
-      type: "json",
-      value: JSON.stringify(quizHistory),
+      namespace: NAMESPACE,
+      key: KEY_QUIZ_COUNT,
+      type: "number_integer",
+      value: newCount.toString(),
     },
   ];
 
   try {
-    const response = await admin.graphql(mutation, {
-      variables: { metafields },
-    });
-    const responseData = await response.json();
+    const response = await admin.graphql(mutation, { variables: { metafields } });
+    const data = (await response.json()) as {
+      data?: {
+        metafieldsSet?: {
+          userErrors?: Array<{ field: string; message: string }>;
+        };
+      };
+    };
 
-    if (responseData.data?.metafieldsSet?.userErrors?.length > 0) {
-      console.error("Metafield update errors:", responseData.data.metafieldsSet.userErrors);
+    const userErrors = data.data?.metafieldsSet?.userErrors ?? [];
+    if (userErrors.length > 0) {
+      console.error("[metafields] write errors:", userErrors);
       return {
         success: false,
-        error: "Failed to update metafields",
-        details: responseData.data.metafieldsSet.userErrors,
+        error: userErrors.map((e) => `${e.field}: ${e.message}`).join("; "),
       };
     }
 
-    return {
-      success: true,
-      historyCount: quizHistory.length,
-    };
+    return { success: true, quizCount: newCount };
   } catch (error) {
-    console.error("Error updating metafields:", error);
+    console.error("[metafields] write failed:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
