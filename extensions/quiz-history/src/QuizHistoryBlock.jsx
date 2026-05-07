@@ -1,108 +1,77 @@
-import { extend } from '@shopify/ui-extensions/customer-account'
+import '@shopify/ui-extensions/preact'
+import { render } from 'preact'
+import { useState, useEffect } from 'preact/hooks'
 
 const FLY_BASE = 'https://alle-drops-quiz-app.fly.dev'
 
-extend('customer-account.profile.block.render', async (root, api) => {
-  root.innerHTML = `
-    <s-section heading="Symptom Assessment History">
-      <s-text>Loading your assessment history...</s-text>
-    </s-section>
-  `
+export default async () => {
+  render(<QuizHistory />, document.body)
+}
 
-  let token
-  try {
-    token = await api.sessionToken.get()
-  } catch {
-    renderError(root, 'Could not authenticate. Please refresh the page.')
-    return
+function QuizHistory() {
+  const [status, setStatus] = useState('loading')
+  const [assessments, setAssessments] = useState([])
+  const [token, setToken] = useState('')
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const t = await shopify.sessionToken.get()
+        setToken(t)
+        const resp = await fetch(`${FLY_BASE}/api/me/assessments`, {
+          headers: { Authorization: `Bearer ${t}` },
+        })
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+        const data = await resp.json()
+        setAssessments(data)
+        setStatus('loaded')
+      } catch {
+        setStatus('error')
+      }
+    }
+    load()
+  }, [])
+
+  if (status === 'loading') {
+    return (
+      <s-section heading="Symptom Assessment History">
+        <s-spinner accessibility-label="Loading assessments" />
+      </s-section>
+    )
   }
 
-  let assessments
-  try {
-    const resp = await fetch(`${FLY_BASE}/api/me/assessments`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-    assessments = await resp.json()
-  } catch {
-    renderError(root, 'Unable to load your assessment history.')
-    return
+  if (status === 'error') {
+    return (
+      <s-section heading="Symptom Assessment History">
+        <s-banner tone="critical">Unable to load your assessment history.</s-banner>
+      </s-section>
+    )
   }
 
-  renderAssessments(root, assessments, api)
-})
-
-function renderAssessments(root, assessments, api) {
   if (!assessments.length) {
-    root.innerHTML = `
+    return (
       <s-section heading="Symptom Assessment History">
         <s-text>You haven't completed any symptom assessments yet.</s-text>
       </s-section>
-    `
-    return
+    )
   }
 
-  const rows = assessments
-    .map(
-      (a) => `
-        <s-stack direction="inline" gap="base">
-          <s-text>${formatDate(a.completed_at)}</s-text>
-          <s-button data-id="${a.id}">Download PDF</s-button>
-        </s-stack>
-      `
-    )
-    .join('<s-divider></s-divider>')
-
-  root.innerHTML = `
+  return (
     <s-section heading="Symptom Assessment History">
       <s-stack direction="block" gap="base">
-        ${rows}
+        {assessments.map((a) => (
+          <s-stack key={a.id} direction="inline" gap="base" align-items="center">
+            <s-text>{formatDate(a.completed_at)}</s-text>
+            <s-link
+              href={`${FLY_BASE}/api/me/assessment/${a.id}/pdf?token=${encodeURIComponent(token)}`}
+            >
+              Download PDF
+            </s-link>
+          </s-stack>
+        ))}
       </s-stack>
     </s-section>
-  `
-
-  root.querySelectorAll('s-button[data-id]').forEach((btn) => {
-    btn.addEventListener('click', () => downloadPdf(btn.dataset.id, api))
-  })
-}
-
-async function downloadPdf(id, api) {
-  let token
-  try {
-    token = await api.sessionToken.get()
-  } catch {
-    alert('Session expired. Please refresh the page.')
-    return
-  }
-
-  try {
-    const resp = await fetch(`${FLY_BASE}/api/me/assessment/${id}/pdf`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-
-    const blob = await resp.blob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `assessment-${id}.pdf`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  } catch {
-    alert('Could not download PDF. Please try again.')
-  }
-}
-
-function renderError(root, message) {
-  root.innerHTML = `
-    <s-section heading="Symptom Assessment History">
-      <s-banner status="critical">
-        <s-text>${message}</s-text>
-      </s-banner>
-    </s-section>
-  `
+  )
 }
 
 function formatDate(dateString) {
