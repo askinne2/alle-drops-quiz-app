@@ -6,9 +6,10 @@ import { generateVisitSummaryPdf } from '../lib/pdf'
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   // ── 1. Extract Bearer token ──────────────────────────────────────────────
   const authHeader = request.headers.get('Authorization') ?? ''
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+  const match = authHeader.match(/^Bearer\s+(.+)$/i)
+  const token = match?.[1]?.trim() ?? ''
   if (!token) {
-    return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     })
@@ -35,10 +36,18 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     })
   }
 
-  const row = await getSubmissionByIdForCustomer({
-    id,
-    customer_id_shopify: customerId,
-  })
+  let row: import('../lib/submissions').SubmissionFullRow | null
+  try {
+    row = await getSubmissionByIdForCustomer({
+      id,
+      customer_id_shopify: customerId,
+    })
+  } catch {
+    return new Response(JSON.stringify({ error: 'Service unavailable' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
 
   if (!row) {
     return new Response(JSON.stringify({ error: 'Not found' }), {
@@ -65,7 +74,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     status: 200,
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="assessment-${id}.pdf"`,
+      'Content-Disposition': `attachment; filename="assessment-${id}.pdf"; filename*=UTF-8''assessment-${encodeURIComponent(id)}.pdf`,
       'Content-Length': String(pdfBuffer.length),
       'Cache-Control': 'no-store',
     },
