@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "50649e96ebe691d70569e0b75ea051b4"
-name = "AlleDrops Quiz App"
+client_id = "1af0c030f06eea4b8b46d3c006f431d3"
+name = "AlleDrops Quiz Production"
 application_url = "https://alle-drops-quiz-app.fly.dev"
 embedded = true
 
