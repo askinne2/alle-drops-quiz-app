@@ -35,16 +35,16 @@ Last updated: 2026-05-07
 - [ ] Test path: hit endpoint with a fake session token, confirm 401; with a valid token, confirm correct PDF returns
 
 ### A2. Ledger list endpoint
-- [ ] New route: `GET /api/me/assessments`
+- [x] New route: `GET /api/me/assessments`
   - Verifies Shopify Customer Account session token
   - Calls `listSubmissionLedger` (already exists)
   - Returns `[{ id, symptom_profile_id, completed_at }]` (NO scores, NO PHI in the list — that's the ledger pattern)
 
 ### A3. Customer Account UI extension refactor
-- [ ] `extensions/quiz-history/` — currently reads metafields that no longer exist
-- [ ] Refactor to call `/api/me/assessments` for the list
-- [ ] Render a date-only list with a "Download PDF" button per row
-- [ ] Button calls `/api/me/assessment/:id/pdf`, browser downloads
+- [x] `extensions/quiz-history/` — currently reads metafields that no longer exist
+- [x] Refactor to call `/api/me/assessments` for the list
+- [x] Render a date-only list with a "Download PDF" button per row
+- [x] Button calls `/api/me/assessment/:id/pdf`, browser downloads
 
 ### A4. Verify in dev
 - [ ] Submit a quiz from a logged-in customer on the dev storefront
