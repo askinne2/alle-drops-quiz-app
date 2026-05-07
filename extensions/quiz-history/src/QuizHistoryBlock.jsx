@@ -1,34 +1,36 @@
-const FLY_BASE = 'https://alle-drops-quiz-app.fly.dev';
+import { extend } from '@shopify/ui-extensions/customer-account'
 
-export default async function extension(root, api) {
+const FLY_BASE = 'https://alle-drops-quiz-app.fly.dev'
+
+extend('customer-account.profile.block.render', async (root, api) => {
   root.innerHTML = `
     <s-section heading="Symptom Assessment History">
       <s-text>Loading your assessment history...</s-text>
     </s-section>
-  `;
+  `
 
-  let token;
+  let token
   try {
-    token = await api.sessionToken.get();
-  } catch (err) {
-    renderError(root, 'Could not authenticate. Please refresh the page.');
-    return;
+    token = await api.sessionToken.get()
+  } catch {
+    renderError(root, 'Could not authenticate. Please refresh the page.')
+    return
   }
 
-  let assessments;
+  let assessments
   try {
     const resp = await fetch(`${FLY_BASE}/api/me/assessments`, {
       headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!resp.ok) throw new Error(`API error ${resp.status}`);
-    assessments = await resp.json();
-  } catch (err) {
-    renderError(root, 'Unable to load your assessment history.');
-    return;
+    })
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    assessments = await resp.json()
+  } catch {
+    renderError(root, 'Unable to load your assessment history.')
+    return
   }
 
-  renderAssessments(root, assessments, api);
-}
+  renderAssessments(root, assessments, api)
+})
 
 function renderAssessments(root, assessments, api) {
   if (!assessments.length) {
@@ -36,8 +38,8 @@ function renderAssessments(root, assessments, api) {
       <s-section heading="Symptom Assessment History">
         <s-text>You haven't completed any symptom assessments yet.</s-text>
       </s-section>
-    `;
-    return;
+    `
+    return
   }
 
   const rows = assessments
@@ -49,7 +51,7 @@ function renderAssessments(root, assessments, api) {
         </s-stack>
       `
     )
-    .join('<s-divider></s-divider>');
+    .join('<s-divider></s-divider>')
 
   root.innerHTML = `
     <s-section heading="Symptom Assessment History">
@@ -57,39 +59,39 @@ function renderAssessments(root, assessments, api) {
         ${rows}
       </s-stack>
     </s-section>
-  `;
+  `
 
   root.querySelectorAll('s-button[data-id]').forEach((btn) => {
-    btn.addEventListener('click', () => downloadPdf(btn.dataset.id, api));
-  });
+    btn.addEventListener('click', () => downloadPdf(btn.dataset.id, api))
+  })
 }
 
 async function downloadPdf(id, api) {
-  let token;
+  let token
   try {
-    token = await api.sessionToken.get();
+    token = await api.sessionToken.get()
   } catch {
-    alert('Session expired. Please refresh the page.');
-    return;
+    alert('Session expired. Please refresh the page.')
+    return
   }
 
   try {
     const resp = await fetch(`${FLY_BASE}/api/me/assessment/${id}/pdf`, {
       headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    })
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
 
-    const blob = await resp.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `assessment-${id}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    alert('Could not download PDF. Please try again.');
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `assessment-${id}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  } catch {
+    alert('Could not download PDF. Please try again.')
   }
 }
 
@@ -100,18 +102,18 @@ function renderError(root, message) {
         <s-text>${message}</s-text>
       </s-banner>
     </s-section>
-  `;
+  `
 }
 
 function formatDate(dateString) {
-  if (!dateString) return 'Date unavailable';
+  if (!dateString) return 'Date unavailable'
   try {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    });
+    })
   } catch {
-    return dateString;
+    return dateString
   }
 }
