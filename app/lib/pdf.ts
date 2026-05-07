@@ -40,6 +40,7 @@ export function generateVisitSummaryPdf(row: SubmissionFullRow): Promise<Buffer>
     doc.on('end', () => resolve(Buffer.concat(chunks)))
     doc.on('error', reject)
 
+    try {
     const W = doc.page.width - 100 // usable width (50px margin each side)
 
     // ── Header ──────────────────────────────────────────────────────────────
@@ -92,7 +93,11 @@ export function generateVisitSummaryPdf(row: SubmissionFullRow): Promise<Buffer>
     } else {
       for (const [key, val] of answerEntries) {
         const displayKey = key.replace(/_/g, ' ')
-        const displayVal = Array.isArray(val) ? val.join(', ') : String(val ?? '—')
+        const displayVal = Array.isArray(val)
+          ? val.join(', ')
+          : val !== null && typeof val === 'object'
+            ? JSON.stringify(val)
+            : String(val ?? '—')
         labelValue(capitalize(displayKey), displayVal)
       }
     }
@@ -143,5 +148,8 @@ export function generateVisitSummaryPdf(row: SubmissionFullRow): Promise<Buffer>
     doc.fillColor('#000000')
 
     doc.end()
+    } catch (err) {
+      reject(err)
+    }
   })
 }
