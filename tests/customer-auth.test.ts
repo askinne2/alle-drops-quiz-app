@@ -13,7 +13,6 @@ describe('verifyCustomerToken', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
   it('returns customerId GID when token is valid', async () => {
-    vi.mocked(jose.createRemoteJWKSet).mockReturnValue({} as ReturnType<typeof jose.createRemoteJWKSet>)
     vi.mocked(jose.jwtVerify).mockResolvedValue({
       payload: { sub: 'gid://shopify/Customer/9876543210' },
       protectedHeader: { alg: 'RS256' },
@@ -25,14 +24,12 @@ describe('verifyCustomerToken', () => {
   })
 
   it('throws when jwtVerify rejects', async () => {
-    vi.mocked(jose.createRemoteJWKSet).mockReturnValue({} as ReturnType<typeof jose.createRemoteJWKSet>)
     vi.mocked(jose.jwtVerify).mockRejectedValue(new Error('JWTExpired'))
 
     await expect(verifyCustomerToken('expired.jwt.token')).rejects.toThrow('Invalid session token')
   })
 
   it('throws when payload has no sub claim', async () => {
-    vi.mocked(jose.createRemoteJWKSet).mockReturnValue({} as ReturnType<typeof jose.createRemoteJWKSet>)
     vi.mocked(jose.jwtVerify).mockResolvedValue({
       payload: {},
       protectedHeader: { alg: 'RS256' },
