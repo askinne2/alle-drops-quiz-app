@@ -3,7 +3,18 @@ import { verifyCustomerToken } from '../lib/customer-auth'
 import { getSubmissionByIdForCustomer } from '../lib/submissions'
 import { generateVisitSummaryPdf } from '../lib/pdf'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+} as const
+
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
+  // ── 0. CORS preflight ────────────────────────────────────────────────────
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders })
+  }
+
   // ── 1. Extract Bearer token ──────────────────────────────────────────────
   const authHeader = request.headers.get('Authorization') ?? ''
   const match = authHeader.match(/^Bearer\s+(.+)$/i)
@@ -11,7 +22,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   if (!token) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   }
 
@@ -23,7 +34,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   } catch {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   }
 
@@ -32,7 +43,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   if (!id) {
     return new Response(JSON.stringify({ error: 'Missing assessment id' }), {
       status: 400,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   }
 
@@ -45,14 +56,14 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   } catch {
     return new Response(JSON.stringify({ error: 'Service unavailable' }), {
       status: 503,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   }
 
   if (!row) {
     return new Response(JSON.stringify({ error: 'Not found' }), {
       status: 404,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   }
 
@@ -64,7 +75,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     console.error('[pdf] generation error for submission', id, err instanceof Error ? err.message : 'unknown')
     return new Response(JSON.stringify({ error: 'Could not generate PDF' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   }
 
@@ -77,6 +88,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       'Content-Disposition': `attachment; filename="assessment-${id}.pdf"; filename*=UTF-8''assessment-${encodeURIComponent(id)}.pdf`,
       'Content-Length': String(pdfBuffer.length),
       'Cache-Control': 'no-store',
+      ...corsHeaders,
     },
   })
 }
