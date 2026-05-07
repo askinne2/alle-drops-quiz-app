@@ -143,6 +143,7 @@ Before opening a PR that touches anything in the PHI path, confirm:
 - **The Customer Account UI extension currently still reads PHI metafields that no longer exist.** It needs refactoring to call the Fly API instead. Until that's done, the dashboard will show empty state in dev.
 - **Sessions are stored in SQLite via Prisma + Litestream** (see `fly.toml` mounts). PHI submissions are in Postgres (Cloud SQL). Two distinct stores, do not conflate.
 - **`pg` and `?sslmode=require`:** if the connection string has `?sslmode=require`, Node's `pg` library tries to verify the server cert against the system CA bundle and fails for Cloud SQL. Use `?sslmode=no-verify` for dev, or pin the Cloud SQL server CA for prod.
+- **Never `git reset --hard` to retroactively branch with uncommitted modifications to tracked files.** The modifications get wiped silently. If commits landed on `main` that should have been on a branch: use `git branch <name>` to mark them, then `git reset --keep` (preserves working tree changes) or `git stash` first. Better: always create the branch *before* starting work.
 
 ## Testing the submission pipeline E2E
 
