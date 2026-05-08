@@ -7,7 +7,7 @@ type = "ui_extension"
 uid = "quiz-history-extension"
 
 [[extensions.targeting]]
-module = "./src/QuizHistoryBlock.js"
+module = "./src/QuizHistoryBlock.jsx"
 target = "customer-account.profile.block.render"
 
 [extensions.capabilities]
