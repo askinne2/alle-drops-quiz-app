@@ -1,52 +1,100 @@
-# Handoff — AlleDrops quiz + storefront (WIP)
+# Handoff — AlleDrops quiz app (2026-05-07 session 3)
 
 ### Goal
 
-Ship a reliable end-to-end clinical quiz (TN/TX): submissions persist (Shopify metafields + **Google Sheets**), theme/embed UX is polished, post-quiz routes (**test options**, consult) exist on the store, extensions deploy from Shopify CLI, and clinical copy matches **William’s PDF** (source of truth). Work is **not complete**.
-
-### Current progress
-
-- **Clinical quiz flow** in `alle-drops-quiz-app`: state gate, parts, scoring brackets (`0-2` / `3-6` / `7+`), consent, API `/api/quiz/submit`, metafields `state` + `score_bracket`, admin quiz results + quiz-history extension UI with legacy fallbacks.
-- **Theme `allergist-on-demand`**: symptom quiz template uses app block only; `quiz-history` / `main-account` / Cloudflare worker aligned to new metafields; commits pushed to `main`.
-- **Fly.io**: `fly deploy` has been run successfully; monitor for “not listening on `0.0.0.0:3000`” warnings during rollout.
-- **Ask-mode findings** (not all fixed in code): `/pages/test-options` is a **Shopify page** expected by the app, not Fly; nav buttons missing base `quizNavigation__button` class; results grid still `1fr 1fr` at ≥990px with only one column of content.
-
-### What worked
-
-- `npm run test` / `npm run typecheck` / `npm run build:theme` as quick gates in `alle-drops-quiz-app`.
-- `shopify.app.toml` + `aod-dev` for local app dev; theme block loads bundle from app URL.
-- Bumping worker + Liquid fallbacks so legacy `quiz_region` / `severity_level` still display during migration.
-
-### What didn’t work / issues
-
-- **Google Sheets**: still **not working correctly** end-to-end (verify `GOOGLE_SHEETS_WEB_APP_URL`, Apps Script handler, row header order vs `rowData` in `app/routes/api.quiz.submit.tsx`, CORS, and Script execution logs).
-- **`shopify app deploy`**: fails with **quiz-history** validation — `api_version = "2025-01"` is rejected. Shopify requires Checkout UI–related versions from: `2025-07`, `2025-10`, `2026-01`, `2026-04`, `2026-07`, `unstable`, or `internal`. Fix in `extensions/quiz-history/shopify.extension.toml` line 1 (e.g. set to `2026-04`), then redeploy.
-- **`shopify app dev`**: terminal showed **Incorrect store password** — dev store credentials / login, not code.
-- **Fly** (same terminal log): deployment warning that app may not be listening on **`0.0.0.0:3000`** — confirm production `HOST`/bind and health checks if traffic flakes.
-
-### Next steps
-
-- [ ] **Sheets**: Trace one failing submission (app logs + Apps Script Executions + sheet row). Confirm header row matches: `profile_id`, `name`, `email`, `phone`, `dob`, `state`, `score`, `score_bracket`, `date`, `completion_time`, `answers_json`, `personal_history_json`, `family_history_json`.
-- [ ] **Shopify deploy**: Update `extensions/quiz-history/shopify.extension.toml` `api_version` to an allowed value; run `shopify app deploy` again; resolve `quiz-block` RemoteAsset warning if Shopify blocks later (`asset_url` vs raw `app_url` for CSS).
-- [ ] **Test options page**: In Shopify admin (or theme git), create **Online Store → Page** with handle **`test-options`** (and **`consult`** if used). Add real copy/links (telehealth, allergy testing). Alternatively change `window.location.assign` targets in `app/components/quiz/QuizContainer.tsx` to final URLs.
-- [ ] **William’s PDF**: Re-read the **actual PDF** William sent; reconcile question text, thresholds, outcomes, and legal/disclaimer language with `app/lib/quiz/questions.ts`, `ResultsDisplay.tsx`, and consent copy.
-- [ ] **UX follow-ups** (from prior analysis): Compose `quizNavigation__button` + prev/next classes in `QuizContainer.tsx`; set `.quizResults__mainGrid` to single column at `990px` in `app/styles/quiz.module.css`.
-- [ ] **Dev auth**: Fix dev store password / CLI session so `shopify app dev` works without blocking.
-
-### Resume context
-
-- **Branch:** `main` on `alle-drops-quiz-app` and `allergist-on-demand` (recently pushed).
-- **How to verify:** `cd "/Users/andrewskinner/Local Sites/alle-drops-quiz-app" && npm run test && npm run typecheck`; `shopify app deploy` after TOML fix; hit `https://alle-drops-quiz-app.fly.dev/health` (or live quiz URL) after Fly deploy.
-- **Key files:**
-  - `extensions/quiz-history/shopify.extension.toml` — **deploy blocker** (`api_version`).
-  - `app/routes/api.quiz.submit.tsx` — Sheets `rowData` + submit flow.
-  - `app/lib/google-sheets.ts` — POST body to Apps Script.
-  - `app/components/quiz/QuizContainer.tsx` — `/pages/test-options`, `/pages/consult`, test mode.
-  - `app/components/quiz/ResultsDisplay.tsx` — outcome copy.
-  - `app/lib/quiz/questions.ts` — PDF alignment.
-- **Terminal reference (deploy failure):** `/Users/andrewskinner/.cursor/projects/Users-andrewskinner-Local-Sites-allergist-on-demand/terminals/1.txt` — `shopify app deploy` error excerpt: *quiz-history — api_version "2025-01" is not a valid API version…*
-- **Blockers / open questions:** William PDF path not in repo—attach or path in next session. Confirm whether Cloudflare worker is still used for any storefront `apiEndpoint` override.
+Get the quiz-history Customer Account UI extension rendering on `/account/profile` — logged-in patient sees "Symptom Assessment History" with a Download PDF link. Thread B (cross-origin iframe) follows after Thread A is verified end-to-end.
 
 ---
 
-**Pickup:** `@HANDOFF.md` in `alle-drops-quiz-app` and say **continue from the handoff.** Commit this file so other machines/agents see the same context.
+### Current progress
+
+**Shipped to `main` (PRs merged):**
+- PRs #1–4 all merged (see previous HANDOFFs).
+
+**Branch in flight: `fix-preact-signals-dep`** (pushed, not yet merged to main)
+This session added 3 more uncommitted changes on top of the original 2 commits:
+- Original commit 1: added `@preact/signals` to `extensions/quiz-history/package.json`
+- Original commit 2: downgraded `api_version` to `"2026-01"` in `shopify.extension.toml`
+- **This session — Change 3:** swapped `client_id` in `shopify.app.toml` from `50649e96ebe691d70569e0b75ea051b4` → `1af0c030f06eea4b8b46d3c006f431d3` and renamed app to `"AlleDrops Quiz Production"`
+- **This session — Change 4:** fixed render target in `QuizHistoryBlock.jsx` — changed `render(<QuizHistory />, document.body)` → `render(<QuizHistory />, root)` (see Root Cause below)
+
+**Shopify app situation (THE SMOKING GUN):**
+Two apps existed in the Partners dashboard:
+1. **AlleDrops Quiz App** (`alledrops-quiz-app-N` slug, client `50649e96...`) — where all previous deploys landed. The install link for this app was broken/invalid.
+2. **AlleDrops Quiz Production** (`alle-drops-quiz-app-N` slug, client `1af0c030...`) — the original working app already installed on the store.
+
+We were deploying to the wrong app the entire time. Fixed by swapping `client_id` in `shopify.app.toml` to point at the Production app.
+
+**Deploys this session:**
+- `shopify app deploy` after client_id swap → `alledrops-quiz-production-7` (30KB bundle confirmed non-empty ✅)
+- Andrew added the Quiz History block to the Customer Accounts Profile page customizer ✅
+- Extension version confirmed via DevTools: `versionTag: "alledrops-quiz-production-7"` ✅
+
+**Root cause of non-rendering (FIXED, needs deploy):**
+The Shopify Customer Account UI extension runtime runs the bundle in a hidden sandbox iframe (`display:none`). It provides a `root` DOM element via the `shopify.extend` callback and projects whatever is rendered into `root` up to the parent page. The extension was rendering to `document.body` (wrong target — not monitored by the runtime), so nothing appeared in the parent page DOM. No `s-*` web components, no visible block.
+
+Fix applied to `QuizHistoryBlock.jsx`:
+```js
+// Before (broken):
+export default async () => { render(<QuizHistory />, document.body) }
+// After (fixed):
+export default (root) => { render(<QuizHistory />, root) }
+```
+
+**Still needs:** `shopify app deploy` to push this fix as v8 of `alledrops-quiz-production`, then reload and verify.
+
+---
+
+### What worked
+
+- Chrome DevTools MCP: checking `versionTag` + `scriptUrl` inline script data to confirm which extension version serves.
+- Fetching the CDN bundle URL directly in DevTools to confirm 30KB non-empty bundle vs 1-byte `(()=>{})();` empty bundle.
+- Checking `document.querySelectorAll('iframe')` + `getBoundingClientRect()` to confirm extension sandbox iframe is `display:none, 0×0` — confirmed non-visible sandbox model.
+- `shopify app deploy` after client_id swap → extension now loads as `alledrops-quiz-production-7`.
+- `npm run typecheck && npm test` — clean, 15/15 tests pass.
+- Fly deploy working; `/api/quiz/submit` returns 200.
+
+### What didn't work
+
+- Deploying to `"AlleDrops Quiz App"` (client `50649e96...`) — wrong app; store was always on the Production app.
+- The install link from Shopify Partners for "AlleDrops Quiz App" was invalid (expired OAuth UUID). Use the auth URL directly if ever needed: `https://alle-drops-quiz-app.fly.dev/auth?shop=allergist-on-demand.myshopify.com`
+- `import '@shopify/ui-extensions/preact'` is a side-effect-only import that registers Preact signals with the runtime — it does NOT set up rendering. The `@shopify/ui-extensions/customer-account` ESM/esnext build is 1 byte (empty). Only `@shopify/ui-extensions/customer-account/preact` (hooks) is populated.
+- Rendering to `document.body` in the extension sandbox — the runtime ignores document.body; it only projects content from the `root` element it provides.
+
+---
+
+### Next steps
+
+- [ ] **`shopify app deploy`** — push the `root` fix as `alledrops-quiz-production-8`
+- [ ] **Hard-refresh `/account/profile`** and confirm `versionTag` is `alledrops-quiz-production-8` (or higher)
+- [ ] **Verify block renders:** check that `document.querySelectorAll('s-section')` returns elements, and the "Symptom Assessment History" heading appears visually
+- [ ] **Verify API call:** confirm `alle-drops-quiz-app.fly.dev/api/me/assessments` appears in the Network tab (fetch/XHR)
+- [ ] **A4 E2E verification:** Submit quiz as logged-in customer → see assessment list on profile → click Download PDF → PDF downloads
+- [ ] **Merge `fix-preact-signals-dep` branch** as a PR to main (5 changes: @preact/signals dep, api_version, client_id swap, app name, root render fix)
+- [ ] **"Test Mode" button** on `/pages/allergy-quiz` — hide or remove before go-live
+
+---
+
+### Resume context
+
+- **Branch:** `fix-preact-signals-dep` (uncommitted local changes for Change 3 + Change 4 above — commit these before deploying)
+- **How to verify locally:** `npm run typecheck && npm test`
+- **How to check served version (fastest):** DevTools console on profile page:
+  ```js
+  [...document.querySelectorAll('script')].map(s=>s.textContent).find(t=>t?.includes('versionTag'))?.match(/"versionTag":"([^"]+)"/)?.[1]
+  ```
+  Should return `alledrops-quiz-production-8` (or higher) after next deploy.
+- **Key files:**
+  - `extensions/quiz-history/src/QuizHistoryBlock.jsx` — **FIXED this session** — now uses `(root) => render(<QuizHistory />, root)`
+  - `shopify.app.toml` — **UPDATED this session** — `client_id = "1af0c030f06eea4b8b46d3c006f431d3"`, `name = "AlleDrops Quiz Production"`
+  - `extensions/quiz-history/package.json` — has `@preact/signals ^2.9.0`
+  - `extensions/quiz-history/shopify.extension.toml` — `api_version = "2026-01"`, `network_access = true`
+  - `app/routes/api.me.assessments.tsx` — ledger endpoint (working)
+  - `app/routes/api.me.assessment.$id.pdf.tsx` — PDF endpoint with `?token=` fallback (Fly deployed)
+- **Test store:** `allergist-on-demand.myshopify.com` (password: `allergy`). Profile: `https://shopify.com/65752301774/account/profile`
+- **Fly app:** `alle-drops-quiz-app` on Fly.io. Logs: `fly logs -a alle-drops-quiz-app`
+- **Shopify app:** "AlleDrops Quiz Production" (client `1af0c030f06eea4b8b46d3c006f431d3`). Versions use slug `alle-drops-quiz-app-N`. Currently on v7; next deploy will be v8.
+
+---
+
+**Pickup:** `@HANDOFF.md` and say **"continue from the handoff"** — commit the two local changes (client_id + root render fix), run `shopify app deploy`, reload the profile page, and verify the Quiz History block renders with the Symptom Assessment History heading.
