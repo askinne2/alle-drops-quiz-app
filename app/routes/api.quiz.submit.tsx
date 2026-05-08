@@ -98,11 +98,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (shop) {
     try {
       const result = await unauthenticated.admin(shop);
-      // The Shopify admin client matches the AdminLike interface used in helpers.
       admin = result.admin as unknown as typeof admin;
     } catch (authErr) {
-      console.warn("[submit] admin auth unavailable:", authErr);
-      customerLinkSkipped = true;
+      console.warn("[submit] unauthenticated.admin failed, trying direct token:", (authErr as Error).message);
+      // Fall back to direct Admin API access token (works for single-shop deployments).
+      const directToken = process.env.SHOPIFY_ADMIN_ACCESS_TOKEN;
+      const directShop = process.env.SHOPIFY_SHOP_DOMAIN || shop;
+      if (directToken && directShop) {
+        const apiVersion = "2024-10";
+        admin = {
+          graphql: async (query: string, opts?: { variables?: Record<string, unknown> }) => {
+            const resp = await fetch(
+              `https://${directShop}/admin/api/${apiVersion}/graphql.json`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Shopify-Access-Token": directToken,
+                },
+                body: JSON.stringify({ query, variables: opts?.variables ?? {} }),
+              }
+            );
+            return { json: () => resp.json() };
+          },
+        };
+      } else {
+        customerLinkSkipped = true;
+      }
     }
 
     if (admin) {

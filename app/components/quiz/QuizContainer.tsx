@@ -51,13 +51,15 @@ function getRedirectUrl(kind: "consult" | "testOptions"): string {
 }
 
 async function postQuiz(payload: Record<string, unknown>): Promise<{ success: boolean; error?: string }> {
-  const apiEndpoint =
-    (typeof window !== "undefined" &&
-      (window as unknown as { AlleDropsQuizConfig?: { apiEndpoint?: string } }).AlleDropsQuizConfig?.apiEndpoint) ||
-    "/api/quiz/submit";
+  const cfg = typeof window !== "undefined"
+    ? (window as unknown as { AlleDropsQuizConfig?: { apiEndpoint?: string; shopUrl?: string } }).AlleDropsQuizConfig
+    : undefined;
+  const apiEndpoint = cfg?.apiEndpoint || "/api/quiz/submit";
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (cfg?.shopUrl) headers["X-Shopify-Shop-Domain"] = cfg.shopUrl;
   const response = await fetch(apiEndpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(payload),
   });
   const result = (await response.json()) as { success?: boolean; error?: string };
@@ -103,6 +105,15 @@ export function QuizContainer() {
       history_family: Array.isArray(prev.history_family) ? prev.history_family : [],
     }));
   }, [step]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.self !== window.top) {
+      window.parent.postMessage({ type: "quiz:scrollToTop" }, "*");
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [step, currentPartIndex]);
 
   const handleAnswerChange = useCallback((questionId: string, value: string | string[] | number) => {
     setAnswers((prev) => {

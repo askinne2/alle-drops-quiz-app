@@ -32,9 +32,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return new Response(bundle, {
         headers: {
           "Content-Type": "application/javascript; charset=utf-8",
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Pragma": "no-cache",
-          "Expires": "0",
+          "Cache-Control": "public, max-age=300",
           ...corsHeaders,
         },
       });

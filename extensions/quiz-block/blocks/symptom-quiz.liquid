@@ -1,7 +1,6 @@
 {%- comment -%}
   AlleDrops Symptom Quiz App Block
-  Renders the quiz directly in the theme (no iframe)
-  Inherits CSS from theme variables
+  Renders the quiz inside a cross-origin iframe hosted on Fly.
 {%- endcomment -%}
 
 {%- style -%}
@@ -20,123 +19,67 @@
 
 <div class="symptom-quiz-wrapper section-{{ section.id }}-padding">
   <div class="page-width">
-    
-    {%- comment -%} Quiz Header {%- endcomment -%}
-    <div class="symptom-quiz__header">
-      {%- if block.settings.heading != blank -%}
-        <h1 class="symptom-quiz__title">{{ block.settings.heading }}</h1>
-      {%- endif -%}
-      
-      {%- if block.settings.subheading != blank -%}
-        <p class="symptom-quiz__subtitle">{{ block.settings.subheading }}</p>
-      {%- endif -%}
-      
-      {%- if block.settings.show_disclaimer -%}
-        <div class="symptom-quiz__disclaimer">
-          <p>
-            <strong>Medical Disclaimer:</strong> 
-            This assessment is for product recommendation purposes only and does not constitute medical advice. 
-            It does not replace consultation with a healthcare provider.
-          </p>
-        </div>
-      {%- endif -%}
-    </div>
 
-    {%- comment -%} Quiz Container - React will render here {%- endcomment -%}
-    <div 
-      id="alledrops-quiz-{{ block.id }}" 
-      class="symptom-quiz"
-      data-alledrops-quiz
-      data-app-url="{{ block.settings.app_url }}"
-    >
-      {%- if block.settings.show_loading -%}
-        <div style="text-align: center; padding: 3rem;">
-          <p>Loading quiz...</p>
-        </div>
-      {%- endif -%}
-    </div>
-    
-    {%- comment -%} Privacy Notice {%- endcomment -%}
+    {%- if block.settings.heading != blank -%}
+      <h1 class="symptom-quiz__title">{{ block.settings.heading }}</h1>
+    {%- endif -%}
+
+    {%- if block.settings.subheading != blank -%}
+      <p class="symptom-quiz__subtitle">{{ block.settings.subheading }}</p>
+    {%- endif -%}
+
+    {%- if block.settings.show_disclaimer -%}
+      <div class="symptom-quiz__disclaimer">
+        <p>
+          <strong>Medical Disclaimer:</strong>
+          This assessment is for product recommendation purposes only and does not constitute medical advice.
+          It does not replace consultation with a healthcare provider.
+        </p>
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} Build embed URL {%- endcomment -%}
+    {%- assign fly_url = block.settings.app_url | strip -%}
+    {%- if fly_url == blank -%}{%- assign fly_url = 'https://alle-drops-quiz-app.fly.dev' -%}{%- endif -%}
+    {%- assign _consult_enc = block.settings.consult_redirect_url | url_encode -%}
+    {%- assign _test_enc = block.settings.test_options_redirect_url | url_encode -%}
+    {%- assign _test_flag = '0' -%}{%- if block.settings.enable_test_mode -%}{%- assign _test_flag = '1' -%}{%- endif -%}
+    {%- assign _embed_src = fly_url | append: '/quiz-embed?consult=' | append: _consult_enc | append: '&testOptions=' | append: _test_enc | append: '&test=' | append: _test_flag -%}
+
+    <iframe
+      id="alledrops-quiz-{{ block.id }}"
+      src="{{ _embed_src }}"
+      title="AlleDrops Symptom Assessment"
+      style="width:100%; border:none; display:block; min-height:600px; overflow:hidden;"
+      scrolling="no"
+    ></iframe>
+
+    <script>
+      (function() {
+        var iframe = document.getElementById('alledrops-quiz-{{ block.id }}');
+        window.addEventListener('message', function(e) {
+          if (!e.data || typeof e.data !== 'object') return;
+          if (e.data.type === 'quiz:resize' && iframe) {
+            iframe.style.height = (e.data.height + 24) + 'px';
+          }
+          if (e.data.type === 'quiz:navigate' && e.data.url) {
+            window.location.assign(e.data.url);
+          }
+        });
+      })();
+    </script>
+
     {%- if block.settings.privacy_policy_url != blank -%}
       <div class="symptom-quiz__privacy">
         <p>
-          Your data is protected. Read our 
+          Your data is protected. Read our
           <a href="{{ block.settings.privacy_policy_url }}" target="_blank" rel="noopener">Privacy Policy</a>.
         </p>
       </div>
     {%- endif -%}
-    
+
   </div>
 </div>
-
-{%- comment -%} Load Quiz CSS and JavaScript Bundle {%- endcomment -%}
-{%- assign app_url = block.settings.app_url -%}
-{%- if app_url != blank and app_url != 'https://your-app-url.com' and app_url != '' -%}
-  {%- comment -%} Load CSS {%- endcomment -%}
-  <link rel="stylesheet" href="{{ app_url }}/quiz-bundle-css" />
-  
-  {%- comment -%} Load JavaScript {%- endcomment -%}
-  <script>
-    (function() {
-      const appUrl = {{ app_url | json }};
-      const container = document.getElementById('alledrops-quiz-{{ block.id }}');
-      
-      if (!appUrl || appUrl === 'https://your-app-url.com' || appUrl === '') {
-        if (container) {
-          container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #999;">Quiz app URL not configured. Please set the App URL in the block settings.</p>';
-        }
-        return;
-      }
-      
-      // Load the quiz bundle from the app
-      const script = document.createElement('script');
-      script.src = appUrl + '/quiz-bundle-js'; // Dash instead of dot for React Router
-      script.async = true;
-      script.crossOrigin = 'anonymous';
-      script.onerror = function() {
-        if (container) {
-          container.innerHTML = '<p style="text-align: center; padding: 2rem; color: #999;">Unable to load quiz. Please check your app URL configuration.</p>';
-        }
-      };
-      document.head.appendChild(script);
-    })();
-  </script>
-{%- else -%}
-  <script>
-    document.getElementById('alledrops-quiz-{{ block.id }}').innerHTML = '<p style="text-align: center; padding: 2rem; color: #999;">Quiz app URL not configured. Please set the App URL in the block settings.</p>';
-  </script>
-{%- endif -%}
-
-{%- comment -%} Configuration for quiz {%- endcomment -%}
-{%- assign clean_app_url = block.settings.app_url | strip | split: '/' | join: '/' -%}
-{%- if clean_app_url contains 'trycloudflare.com/' -%}
-  {%- assign clean_app_url = clean_app_url | remove_last: '/' -%}
-{%- endif -%}
-<script>
-  (function() {
-    var appUrl = {{ block.settings.app_url | json }};
-    var cloudflareWorkerUrl = {{ block.settings.cloudflare_worker_url | json }};
-    
-    // Remove trailing slash if present
-    if (appUrl && appUrl.endsWith('/')) {
-      appUrl = appUrl.slice(0, -1);
-    }
-    if (cloudflareWorkerUrl && cloudflareWorkerUrl.endsWith('/')) {
-      cloudflareWorkerUrl = cloudflareWorkerUrl.slice(0, -1);
-    }
-    
-    window.AlleDropsQuizConfig = {
-      appUrl: appUrl,
-      shopUrl: {{ shop.url | json }},
-      // Use Cloudflare Worker if configured, otherwise fall back to app API
-      apiEndpoint: cloudflareWorkerUrl || (appUrl + '/api/quiz/submit'),
-      cloudflareWorkerUrl: cloudflareWorkerUrl,
-      testMode: {{ block.settings.enable_test_mode | json }},
-      consultRedirectUrl: {{ block.settings.consult_redirect_url | json }},
-      testOptionsRedirectUrl: {{ block.settings.test_options_redirect_url | json }}
-    };
-  })();
-</script>
 
 {% schema %}
 {
@@ -176,13 +119,7 @@
       "id": "app_url",
       "label": "App URL",
       "default": "https://alle-drops-quiz-app.fly.dev",
-      "info": "Your app's URL (set this after deploying)"
-    },
-    {
-      "type": "text",
-      "id": "cloudflare_worker_url",
-      "label": "Cloudflare Worker URL (Optional)",
-      "info": "If set, quiz submissions will go through your Cloudflare Worker for customer metafield updates. Leave blank to use the app's API."
+      "info": "Fly app URL. Swap to quiz.alledrops.com once the custom domain is set up."
     },
     {
       "type": "checkbox",
@@ -195,7 +132,7 @@
       "id": "enable_test_mode",
       "label": "Enable Test Mode",
       "default": false,
-      "info": "Shows a test button to auto-complete the quiz (for development/testing)"
+      "info": "Shows a test button to auto-complete the quiz (for development/testing only)"
     },
     {
       "type": "header",

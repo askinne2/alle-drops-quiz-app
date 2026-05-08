@@ -1,98 +1,106 @@
-# Handoff — AlleDrops quiz app (2026-05-08 session 10)
+# Handoff — AlleDrops quiz app (2026-05-08 session 13)
 
 ### Goal
 
-All UX audit items from `docs/UX-AUDIT.md` are now resolved. Only 2 pre-launch blockers remain (CONTENT-1/2 — external dependencies on William). Carry-over E2E testing tasks remain.
+Prototype the iframe architecture for the AOD team. The quiz runs inside a cross-origin iframe injected by the quiz bundle itself. CSS variables matching the AlleDrops/Shopify brand are hardcoded in the embed page. BAAs and custom domain deferred until actual launch.
 
 ---
 
 ### Current progress
 
-**Shipped in PR #6 (squash-merged to `main`):**
-- Extension rewritten as `extensions/quiz-history/src/QuizHistoryBlock.jsx` using the 2026-04 Preact pattern.
-- `app/lib/customer-auth.ts` fixed: JWKS → HS256 with `SHOPIFY_API_SECRET` + `aud` validated against `SHOPIFY_API_KEY`.
+**Shipped in sessions 1–10 (squash-merged to `main`):**
+- All UX audit items resolved. Cloud SQL submission, ledger, PDF generation, Customer Account extension all live.
 
-**Shipped in session 7 (squash-merged to `main`):**
-- BUG-1, BUG-2, BUG-3, UX-1, UX-2, UX-3, UX-5, UX-6 — all fixed and deployed.
+**Built in sessions 11–12 — on disk, NOT committed, deployed to Fly:**
+- `app/routes/quiz-embed.tsx` — Fly route returning standalone HTML embed page with brand CSS vars, postMessage wiring, height reporting, x-forwarded-proto fix, CSP: `frame-ancestors *`
+- `app/entry.theme.tsx` — Dual-mode bundle: injects iframe from Shopify parent page, mounts React directly inside iframe
+- `extensions/quiz-block/blocks/symptom-quiz.liquid` — Updated locally but NOT live on Shopify (old Liquid still active; dual-mode bundle sidesteps the need to update it)
+- `public/quiz-bundle.js` + `public/quiz-bundle.css` — Rebuilt with dual-mode entry point
 
-**Fixed in session 8 — deployed to Fly:**
-- Results page orphaned `1fr 1fr` grid (EXTRA-1)
-- Progress bar answer-based across 18 questions (EXTRA-2) — later superseded by section-based approach
-- Question card borders removed, hover shadow kept (VISUAL-3)
-- Consent scroll box: `quizContainer__scrollBox` CSS class, readable font size (VISUAL-6)
+**Fixed in session 13 — deployed to Fly, still uncommitted:**
+- **Customer history now works.** Root cause was a two-layer failure:
+  1. The iframe origin (`alle-drops-quiz-app.fly.dev`) broke shop detection in the submit route → `customer_id_shopify` was stored as NULL → ledger query returned nothing. Fixed by passing `shop: window.location.hostname` from the parent Shopify page → iframe URL param → `AlleDropsQuizConfig.shopUrl` → `X-Shopify-Shop-Domain` header on every submit.
+  2. Even with the shop detected, `unauthenticated.admin(shop)` throws `SessionNotFoundError` because only `aod-dev.myshopify.com` has a stored OAuth session — `allergist-on-demand.myshopify.com` does not. Fixed by adding a direct-token fallback: when `unauthenticated.admin()` fails, the route uses `SHOPIFY_ADMIN_ACCESS_TOKEN` + `SHOPIFY_SHOP_DOMAIN` env vars to call the Admin GraphQL API directly.
+  3. Backfilled 3 existing `askinne2@gmail.com` submissions via Cloud SQL UPDATE using the known GID `gid://shopify/Customer/6822520881358`.
+- **Scroll-to-top on Next/Back navigation.** `useEffect([step, currentPartIndex])` in `QuizContainer.tsx` fires `quiz:scrollToTop` postMessage; parent in `entry.theme.tsx` calls `container.scrollIntoView({ behavior: 'smooth', block: 'start' })`.
+- **JS bundle cache fixed.** `quiz-bundle-js.tsx` was serving with `no-store` (183 KB re-download every load). Changed to `public, max-age=300`.
 
-**Fixed in session 9 — deployed to Fly:**
-- **VISUAL-1** — Checkbox option rows: white background, border opacity 0.2.
-- **VISUAL-2** — Score circle: 88px circle with teal border + tinted bg. Severity color classes applied in `ResultsDisplay.tsx`.
-- **VISUAL-4** — Heading font-weight hard-coded to 700 (was inheriting 900 from Shopify theme).
-- **VISUAL-5** — Completed step: wrapped in `.questionCard`, green SVG checkmark, profile ID styled pill, inline styles removed.
-- **VISUAL-7** — IneligibleMessage: added `<h2>Not Available in Your State</h2>`.
-- **quiz-theme.css background removed** — `.symptom-quiz` background-color now transparent.
-- **Cache-Control fixed** — `quiz-bundle-css.tsx` and `quiz-bundle.css.tsx` changed from `max-age=3600` to `max-age=0, must-revalidate`.
-- **TS error fixed** — `auth.login/route.tsx:39` — added `?? ""` fallback on `e.currentTarget.value`.
-
-**Fixed in session 10 — built, needs deploy:**
-- **UX-4** — Progress indicator now shows on StateGate ("Step 1 of 7"), PatientInfo ("Step 2 of 7"), and all 5 quiz parts ("Part X of 5"). Fill is section-based: advances 14% per step (0% → 14% → 28% → … → 86%).
-- **Progress bar fill never rendered** — Root cause: Shopify `base.css` has `div:empty { display: none }` which hid the empty fill `<div>`. Fix: changed fill element from `<div>` to `<span>` (`span:empty` is not in Shopify's rule). Added `display: block` to `.quizProgress__fill` CSS class (spans are inline by default).
-- **QuizProgress refactored** — Simplified to `{ fillPct, label }` props. Old `answeredCount`/`totalQuestions` answer-based approach removed (imperceptible ~5% increments replaced by visible 14% section jumps).
+**Deployed state:** All session 13 changes are live on Fly. Changes are uncommitted.
 
 ---
 
 ### What worked
 
-- **Correct extension pattern (2026-04):** `import '@shopify/ui-extensions/preact'` + `render(<Component />, document.body)`. `s-` web components globally registered.
-- **`shopify app deploy --allow-updates`** — fast and reliable.
-- **Chrome DevTools MCP** — `evaluate_script` to query computed styles and matching CSS rules. Found `display: none` on fill element + identified the matching Shopify selector.
-- **`<span>` instead of `<div>` for empty visual elements** — Shopify's `base.css` lists `div:empty, p:empty, h1:empty…` but NOT `span:empty`. Switching the fill bar to `<span>` sidesteps the rule entirely without specificity battles.
-- **Fly secrets**: `SHOPIFY_API_SECRET` and `SHOPIFY_API_KEY` already set.
+- **Dual-mode bundle** — `entry.theme.tsx` detects `window.self !== window.top`. Works with the OLD Shopify extension Liquid without needing `shopify app deploy`.
+- **`x-forwarded-proto` header** — Fly's proxy strips HTTPS; must use this header to reconstruct the correct `https://` origin.
+- **Hardcoded CSS variables in embed page** — The iframe is cross-origin so Shopify theme CSS variables are not inherited. Values extracted from live Shopify theme via DevTools.
+- **`html { font-size: 62.5% }`** — Quiz CSS uses rem units sized for a 10px base; without this all text is oversized.
+- **Loader-only route returning raw `Response`** — No default export needed.
+- **`ResizeObserver` + setTimeout(200ms, 800ms) fallbacks** — Covers initial paint and React hydration.
+- **`frame-ancestors *` CSP** — Allows embedding from any Shopify store domain.
+- **Direct Admin API token fallback** — `SHOPIFY_ADMIN_ACCESS_TOKEN` + `SHOPIFY_SHOP_DOMAIN` secrets already deployed; using them as a fallback when `unauthenticated.admin()` fails (no stored OAuth session for production shop). This is the correct approach for a single-shop deployment.
+- **Shop domain passed through iframe URL** — `window.location.hostname` → `?shop=` param → `AlleDropsQuizConfig.shopUrl` → `X-Shopify-Shop-Domain` header. Submit route already read this header as a fallback; no change needed there.
+- **Cloud SQL queries via Fly SSH** — `fly ssh console` + inline Node `pg` query is the fastest way to inspect or patch Cloud SQL data without needing gcloud ADC set up locally. `gcloud sql connect` requires `gcloud auth application-default login` separately from `gcloud auth login`.
 
 ### What didn't work (DO NOT RETRY)
 
-- **Compound selector to override `div:empty`** — Tried `.quizProgress__bar .quizProgress__fill { display: block }` (specificity 0,2,0 vs Shopify's 0,1,1). Logically should win but the fix was proven ineffective in DevTools while the old cached bundle was still live. Superseded by the `<span>` approach which avoids the conflict entirely.
-- **Answer-based progress fill** — Each question = ~5.6% fill on an 8px bar. Imperceptible to users. Section-based fill (14% per step) is much more satisfying.
-- `shopify.extend(target, factory)` — old API.
-- `reactExtension` from `@shopify/ui-extensions-react/customer-account` — deprecated as of 2026-04 API.
-- JWKS / `createRemoteJWKSet` for Customer Account extension session tokens — tokens are HS256.
-- Preact without `@shopify/ui-extensions/preact` import.
-- Vanilla `document.createElement` + `document.body.appendChild`.
+- **`shopify app deploy --allow-updates` updating the extension Liquid** — Even after re-adding the block in the theme customizer, the live page still renders the OLD `symptom-quiz.liquid`. Dual-mode bundle sidesteps this entirely.
+- **`url.protocol` for origin in `quiz-embed.tsx`** — Returns `http:` behind Fly's TLS proxy. Always use `x-forwarded-proto` header instead.
+- **`async` on the quiz bundle `<script>` tag** — Races with the inline config/override script. Use synchronous `<script src="...">` at end of `<body>`.
+- **Compound CSS specificity battles with Shopify `div:empty` rule** — Use `<span>` instead.
+- **Old Shopify extension APIs:** `shopify.extend`, `reactExtension`, JWKS for session tokens.
+- **`unauthenticated.admin(shop)` for production shop** — Only one OAuth session exists in the Fly SQLite: `offline_aod-dev.myshopify.com`. No session for `allergist-on-demand.myshopify.com`. Do NOT try to re-auth via OAuth flow — use the direct-token fallback instead.
 
 ---
 
 ### Next steps
 
-**Pre-launch blockers (must fix before first real patient):**
-- [ ] **CONTENT-2 (BLOCKER)** — Confirm/disable Test Mode on production page. Check Theme App Block Liquid for `testMode: true` or `?test=1`. File: `QuizContainer.tsx` + theme block Liquid.
-- [ ] **CONTENT-1 (BLOCKER)** — Replace `[PENDING — Treatment policy page language]` in Section 4 of consent form with final William-approved language. File: `ConsentStep.tsx`.
+**Before sending to client:**
+- [ ] **Turn off Test Mode** — Shopify admin → Themes → Customize → AlleDrops Quiz block → uncheck "Enable Test Mode" → Save. Currently `test=1` in the iframe src shows the pink "Test Mode: jump to outcome" button. **Must do before sharing with AOD.**
+- [ ] **Commit all local changes** — `app/routes/quiz-embed.tsx`, `app/routes/api.quiz.submit.tsx`, `app/entry.theme.tsx`, `app/components/quiz/QuizContainer.tsx`, `app/routes/quiz-bundle-js.tsx`, `extensions/quiz-block/blocks/symptom-quiz.liquid`, `public/quiz-bundle.*`, `HANDOFF.md`. All on disk but untracked/unstaged.
 
-**Carry-over from session 5:**
-- [ ] **Remove duplicate quiz-history block** from profile page customizer (Shopify admin → Customer Account → Profile customizer).
-- [ ] **Test Download PDF E2E** — click link as logged-in patient, confirm PDF downloads.
-- [ ] **Submit quiz as logged-in customer** — confirm new assessment appears in history after submission.
-- [ ] **Custom domain on Fly** — `fly certs create quiz.allerdrops.com -a alle-drops-quiz-app`.
+**Verify after Test Mode is off:**
+- [ ] Submit one full quiz as `askinne2@gmail.com` and confirm `customerLinked: true` in Fly logs (`fly logs -a alle-drops-quiz-app --no-tail | grep customerLinked`).
+- [ ] Check Customer Account history page — should show all 4 assessments (3 backfilled + 1 new).
+- [ ] Verify E2E: Tennessee → fill patient info → answer all parts → see results → use a CTA redirect button (confirms postMessage navigation).
 
-**Iframe migration (MVP plan — next major sprint):**
-- Requires Day 1 prerequisites from Andrew: DNS access for `quiz.alledrops.com`, Google Cloud BAA acceptance, Fly BAA conversation initiated.
-- Engineering work: `/quiz/embed` route on Fly, CSP headers, postMessage handlers, Theme App Block Liquid → iframe wrapper, custom domain cert.
-- Full plan: `~/Documents/Claude/Projects/AoD/aod-mvp-plan.md` (Day 5–6 items).
+**Pre-launch blockers:**
+- [ ] **CONTENT-1 (BLOCKER)** — Replace `[PENDING — Treatment policy page language]` in consent form. File: `app/components/quiz/ConsentStep.tsx`. Awaiting copy from William.
+
+**Carry-over:**
+- [ ] Remove duplicate quiz-history block from profile page customizer.
+- [ ] Test Download PDF E2E as logged-in patient.
+- [ ] Theme repo cleanup — delete `cloudflare-worker/` and `google-apps-script/` from `~/Local Sites/allergist-on-demand/`.
+
+**Custom domain (when ready to go live):**
+- DNS CNAME → Fly, `fly certs create quiz.alledrops.com -a alle-drops-quiz-app`
+- Update `app_url` in Theme App Block customizer — no code changes needed
 
 ---
 
 ### Resume context
 
-- **Branch:** `main`
-- **Current deployed version:** Session 10 changes committed and pushed. `public/quiz-bundle.css` + `public/quiz-bundle.js` rebuilt. Deploy with `fly deploy -a alle-drops-quiz-app` to go live (Andrew runs deploy).
-- **Deploy sequence for future CSS changes:** `npm run build:theme` → `fly deploy -a alle-drops-quiz-app` (React Router `npm run build` does NOT rebuild the quiz bundle).
-- **How to verify quiz:** `https://allergist-on-demand.myshopify.com/pages/allergy-quiz` (password: `allergy`)
-- **How to verify account extension:** `https://shopify.com/65752301774/account/profile` (password: `allergy`)
-- **UX audit doc:** `docs/UX-AUDIT.md` — all items resolved. Only CONTENT-1 and CONTENT-2 remain open.
+- **Branch:** `main` — all session 11–13 changes are **uncommitted**. Commit before any branch operations.
+- **How to verify:** `https://allergist-on-demand.myshopify.com/pages/allergy-quiz` (password: `allergy`) — quiz should load in iframe with correct AlleDrops brand colors, no Test Mode button, scroll-to-top on navigation.
+- **Deploy sequence for future changes:**
+  - Server-side route changes only → `fly deploy -a alle-drops-quiz-app`
+  - Quiz UI/CSS changes → `npm run build:theme` → `fly deploy -a alle-drops-quiz-app`
+  - React Router `npm run build` does NOT rebuild the quiz bundle
 - **Key files:**
-  - `app/components/quiz/QuizProgress.tsx` — simplified to `{ fillPct, label }` props; fill is now `<span>` to avoid Shopify `div:empty` rule
-  - `app/components/quiz/QuizContainer.tsx` — `progressInfo` computed for all steps; renders progress on state_gate, patient_info, quiz_parts
-  - `app/styles/quiz.module.css` — `display: block` added to `.quizProgress__fill`
-  - `app/components/quiz/ConsentStep.tsx` — CONTENT-1 placeholder still present (awaiting William)
+  - `app/routes/quiz-embed.tsx` — embed page HTML; reads `?shop=` param, sets `shopUrl` in config
+  - `app/entry.theme.tsx` — dual-mode; passes `shop: window.location.hostname` to iframe URL; handles `quiz:scrollToTop` postMessage
+  - `app/components/quiz/QuizContainer.tsx` — sends `X-Shopify-Shop-Domain` header; fires `quiz:scrollToTop` on step/part change
+  - `app/routes/api.quiz.submit.tsx` — submit route; direct-token fallback for customer linking
+  - `app/components/quiz/ConsentStep.tsx` — CONTENT-1 placeholder awaiting William
+  - `public/quiz-bundle.js` / `public/quiz-bundle.css` — rebuilt dual-mode bundle (session 13)
 - **Fly app:** `alle-drops-quiz-app`. Logs: `fly logs -a alle-drops-quiz-app`
 - **Shopify app:** "AlleDrops Quiz Production" (`client_id = "1af0c030f06eea4b8b46d3c006f431d3"`)
-- **Full MVP plan:** `~/Documents/Claude/Projects/AoD/aod-mvp-plan.md`
+- **Known Cloud SQL state:** `askinne2@gmail.com` has GID `gid://shopify/Customer/6822520881358`. 3 previously unlinked submissions were backfilled in session 13. Only one OAuth session in Fly SQLite: `offline_aod-dev.myshopify.com`.
+- **CSS variables in embed page** (update here if theme colors change):
+  - `--color-foreground: 46, 42, 57` | `--color-background: 229, 244, 237` | `--color-button: 44, 62, 63`
+  - `--color-button-text: 253, 251, 247` | `--color-link: 44, 62, 63`
+  - `--font-body-family / --font-heading-family: Inter, sans-serif`
+  - `--gradient-background: linear-gradient(180deg, #e5f4ed, #FDFBF7 100%)`
 
 ---
 
