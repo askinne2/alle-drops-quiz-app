@@ -4,8 +4,8 @@ import { useState, useEffect } from 'preact/hooks'
 
 const FLY_BASE = 'https://alle-drops-quiz-app.fly.dev'
 
-export default (root) => {
-  render(<QuizHistory />, root)
+export default () => {
+  render(<QuizHistory />, document.body)
 }
 
 function QuizHistory() {
