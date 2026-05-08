@@ -234,44 +234,6 @@
   box-sizing: border-box;
 }
 
-.symptom-quiz :global(button) {
-  /* Use theme button colors */
-  background-color: rgb(var(--color-button));
-  color: rgb(var(--color-button-text));
-  border: none;
-  border-radius: var(--quiz-border-radius);
-  /* Compact padding on mobile */
-  padding: var(--quiz-spacing-sm) var(--quiz-spacing-lg);
-  font-size: var(--font-body-size, 1.4rem);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--quiz-transition);
-  min-height: 44px;
-}
-
-@media screen and (min-width: 750px) {
-  .symptom-quiz :global(button) {
-    padding: var(--quiz-spacing-md) var(--quiz-spacing-xl);
-    font-size: var(--font-body-size, 1.6rem);
-  }
-}
-
-.symptom-quiz :global(button:hover) {
-  background-color: rgba(var(--color-button), 0.9);
-  box-shadow: var(--quiz-shadow-hover);
-}
-
-.symptom-quiz :global(button:focus) {
-  outline: 3px solid rgb(var(--color-button));
-  outline-offset: 2px;
-}
-
-.symptom-quiz :global(button:disabled) {
-  background-color: rgba(var(--color-foreground), 0.2);
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
 .symptom-quiz :global(input[type="text"]),
 .symptom-quiz :global(input[type="email"]) {
   width: 100%;

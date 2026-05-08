@@ -87,6 +87,7 @@ export function QuizContainer() {
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [showTestMode, setShowTestMode] = useState(false);
   const [savedToServer, setSavedToServer] = useState(false);
+  const [showProceedWarning, setShowProceedWarning] = useState(false);
 
   const autoSubmit0to2Attempted = useRef(false);
 
@@ -215,15 +216,18 @@ export function QuizContainer() {
   }, []);
 
   const handleProceedWithoutTesting = useCallback(() => {
-    const ok = window.confirm(
-      "Although testing is recommended, based on your score severity, you may choose to move forward with sublingual immunotherapy after completing our Medical History Questionnaire. Do you wish to proceed?"
-    );
-    if (ok) {
-      setConsentChecked(false);
-      setStep("medical_history");
-    } else {
-      window.location.assign(getRedirectUrl("testOptions") || "/pages/test-options");
-    }
+    setShowProceedWarning(true);
+  }, []);
+
+  const handleConfirmProceedWithoutTesting = useCallback(() => {
+    setShowProceedWarning(false);
+    setConsentChecked(false);
+    setStep("medical_history");
+  }, []);
+
+  const handleDeclineProceedWithoutTesting = useCallback(() => {
+    setShowProceedWarning(false);
+    window.location.assign(getRedirectUrl("testOptions") || "/pages/test-options");
   }, []);
 
   const handleConsentSubmit = useCallback(async () => {
@@ -256,7 +260,7 @@ export function QuizContainer() {
       <div className={styles.quizError}>
         <h2>Error</h2>
         <p>{submissionError || "There was an error submitting your quiz. Please try again."}</p>
-        <button type="button" onClick={() => setStep("consent")}>
+        <button type="button" className={styles.button} onClick={() => setStep("consent")}>
           Back
         </button>
       </div>
@@ -287,7 +291,10 @@ export function QuizContainer() {
   if (step === "submitting") {
     return (
       <div className={styles.quizContainer}>
-        <p>Submitting…</p>
+        <div className={styles.quizSubmitting}>
+          <div className={styles.quizSubmitting__spinner} aria-hidden="true" />
+          <p className={styles.quizSubmitting__text}>Submitting your assessment…</p>
+        </div>
       </div>
     );
   }
@@ -312,12 +319,12 @@ export function QuizContainer() {
             />
             {renderNavRow(
               <>
-                <button type="button" className={styles.quizNavigation__buttonPrev} onClick={() => setStep("state_gate")}>
+                <button type="button" className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`} onClick={() => setStep("state_gate")}>
                   ← Previous
                 </button>
                 <button
                   type="button"
-                  className={styles.quizNavigation__buttonNext}
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
                   onClick={() => {
                     if (!validatePatientInfoStep(patientInfo)) {
                       setPatientInfoShowErrors(true);
@@ -347,7 +354,7 @@ export function QuizContainer() {
                 {currentPartIndex > 0 ? (
                   <button
                     type="button"
-                    className={styles.quizNavigation__buttonPrev}
+                    className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
                     onClick={() => setCurrentPartIndex((i) => i - 1)}
                   >
                     ← Previous
@@ -355,7 +362,7 @@ export function QuizContainer() {
                 ) : (
                   <button
                     type="button"
-                    className={styles.quizNavigation__buttonPrev}
+                    className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
                     onClick={() => setStep("patient_info")}
                   >
                     ← Previous
@@ -364,7 +371,7 @@ export function QuizContainer() {
                 {currentPartIndex < quizPartsTotal - 1 ? (
                   <button
                     type="button"
-                    className={styles.quizNavigation__buttonNext}
+                    className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
                     disabled={!isPartComplete(currentPartQuestions, answers)}
                     onClick={() => isPartComplete(currentPartQuestions, answers) && setCurrentPartIndex((i) => i + 1)}
                   >
@@ -373,7 +380,7 @@ export function QuizContainer() {
                 ) : (
                   <button
                     type="button"
-                    className={styles.quizNavigation__buttonNext}
+                    className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
                     disabled={!isPartComplete(currentPartQuestions, answers)}
                     onClick={() => isPartComplete(currentPartQuestions, answers) && goToOutcome()}
                   >
@@ -389,7 +396,33 @@ export function QuizContainer() {
           patientState &&
           symptomProfileId &&
           score !== null &&
-          scoreBracket !== null && (
+          scoreBracket !== null &&
+          (showProceedWarning ? (
+            <div className={styles.proceedWarning}>
+              <h3 className={styles.proceedWarning__heading}>Testing is recommended for your score</h3>
+              <p className={styles.proceedWarning__body}>
+                Based on your symptom severity, allergy testing helps confirm which allergens to target and improves
+                treatment outcomes. You may still choose to proceed with sublingual immunotherapy, and your provider
+                will review your medical history before finalizing your plan.
+              </p>
+              <div className={styles.proceedWarning__actions}>
+                <button
+                  type="button"
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
+                  onClick={handleConfirmProceedWithoutTesting}
+                >
+                  Continue without testing
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
+                  onClick={handleDeclineProceedWithoutTesting}
+                >
+                  I&apos;d like allergy testing first
+                </button>
+              </div>
+            </div>
+          ) : (
             <ResultsDisplay
               score={score}
               scoreBracket={scoreBracket}
@@ -400,7 +433,7 @@ export function QuizContainer() {
               onTestFirst={handleTestFirst}
               onProceedWithoutTesting={handleProceedWithoutTesting}
             />
-          )}
+          ))}
 
         {step === "medical_history" && (
           <>
@@ -412,12 +445,12 @@ export function QuizContainer() {
             />
             {renderNavRow(
               <>
-                <button type="button" className={styles.quizNavigation__buttonPrev} onClick={() => setStep("outcome")}>
+                <button type="button" className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`} onClick={() => setStep("outcome")}>
                   ← Previous
                 </button>
                 <button
                   type="button"
-                  className={styles.quizNavigation__buttonNext}
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
                   disabled={!isPartComplete(PART6_MEDICAL_HISTORY, answers)}
                   onClick={() => isPartComplete(PART6_MEDICAL_HISTORY, answers) && setStep("consent")}
                 >
@@ -435,14 +468,14 @@ export function QuizContainer() {
               <>
                 <button
                   type="button"
-                  className={styles.quizNavigation__buttonPrev}
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
                   onClick={() => setStep(scoreBracket === "7+" ? "medical_history" : "outcome")}
                 >
                   ← Previous
                 </button>
                 <button
                   type="button"
-                  className={styles.quizNavigation__buttonSubmit}
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonSubmit}`}
                   disabled={!consentChecked}
                   onClick={() => void handleConsentSubmit()}
                 >

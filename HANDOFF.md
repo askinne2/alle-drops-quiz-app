@@ -1,8 +1,8 @@
-# Handoff — AlleDrops quiz app (2026-05-08 session 5)
+# Handoff — AlleDrops quiz app (2026-05-08 session 6)
 
 ### Goal
 
-Quiz-history Customer Account UI extension is **fully working** on `/account/profile`. Logged-in patient sees "Symptom Assessment History" with date + Download PDF link. Next session: walk the full quiz front-end (storefront quiz flow, E2E testing, and pre-go-live cleanup).
+Session 6 walked the full quiz front-end E2E using Chrome DevTools MCP. Found and documented 18 UX/UI issues across all steps. **Next session: work through the findings in `docs/UX-AUDIT.md` one-by-one, starting with the two pre-launch blockers and the nav button CSS bug.**
 
 ---
 
@@ -43,12 +43,33 @@ Quiz-history Customer Account UI extension is **fully working** on `/account/pro
 
 ### Next steps
 
-- [ ] **Remove duplicate block** — the block appears twice on the profile page (two placements in the customizer). Remove one via Shopify admin → Customer Account → Profile customizer.
-- [ ] **Test Download PDF E2E** — click the Download PDF link as a logged-in patient, confirm the PDF downloads (calls `GET /api/me/assessment/{id}/pdf?token=...` on Fly).
-- [ ] **Submit quiz as logged-in customer** — confirm new assessment appears in the history list on profile page after submission.
-- [ ] **Walk the full quiz front-end** — review the storefront quiz flow (Theme App Block embed), iframe plan, UX/copy, state machine, consent text. See `aod-mvp-plan.md` and CLAUDE.md for full scope.
-- [ ] **Remove "Test Mode" button** from `/pages/allergy-quiz` before go-live.
-- [ ] **Custom domain on Fly** — `fly certs create quiz.allerdrops.com -a alle-drops-quiz-app` (iframe plan).
+**UX/UI fixes — work from `docs/UX-AUDIT.md` in priority order:**
+- [ ] **CONTENT-2 (BLOCKER)** — Confirm/disable Test Mode on production page. Check Theme App Block Liquid for `testMode: true` or `?test=1` in config. File: `QuizContainer.tsx:457` + theme block Liquid.
+- [ ] **CONTENT-1 (BLOCKER)** — Replace `[PENDING — Treatment policy page language]` in consent form with final William-approved language. File: `ConsentStep.tsx:56`.
+- [ ] **BUG-1** — Add `${styles.quizNavigation__button}` base class to all 8 nav buttons in `QuizContainer.tsx` (lines 315, 318, 349–363, 364–381, 414–425, 436–450). This fixes broken borders, border-radius, and flex on ← Previous / Next → / Submit across every step.
+- [ ] **BUG-2** — Remove or narrow the blanket `:global(button)` override in `quiz-theme.css:237`. This fixes the "No — I live in another state" button rendering dark instead of outlined.
+- [ ] **UX-1** — Style the "No" StateGate button as a secondary/ghost variant with a visual separator.
+- [ ] **UX-2** — Replace `window.confirm()` in `handleProceedWithoutTesting` with an inline confirmation panel.
+- [ ] **UX-3** — Add primary/secondary visual hierarchy to results CTA buttons; make them full-width.
+- [ ] **UX-5** — Add spinner/loading indicator to the "submitting" step.
+- [ ] **UX-6** — Add copy-to-clipboard button for Symptom Profile ID on results page.
+- [ ] **BUG-3** — Add `className={styles.button}` to error state Back button (`QuizContainer.tsx:259`).
+
+**Visual polish (third pass):**
+- [ ] **VISUAL-1** — White background on checkbox option rows (currently near-invisible on mint).
+- [ ] **VISUAL-2** — Score circle needs actual circle shape; apply severity color classes to bracket value.
+- [ ] **VISUAL-4** — Cap quiz heading font-weight at 700 in CSS module.
+- [ ] **VISUAL-5** — Completed step needs card wrapper + success state.
+- [ ] **VISUAL-6** — Consent scroll box: dedicated CSS class + scroll shadow indicator.
+- [ ] **VISUAL-7** — Add heading to IneligibleMessage.
+- [ ] **VISUAL-3** — Add resting box-shadow to question cards.
+- [ ] **UX-4** — Extend progress indicator to StateGate and PatientInfo steps.
+
+**Carry-over from session 5:**
+- [ ] **Remove duplicate quiz-history block** from profile page customizer (Shopify admin → Customer Account → Profile customizer).
+- [ ] **Test Download PDF E2E** — click link as logged-in patient, confirm PDF downloads.
+- [ ] **Submit quiz as logged-in customer** — confirm new assessment appears in history after submission.
+- [ ] **Custom domain on Fly** — `fly certs create quiz.allerdrops.com -a alle-drops-quiz-app`.
 
 ---
 
@@ -57,13 +78,18 @@ Quiz-history Customer Account UI extension is **fully working** on `/account/pro
 - **Branch:** `main` (all changes in PR #6 squash-merged)
 - **Current deployed version:** `alledrops-quiz-production-12` (Shopify extension), Fly `alle-drops-quiz-app` updated
 - **How to verify:** navigate to `https://shopify.com/65752301774/account/profile` (password: `allergy`), check "Symptom Assessment History" renders with data
-- **Key files:**
-  - `extensions/quiz-history/src/QuizHistoryBlock.jsx` — extension entry point (Preact JSX, new API)
-  - `extensions/quiz-history/shopify.extension.toml` — targets `customer-account.profile.block.render`
-  - `app/lib/customer-auth.ts` — HS256 token verification (fixed this session)
-  - `app/routes/api.me.assessments.tsx` — ledger endpoint (working)
-  - `app/routes/api.me.assessment.$id.pdf.tsx` — PDF endpoint (working, untested E2E)
-  - `app/components/quiz/` — quiz front-end components (next session focus)
+- **UX audit doc:** `docs/UX-AUDIT.md` — 18 findings with exact file/line references, severity, and fix descriptions. Work top-to-bottom.
+- **Key files for UX fixes:**
+  - `app/components/quiz/QuizContainer.tsx` — main state machine; BUG-1, BUG-3, UX-2, UX-5, CONTENT-2 fixes all land here
+  - `app/components/quiz/StateGate.tsx` — UX-1 (No button secondary style)
+  - `app/components/quiz/ResultsDisplay.tsx` — UX-3, UX-6, VISUAL-2
+  - `app/components/quiz/ConsentStep.tsx` — CONTENT-1, VISUAL-6
+  - `app/components/quiz/IneligibleMessage.tsx` — VISUAL-7
+  - `app/styles/quiz.module.css` — VISUAL-1, VISUAL-3, VISUAL-4, VISUAL-5; BUG-1 base class definitions live here
+  - `app/styles/quiz-theme.css` — BUG-2 (remove `:global(button)` override at line 237)
+- **Extension files (session 5, stable):**
+  - `extensions/quiz-history/src/QuizHistoryBlock.jsx` — working Preact extension
+  - `app/lib/customer-auth.ts` — HS256 token verification (fixed session 5)
 - **Test store:** `allergist-on-demand.myshopify.com` (password: `allergy`). Profile: `https://shopify.com/65752301774/account/profile`
 - **Fly app:** `alle-drops-quiz-app`. Logs: `fly logs -a alle-drops-quiz-app`
 - **Shopify app:** "AlleDrops Quiz Production" (`client_id = "1af0c030f06eea4b8b46d3c006f431d3"`)
@@ -71,4 +97,4 @@ Quiz-history Customer Account UI extension is **fully working** on `/account/pro
 
 ---
 
-**Pickup:** `@HANDOFF.md` and say "continue from the handoff" — or proceed directly to the quiz front-end walk-through.
+**Pickup:** `@HANDOFF.md` and say "continue from the handoff" — then open `docs/UX-AUDIT.md` and say "let's fix these one by one starting from the top."
