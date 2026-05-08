@@ -880,12 +880,6 @@
   }
 }
 
-@media (min-width: 990px) {
-  .quizResults__mainGrid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
 .quizResults__leftColumn {
   display: flex;
   flex-direction: column;
@@ -896,11 +890,6 @@
   .quizResults__leftColumn {
     gap: var(--quiz-spacing-lg);
   }
-}
-
-.quizResults__rightColumn {
-  display: flex;
-  flex-direction: column;
 }
 
 /* Score Circle */
