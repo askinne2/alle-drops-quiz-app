@@ -196,7 +196,7 @@
 .symptom-quiz {
   margin: 0 auto;
   /* Use theme background */
-  background-color: rgb(var(--color-background));
+  /* background-color: rgb(var(--color-background)); */
   /* Minimal padding on mobile */
   padding: var(--quiz-spacing-sm);
   border-radius: var(--quiz-border-radius);

@@ -45,8 +45,14 @@ export function ResultsDisplay({
               <span className={styles.quizResults__scoreNumber}>{score}</span>
             </div>
             <div className={styles.quizResults__severity}>
-              <span className={styles.quizResults__severityLabel}>Your Assessment Score (bracket):</span>
-              <span className={styles.quizResults__severityValue}>{scoreBracket}</span>
+              <span className={styles.quizResults__severityLabel}>Symptom Score:</span>
+              <span className={`${styles.quizResults__severityValue} ${
+                scoreBracket === "0-2"
+                  ? styles.quizResults__severityValueMinimal
+                  : scoreBracket === "3-6"
+                  ? styles.quizResults__severityValueMild
+                  : styles.quizResults__severityValueSevere
+              }`}>{scoreBracket}</span>
             </div>
           </div>
 

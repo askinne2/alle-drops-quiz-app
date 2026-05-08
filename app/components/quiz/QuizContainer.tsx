@@ -249,6 +249,21 @@ export function QuizContainer() {
   const currentPartQuestions = QUIZ_PARTS[currentPartIndex] ?? [];
   const quizPartsTotal = QUIZ_PARTS.length;
 
+  // Overall flow: state_gate (1) + patient_info (2) + 5 quiz parts (3-7) = 7 steps
+  const TOTAL_FLOW_STEPS = 2 + quizPartsTotal;
+  const progressInfo: { fillPct: number; label: string } | null = (() => {
+    if (step === "state_gate")
+      return { fillPct: 0, label: `Step 1 of ${TOTAL_FLOW_STEPS}` };
+    if (step === "patient_info")
+      return { fillPct: Math.round((1 / TOTAL_FLOW_STEPS) * 100), label: `Step 2 of ${TOTAL_FLOW_STEPS}` };
+    if (step === "quiz_parts")
+      return {
+        fillPct: Math.round(((2 + currentPartIndex) / TOTAL_FLOW_STEPS) * 100),
+        label: `Part ${currentPartIndex + 1} of ${quizPartsTotal}`,
+      };
+    return null;
+  })();
+
   const renderNavRow = (children: ReactNode) => (
     <div className={styles.quizNavigation} style={{ marginTop: "1.5rem" }}>
       <div className={styles.quizNavigation__buttons}>{children}</div>
@@ -270,20 +285,43 @@ export function QuizContainer() {
   if (step === "completed") {
     return (
       <div className={styles.quizContainer}>
-        <h2 className={styles.questionCategory__title}>Thank you</h2>
-        <p className={styles.quizContainer__subtitle}>
-          Your information has been submitted. {symptomProfileId && <>Profile ID: {symptomProfileId}</>}
-        </p>
-        <button type="button" className={styles.button} onClick={() => window.location.assign("/")}>
-          Return home
-        </button>
-        {patientState && (
-          <p style={{ marginTop: "1rem" }}>
-            <a className={styles.button} href={`/products/${PRODUCT_HANDLE_BY_STATE[patientState]}`}>
-              Go to AlleDrops product page
-            </a>
-          </p>
-        )}
+        <div className={styles.questionCard}>
+          <div className={styles.quizCompleted}>
+            <div className={styles.quizCompleted__icon} aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" fill="rgba(76,175,80,0.12)" stroke="#4CAF50" strokeWidth="2"/>
+                <path d="M7 12.5l3.5 3.5 6.5-7" stroke="#4CAF50" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <h2 className={styles.questionCategory__title}>Thank You</h2>
+            <p className={styles.quizContainer__subtitle}>
+              Your assessment has been submitted successfully.
+            </p>
+            {symptomProfileId && (
+              <div className={styles.quizCompleted__profileId}>
+                <span>Profile ID:</span>
+                <strong>{symptomProfileId}</strong>
+              </div>
+            )}
+            <div className={styles.quizCompleted__actions}>
+              <button
+                type="button"
+                className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
+                onClick={() => window.location.assign("/")}
+              >
+                Return Home
+              </button>
+              {patientState && (
+                <a
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
+                  href={`/products/${PRODUCT_HANDLE_BY_STATE[patientState]}`}
+                >
+                  Go to AlleDrops Product Page
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -301,8 +339,8 @@ export function QuizContainer() {
 
   return (
     <div className={styles.quizContainer} data-alledrops-quiz>
-      {step === "quiz_parts" && (
-        <QuizProgress currentCategory={currentPartIndex} totalCategories={quizPartsTotal} />
+      {progressInfo && (
+        <QuizProgress fillPct={progressInfo.fillPct} label={progressInfo.label} />
       )}
 
       <div className={styles.quizContainer__questions}>

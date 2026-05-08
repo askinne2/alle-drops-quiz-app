@@ -422,13 +422,28 @@ No `<h2>` heading. Compared to every other step (which starts with a heading), t
 | UX-6 | Profile ID has no copy-to-clipboard button | MEDIUM | `ResultsDisplay.tsx:107` | ✅ Fixed (session 7) |
 | CONTENT-1 | `[PENDING…]` placeholder text live in consent form | **BLOCKER** | `ConsentStep.tsx:56` | Open — awaiting William sign-off |
 | CONTENT-2 | Test Mode button visible on production page | **BLOCKER** | `QuizContainer.tsx:457` | Open — disable in Shopify theme customizer |
-| VISUAL-1 | Checkbox option rows near-invisible on mint bg | MEDIUM | `quiz.module.css:1373` | Open |
-| VISUAL-2 | Score circle is just a floating number, no shape | MEDIUM | `ResultsDisplay.tsx:33`, `quiz.module.css:874` | Open |
-| VISUAL-3 | Question cards no resting shadow | LOW | `quiz.module.css:345` | Open |
-| VISUAL-4 | Heading font-weight 900 too heavy for clinical context | LOW-MEDIUM | `quiz.module.css:295` | Open |
-| VISUAL-5 | Completed step no card/success state, inline styles | LOW-MEDIUM | `QuizContainer.tsx:266` | Open |
-| VISUAL-6 | Consent scroll box uses input class + 7 inline styles | LOW | `ConsentStep.tsx:18` | Open |
-| VISUAL-7 | IneligibleMessage has no heading | LOW | `IneligibleMessage.tsx` | Open |
+| VISUAL-1 | Checkbox option rows near-invisible on mint bg | MEDIUM | `quiz.module.css:1373` | ✅ Fixed (session 9) — white bg, border opacity 0.2 |
+| VISUAL-2 | Score circle is just a floating number, no shape | MEDIUM | `ResultsDisplay.tsx:33`, `quiz.module.css:874` | ✅ Fixed (session 9) — 88px circle + severity colors applied |
+| VISUAL-3 | Question cards no resting shadow | LOW | `quiz.module.css:345` | ✅ Modified (session 8) — borders removed instead; hover shadow kept |
+| VISUAL-4 | Heading font-weight 900 too heavy for clinical context | LOW-MEDIUM | `quiz.module.css:295` | ✅ Fixed (session 9) — hard-coded 700 |
+| VISUAL-5 | Completed step no card/success state, inline styles | LOW-MEDIUM | `QuizContainer.tsx:266` | ✅ Fixed (session 9) — card wrapper, checkmark SVG, profile ID styled, inline style removed |
+| VISUAL-6 | Consent scroll box uses input class + 7 inline styles | LOW | `ConsentStep.tsx:18` | ✅ Fixed (session 8) |
+| VISUAL-7 | IneligibleMessage has no heading | LOW | `IneligibleMessage.tsx` | ✅ Fixed (session 9) — "Not Available in Your State" h2 added |
+
+### Additional fixes (session 8, not in original audit)
+
+| ID | Description | File | Status |
+|---|---|---|---|
+| EXTRA-1 | Results page orphaned `1fr 1fr` grid at 990px (relic of deleted product recommendations column) | `quiz.module.css` | ✅ Fixed + deployed (session 8) |
+| EXTRA-2 | Progress bar filled in 20% jumps per section — now answer-based across all 18 questions | `QuizProgress.tsx`, `QuizContainer.tsx` | ✅ Fixed (session 8) |
+
+### Additional fixes (session 9, not in original audit)
+
+| ID | Description | File | Status |
+|---|---|---|---|
+| EXTRA-3 | `.symptom-quiz` background-color removed — quiz container is now transparent, inherits page bg | `quiz-theme.css`, `public/quiz-bundle.css` | ✅ Fixed (session 9) |
+| EXTRA-4 | CSS route cache `max-age=3600` caused stale deploys — changed to `max-age=0, must-revalidate` | `quiz-bundle-css.tsx`, `quiz-bundle.css.tsx` | ✅ Fixed (session 9) |
+| EXTRA-5 | TS error in `auth.login` route — `e.currentTarget.value` could be `undefined` | `auth.login/route.tsx:39` | ✅ Fixed (session 9) |
 
 ---
 

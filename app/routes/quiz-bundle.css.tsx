@@ -31,7 +31,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return new Response(css, {
         headers: {
           "Content-Type": "text/css; charset=utf-8",
-          "Cache-Control": "public, max-age=3600",
+          "Cache-Control": "public, max-age=0, must-revalidate",
           ...corsHeaders,
         },
       });
