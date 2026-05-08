@@ -1,119 +1,74 @@
-# Handoff — AlleDrops quiz app (2026-05-08 session 4)
+# Handoff — AlleDrops quiz app (2026-05-08 session 5)
 
 ### Goal
 
-Get the quiz-history Customer Account UI extension rendering on `/account/profile` — logged-in patient sees "Symptom Assessment History" with a Download PDF link.
+Quiz-history Customer Account UI extension is **fully working** on `/account/profile`. Logged-in patient sees "Symptom Assessment History" with date + Download PDF link. Next session: walk the full quiz front-end (storefront quiz flow, E2E testing, and pre-go-live cleanup).
 
 ---
 
 ### Current progress
 
-**Shipped to `main` (all PRs merged including PR #5):**
-- PRs #1–5 merged. `main` is fully up-to-date.
-- `shopify.app.toml` points at the correct Production app (`client_id = "1af0c030f06eea4b8b46d3c006f431d3"`).
-- Extension block IS added to the Customer Accounts Profile page customizer (`placementReference: "PROFILE1"`, `position: 0`).
+**Shipped in PR #6 (squash-merged to `main`):**
+- Extension rewritten as `extensions/quiz-history/src/QuizHistoryBlock.jsx` using the 2026-04 Preact pattern.
+- `extensions/quiz-history/tsconfig.json` added with `jsxImportSource: preact`, `noEmit: true`, `exclude: ["dist"]`.
+- `extensions/quiz-history/shopify.extension.toml` module updated to `./src/QuizHistoryBlock.jsx`.
+- `app/lib/customer-auth.ts` fixed: JWKS → HS256 with `SHOPIFY_API_SECRET` + `aud` validated against `SHOPIFY_API_KEY`.
+- Deployed as `alledrops-quiz-production-12` (Shopify) and Fly updated.
 
-**Deployed versions this session (all to `alledrops-quiz-production-N`):**
-- v9: render to `root` param (broken — `root` is `undefined`, factory called with no args)
-- v10: render to `document.body` via preact (broken — preact DOM reconciler doesn't sync to Remote DOM channel)
-- v11: vanilla JS DOM manipulation to `document.body` (still not rendering — current deployed version)
-
-**Current `main` state:** vanilla JS extension at `extensions/quiz-history/src/QuizHistoryBlock.js`
-
----
-
-### Sandbox architecture (deep investigation — DO NOT RE-INVESTIGATE)
-
-We read and analyzed Shopify's `sandbox-DZwF8yjP.js` (741KB) in full. Key findings:
-
-1. **`shopify.extend(target, factory)` stores the factory.** The sandbox then calls `factory()` with **NO ARGS** (`this.output = l.get(e)?.()`) — so any `(root) => ...` parameter is always `undefined`.
-
-2. **`jN` factory connects `document.body` to the Remote DOM channel.** It runs `Sw(e.global.document.body, connection)` which starts syncing `document.body` mutations to the parent page. This happens BEFORE the extension factory is called.
-
-3. **`MN` factory creates a virtual Window (`new aw`)** as `this.global`. All code inside the extension IIFE runs in a `with (this.global)` scope chain, so `document` in any bundled code (including preact) resolves to the virtual document.
-
-4. **The virtual `document.body` IS the correct render target** — it is connected to the parent page via the Remote DOM channel.
-
-5. **Preact's DOM reconciler fails silently** — even though `document` resolves to the virtual document, the rendered elements aren't synced to the parent. Root cause unknown (possibly MutationObserver not wired, or Remote DOM elements don't support full DOM interface).
-
-6. **Vanilla `document.createElement`/`appendChild` also failed** — no `s-section` appeared in the parent DOM and no Fly API call was made. Most likely `shopify.sessionToken.get()` or the fetch is blocked, OR the Remote DOM sync isn't triggered by standard DOM operations.
-
-**The correct architecture is `@shopify/ui-extensions-react/customer-account` with `reactExtension`.** This is Shopify's ONLY officially supported JSX/component approach for this extension surface. It includes a custom React reconciler designed for the Remote DOM protocol.
+**Verified in browser:**
+- "Symptom Assessment History" section renders on profile page.
+- `GET /api/me/assessments` returns 200 with real data (date: May 7, 2026).
+- Download PDF link is present and correctly formed.
 
 ---
 
 ### What worked
 
-- Chrome DevTools MCP: versionTag check via inline script, CDN bundle fetch to verify content.
-- `shopify app deploy --allow-updates` — deploys correctly every time.
-- `git push` + PR + `gh pr merge` — all clean.
-- The extension block IS added and configured in the customizer (confirmed via inline script `placementReference: "PROFILE1"`).
-- Reading `sandbox-DZwF8yjP.js` from CDN to understand exact execution model.
+- **Correct extension pattern (2026-04):** `import '@shopify/ui-extensions/preact'` + `render(<Component />, document.body)` with a synchronous default export. `s-` web components are globally registered — no import needed.
+- **`jsxImportSource: preact` in tsconfig** — tells esbuild to use Preact's JSX runtime.
+- **`shopify app deploy --allow-updates`** — fast, reliable every time.
+- **Chrome DevTools MCP** — captured the Authorization header from the network request, decoded the JWT header in-browser to confirm `alg: HS256`, which led directly to the auth fix.
+- **Fly secrets**: `SHOPIFY_API_SECRET` and `SHOPIFY_API_KEY` were already set; no new secrets needed.
+- **Shopify MCP (`polaris-customer-account-extensions`)** — confirmed `reactExtension` is the OLD API; pointed to the Preact pattern with the upgrade guide example.
 
-### What didn't work (DO NOT RETRY THESE)
+### What didn't work (DO NOT RETRY)
 
-- `render(<Component />, root)` — `root` is always `undefined` (factory called with no args).
-- `render(<Component />, document.body)` with Preact — preact DOM reconciler doesn't sync to Remote DOM.
-- Vanilla `document.createElement('s-section')` + `document.body.appendChild()` — no visible output.
-- Trying to figure out why `document.createElement` doesn't work — not productive without sandbox console access.
+- `shopify.extend(target, factory)` — old API, factory called with no args.
+- `reactExtension` from `@shopify/ui-extensions-react/customer-account` — deprecated as of 2026-04 API.
+- JWKS / `createRemoteJWKSet` for verifying Customer Account extension session tokens — tokens are HS256 signed with the app shared secret, not asymmetric JWKS.
+- Preact without `@shopify/ui-extensions/preact` import — signals not connected to Remote DOM channel.
+- Vanilla `document.createElement` + `document.body.appendChild` — not synced to Remote DOM channel.
 
 ---
 
 ### Next steps
 
-- [ ] **Install `@shopify/ui-extensions-react`** in the extension:
-  ```bash
-  cd extensions/quiz-history
-  npm install @shopify/ui-extensions-react react react-dom
-  ```
-  Or use preact/compat alias if bundle size is a concern (alias `react` → `preact/compat` in esbuild config).
-
-- [ ] **Rewrite `QuizHistoryBlock` using `reactExtension`:**
-  ```jsx
-  // extensions/quiz-history/src/QuizHistoryBlock.jsx
-  import { reactExtension, Section, Text, Spinner, Banner, InlineStack, Link } from '@shopify/ui-extensions-react/customer-account';
-  import { useSessionToken } from '@shopify/ui-extensions/customer-account/preact'; // or React hook equiv
-  import { useState, useEffect } from 'react';
-
-  export default reactExtension('customer-account.profile.block.render', () => <QuizHistory />);
-
-  function QuizHistory() {
-    const [status, setStatus] = useState('loading');
-    const [assessments, setAssessments] = useState([]);
-    const [token, setToken] = useState('');
-    // ...same logic as before...
-  }
-  ```
-  Check `@shopify/ui-extensions-react/customer-account` for exact component names (`Section`, `Text`, `Spinner`, `Banner`, `InlineStack`, `Link`).
-
-- [ ] **Update `shopify.extension.toml`** module back to `./src/QuizHistoryBlock.jsx`
-
-- [ ] **Deploy and verify:** `shopify app deploy --allow-updates` → hard reload profile page → check for `s-section` in DOM and Fly API call in Network tab.
-
-- [ ] **After block renders:** verify E2E — submit quiz as logged-in customer → see assessment list → Download PDF works.
-
+- [ ] **Remove duplicate block** — the block appears twice on the profile page (two placements in the customizer). Remove one via Shopify admin → Customer Account → Profile customizer.
+- [ ] **Test Download PDF E2E** — click the Download PDF link as a logged-in patient, confirm the PDF downloads (calls `GET /api/me/assessment/{id}/pdf?token=...` on Fly).
+- [ ] **Submit quiz as logged-in customer** — confirm new assessment appears in the history list on profile page after submission.
+- [ ] **Walk the full quiz front-end** — review the storefront quiz flow (Theme App Block embed), iframe plan, UX/copy, state machine, consent text. See `aod-mvp-plan.md` and CLAUDE.md for full scope.
 - [ ] **Remove "Test Mode" button** from `/pages/allergy-quiz` before go-live.
+- [ ] **Custom domain on Fly** — `fly certs create quiz.allerdrops.com -a alle-drops-quiz-app` (iframe plan).
 
 ---
 
 ### Resume context
 
-- **Branch:** `main` (all changes committed and pushed)
-- **Current deployed version:** `alledrops-quiz-production-11` (vanilla JS, not working)
-- **How to check served version:**
-  ```js
-  [...document.querySelectorAll('script')].map(s=>s.textContent).find(t=>t?.includes('versionTag'))?.match(/"versionTag":"([^"]+)"/)?.[1]
-  ```
+- **Branch:** `main` (all changes in PR #6 squash-merged)
+- **Current deployed version:** `alledrops-quiz-production-12` (Shopify extension), Fly `alle-drops-quiz-app` updated
+- **How to verify:** navigate to `https://shopify.com/65752301774/account/profile` (password: `allergy`), check "Symptom Assessment History" renders with data
 - **Key files:**
-  - `extensions/quiz-history/src/QuizHistoryBlock.js` — current vanilla JS (replace with reactExtension version)
-  - `extensions/quiz-history/shopify.extension.toml` — module points to `./src/QuizHistoryBlock.js`, change to `.jsx` after rewrite
-  - `extensions/quiz-history/package.json` — needs `@shopify/ui-extensions-react` + `react` added
-  - `app/routes/api.me.assessments.tsx` — ledger endpoint (working, deployed on Fly)
-  - `app/routes/api.me.assessment.$id.pdf.tsx` — PDF endpoint (working, deployed on Fly)
+  - `extensions/quiz-history/src/QuizHistoryBlock.jsx` — extension entry point (Preact JSX, new API)
+  - `extensions/quiz-history/shopify.extension.toml` — targets `customer-account.profile.block.render`
+  - `app/lib/customer-auth.ts` — HS256 token verification (fixed this session)
+  - `app/routes/api.me.assessments.tsx` — ledger endpoint (working)
+  - `app/routes/api.me.assessment.$id.pdf.tsx` — PDF endpoint (working, untested E2E)
+  - `app/components/quiz/` — quiz front-end components (next session focus)
 - **Test store:** `allergist-on-demand.myshopify.com` (password: `allergy`). Profile: `https://shopify.com/65752301774/account/profile`
 - **Fly app:** `alle-drops-quiz-app`. Logs: `fly logs -a alle-drops-quiz-app`
-- **Shopify app:** "AlleDrops Quiz Production" (`client_id = "1af0c030f06eea4b8b46d3c006f431d3"`). Currently on v11; next deploy will be v12.
+- **Shopify app:** "AlleDrops Quiz Production" (`client_id = "1af0c030f06eea4b8b46d3c006f431d3"`)
+- **Full MVP plan:** `~/Documents/Claude/Projects/AoD/aod-mvp-plan.md`
 
 ---
 
-**Pickup:** `@HANDOFF.md` and say "continue from the handoff" — rewrite the extension using `reactExtension` from `@shopify/ui-extensions-react/customer-account`, deploy, and verify the block renders.
+**Pickup:** `@HANDOFF.md` and say "continue from the handoff" — or proceed directly to the quiz front-end walk-through.
