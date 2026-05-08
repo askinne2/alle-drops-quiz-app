@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { type ScoreBracket } from "../../lib/quiz/scoring";
 import styles from "../../styles/quiz.module.css";
 
@@ -22,6 +23,15 @@ export function ResultsDisplay({
   onTestFirst,
   onProceedWithoutTesting,
 }: ResultsDisplayProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(symptomProfileId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   return (
     <div className={styles.quizResults} data-patient-state={patientState}>
       <div className={styles.quizResults__header}>
@@ -52,7 +62,11 @@ export function ResultsDisplay({
                 </p>
               </div>
               <div className={styles.quizResults__actions}>
-                <button type="button" className={styles.button} onClick={onScheduleConsult}>
+                <button
+                  type="button"
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
+                  onClick={onScheduleConsult}
+                >
                   Schedule a Consultation
                 </button>
               </div>
@@ -69,11 +83,19 @@ export function ResultsDisplay({
                   identify your triggers and optimize your treatment plan.
                 </p>
               </div>
-              <div className={styles.quizResults__actions} style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
-                <button type="button" className={styles.button} onClick={onScheduleConsult}>
+              <div className={styles.quizResults__actions}>
+                <button
+                  type="button"
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
+                  onClick={onScheduleConsult}
+                >
                   Schedule a Telehealth Appointment
                 </button>
-                <button type="button" className={styles.button} onClick={onProceedToPurchase}>
+                <button
+                  type="button"
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
+                  onClick={onProceedToPurchase}
+                >
                   Continue to Purchase AlleDrops
                 </button>
               </div>
@@ -93,11 +115,19 @@ export function ResultsDisplay({
                   causing your symptoms.
                 </p>
               </div>
-              <div className={styles.quizResults__actions} style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
-                <button type="button" className={styles.button} onClick={onTestFirst}>
+              <div className={styles.quizResults__actions}>
+                <button
+                  type="button"
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
+                  onClick={onTestFirst}
+                >
                   I&apos;d Like Allergy Testing First
                 </button>
-                <button type="button" className={styles.button} onClick={onProceedWithoutTesting}>
+                <button
+                  type="button"
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
+                  onClick={onProceedWithoutTesting}
+                >
                   Proceed Without Testing
                 </button>
               </div>
@@ -105,11 +135,20 @@ export function ResultsDisplay({
           )}
 
           <div className={styles.quizResults__profile}>
-            <p className={styles.quizResults__profileText}>
-              Your Symptom Profile ID: <strong>{symptomProfileId}</strong>
-            </p>
+            <p className={styles.quizResults__profileText}>Your Symptom Profile ID:</p>
+            <div className={styles.quizResults__profileId}>
+              <strong className={styles.quizResults__profileIdValue}>{symptomProfileId}</strong>
+              <button
+                type="button"
+                className={styles.quizResults__copyButton}
+                onClick={handleCopy}
+                aria-label="Copy Symptom Profile ID"
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
             <p className={styles.quizResults__profileNote}>
-              Save this ID for your records. You can copy it for your files or share it with our team if needed.
+              Save this ID for your records. Share it with our team if needed.
             </p>
           </div>
 

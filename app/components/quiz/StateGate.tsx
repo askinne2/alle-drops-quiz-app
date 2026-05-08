@@ -27,9 +27,10 @@ export function StateGate({ onEligible, onIneligible }: StateGateProps) {
         >
           Yes — I live in Texas
         </button>
+        <div className={styles.stateGate__separator}>or</div>
         <button
           type="button"
-          className={`${styles.button} ${styles.quizNavigation__buttonPrev}`}
+          className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
           onClick={onIneligible}
         >
           No — I live in another state
