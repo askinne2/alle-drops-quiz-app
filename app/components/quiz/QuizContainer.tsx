@@ -92,6 +92,7 @@ export function QuizContainer() {
   const [showProceedWarning, setShowProceedWarning] = useState(false);
 
   const autoSubmit0to2Attempted = useRef(false);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (typeof window !== "undefined") setShowTestMode(isTestModeEnabled());
@@ -107,6 +108,10 @@ export function QuizContainer() {
   }, [step]);
 
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     if (typeof window === "undefined") return;
     if (window.self !== window.top) {
       window.parent.postMessage({ type: "quiz:scrollToTop" }, "*");
