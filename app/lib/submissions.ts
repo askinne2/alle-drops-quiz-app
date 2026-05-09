@@ -183,3 +183,90 @@ export async function getSubmissionByIdForCustomer(args: {
   ]);
   return result.rows[0] ?? null;
 }
+
+// ─── Admin-only helpers ──────────────────────────────────────────────────────
+
+export interface AdminSubmissionListRow {
+  id: string;
+  symptom_profile_id: string;
+  patient_name: string;
+  patient_email: string;
+  patient_state: string;
+  score_bracket: string;
+  quiz_score: number;
+  created_at: string;
+  customer_id_shopify: string | null;
+}
+
+export interface AdminSubmissionsPage {
+  rows: AdminSubmissionListRow[];
+  hasNextPage: boolean;
+  cursor: string | null; // base64-encoded offset; pass as ?cursor= for the next page
+}
+
+/** Paginated, filterable submission list for provider admin view. No ownership constraint. */
+export async function listAdminSubmissions(args: {
+  state?: string | null;
+  score_bracket?: string | null;
+  from?: string | null;
+  to?: string | null;
+  q?: string | null;
+  cursor?: string | null;
+  limit?: number;
+}): Promise<AdminSubmissionsPage> {
+  const pool = getPool();
+  const limit = args.limit ?? 50;
+  const offset = args.cursor
+    ? parseInt(Buffer.from(args.cursor, 'base64').toString('utf8'), 10)
+    : 0;
+
+  const sql = `
+    SELECT
+      id, symptom_profile_id, patient_name, patient_email,
+      patient_state, score_bracket, quiz_score, created_at, customer_id_shopify
+    FROM submissions
+    WHERE
+      ($1::text IS NULL OR patient_state = $1)
+      AND ($2::text IS NULL OR score_bracket = $2)
+      AND ($3::timestamptz IS NULL OR created_at >= $3::timestamptz)
+      AND ($4::timestamptz IS NULL OR created_at <= $4::timestamptz)
+      AND ($5::text IS NULL OR (
+        patient_name ILIKE '%' || $5 || '%'
+        OR patient_email ILIKE '%' || $5 || '%'
+        OR symptom_profile_id ILIKE '%' || $5 || '%'
+      ))
+    ORDER BY created_at DESC
+    LIMIT $6 OFFSET $7
+  `;
+
+  const result = await pool.query<AdminSubmissionListRow>(sql, [
+    args.state ?? null,
+    args.score_bracket ?? null,
+    args.from ?? null,
+    args.to ?? null,
+    args.q ?? null,
+    limit + 1,   // fetch one extra to detect hasNextPage
+    offset,
+  ]);
+
+  const hasNextPage = result.rows.length > limit;
+  const rows = hasNextPage ? result.rows.slice(0, limit) : result.rows;
+  const nextOffset = offset + rows.length;
+  const cursor = hasNextPage
+    ? Buffer.from(String(nextOffset), 'utf8').toString('base64')
+    : null;
+
+  return { rows, hasNextPage, cursor };
+}
+
+/** Full row fetch for admin — no ownership constraint. */
+export async function getSubmissionByIdForAdmin(
+  id: string
+): Promise<SubmissionFullRow | null> {
+  const pool = getPool();
+  const result = await pool.query<SubmissionFullRow>(
+    'SELECT * FROM submissions WHERE id = $1 LIMIT 1',
+    [id]
+  );
+  return result.rows[0] ?? null;
+}
