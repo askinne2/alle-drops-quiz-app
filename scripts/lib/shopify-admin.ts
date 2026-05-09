@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { createHash } from 'crypto';
 
 export const SHOP_DOMAIN =
