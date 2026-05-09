@@ -1,8 +1,8 @@
-# Handoff — AlleDrops quiz app (2026-05-08 session 13)
+# Handoff — AlleDrops quiz app (2026-05-08 session 15)
 
 ### Goal
 
-Prototype the iframe architecture for the AOD team. The quiz runs inside a cross-origin iframe injected by the quiz bundle itself. CSS variables matching the AlleDrops/Shopify brand are hardcoded in the embed page. BAAs and custom domain deferred until actual launch.
+Prototype the iframe architecture for the AOD team. The quiz runs inside a cross-origin iframe injected by the quiz bundle itself. CSS variables matching the AlleDrops/Shopify brand are hardcoded in the embed page. BAAs and custom domain deferred until actual launch. Parallel work: Shopify storefront content audit, disclaimer updates, and iterative content-fix verification.
 
 ---
 
@@ -18,14 +18,20 @@ Prototype the iframe architecture for the AOD team. The quiz runs inside a cross
 - `public/quiz-bundle.js` + `public/quiz-bundle.css` — Rebuilt with dual-mode entry point
 
 **Fixed in session 13 — deployed to Fly, still uncommitted:**
-- **Customer history now works.** Root cause was a two-layer failure:
-  1. The iframe origin (`alle-drops-quiz-app.fly.dev`) broke shop detection in the submit route → `customer_id_shopify` was stored as NULL → ledger query returned nothing. Fixed by passing `shop: window.location.hostname` from the parent Shopify page → iframe URL param → `AlleDropsQuizConfig.shopUrl` → `X-Shopify-Shop-Domain` header on every submit.
-  2. Even with the shop detected, `unauthenticated.admin(shop)` throws `SessionNotFoundError` because only `aod-dev.myshopify.com` has a stored OAuth session — `allergist-on-demand.myshopify.com` does not. Fixed by adding a direct-token fallback: when `unauthenticated.admin()` fails, the route uses `SHOPIFY_ADMIN_ACCESS_TOKEN` + `SHOPIFY_SHOP_DOMAIN` env vars to call the Admin GraphQL API directly.
-  3. Backfilled 3 existing `askinne2@gmail.com` submissions via Cloud SQL UPDATE using the known GID `gid://shopify/Customer/6822520881358`.
-- **Scroll-to-top on Next/Back navigation.** `useEffect([step, currentPartIndex])` in `QuizContainer.tsx` fires `quiz:scrollToTop` postMessage; parent in `entry.theme.tsx` calls `container.scrollIntoView({ behavior: 'smooth', block: 'start' })`.
-- **JS bundle cache fixed.** `quiz-bundle-js.tsx` was serving with `no-store` (183 KB re-download every load). Changed to `public, max-age=300`.
+- Customer history now works (shop detection + direct-token fallback).
+- Scroll-to-top on Next/Back navigation via postMessage.
+- JS bundle cache fixed (300s public cache).
 
-**Deployed state:** All session 13 changes are live on Fly. Changes are uncommitted.
+**Done in session 14 — uncommitted, NOT yet deployed:**
+- Storefront content audit written → `docs/STOREFRONT_CONTENT_AUDIT.md`
+- `ResultsDisplay.tsx` disclaimer updated with new clinical language.
+- `extensions/quiz-block/blocks/symptom-quiz.liquid` disclaimer made configurable (needs `shopify app deploy`).
+
+**Done in session 15 (this session) — storefront re-crawl via Chrome DevTools:**
+- Re-crawled all pages on `allergist-on-demand.myshopify.com` to verify fixes.
+- Updated `docs/STOREFRONT_CONTENT_AUDIT.md` with resolved/remaining status for every item.
+- **11 items confirmed resolved** by the client between session 14 and 15 (see What Was Fixed table in audit doc).
+- **2 new issues found** during re-crawl (see below).
 
 ---
 
@@ -39,8 +45,8 @@ Prototype the iframe architecture for the AOD team. The quiz runs inside a cross
 - **`ResizeObserver` + setTimeout(200ms, 800ms) fallbacks** — Covers initial paint and React hydration.
 - **`frame-ancestors *` CSP** — Allows embedding from any Shopify store domain.
 - **Direct Admin API token fallback** — `SHOPIFY_ADMIN_ACCESS_TOKEN` + `SHOPIFY_SHOP_DOMAIN` secrets already deployed; using them as a fallback when `unauthenticated.admin()` fails (no stored OAuth session for production shop). This is the correct approach for a single-shop deployment.
-- **Shop domain passed through iframe URL** — `window.location.hostname` → `?shop=` param → `AlleDropsQuizConfig.shopUrl` → `X-Shopify-Shop-Domain` header. Submit route already read this header as a fallback; no change needed there.
-- **Cloud SQL queries via Fly SSH** — `fly ssh console` + inline Node `pg` query is the fastest way to inspect or patch Cloud SQL data without needing gcloud ADC set up locally. `gcloud sql connect` requires `gcloud auth application-default login` separately from `gcloud auth login`.
+- **Shop domain passed through iframe URL** — `window.location.hostname` → `?shop=` param → `AlleDropsQuizConfig.shopUrl` → `X-Shopify-Shop-Domain` header.
+- **Chrome DevTools MCP for storefront audit** — Navigate, evaluate JS, extract DOM content. `document.body.innerText` gets most page content; expand `details` elements with `el.open = true` before grabbing FAQ text.
 
 ### What didn't work (DO NOT RETRY)
 
@@ -49,23 +55,48 @@ Prototype the iframe architecture for the AOD team. The quiz runs inside a cross
 - **`async` on the quiz bundle `<script>` tag** — Races with the inline config/override script. Use synchronous `<script src="...">` at end of `<body>`.
 - **Compound CSS specificity battles with Shopify `div:empty` rule** — Use `<span>` instead.
 - **Old Shopify extension APIs:** `shopify.extend`, `reactExtension`, JWKS for session tokens.
-- **`unauthenticated.admin(shop)` for production shop** — Only one OAuth session exists in the Fly SQLite: `offline_aod-dev.myshopify.com`. No session for `allergist-on-demand.myshopify.com`. Do NOT try to re-auth via OAuth flow — use the direct-token fallback instead.
+- **`unauthenticated.admin(shop)` for production shop** — Only one OAuth session exists in the Fly SQLite: `offline_aod-dev.myshopify.com`. Do NOT try to re-auth via OAuth flow — use the direct-token fallback instead.
+- **`shopify theme push` (full push) to fix a single-file change** — Use `--only <file>` instead.
+- **Editing `allergist-on-demand/sections/symptom-quiz.liquid` to fix the quiz page disclaimer** — That section is NOT rendered on `/pages/allergy-quiz`. The correct file is `extensions/quiz-block/blocks/symptom-quiz.liquid` in the quiz app repo.
 
 ---
 
 ### Next steps
 
+**Immediate — deploy the session 14 changes (still pending):**
+- [ ] **`shopify app deploy`** from `alle-drops-quiz-app/` — pushes the updated app block extension (configurable disclaimer, privacy block removed).
+- [ ] **`shopify theme push --only sections/symptom-quiz.liquid`** from `allergist-on-demand/` — hygiene only.
+- [ ] **Commit all local changes** — all session 11–14 files on disk but untracked/unstaged.
+
 **Before sending to client:**
-- [ ] **Turn off Test Mode** — Shopify admin → Themes → Customize → AlleDrops Quiz block → uncheck "Enable Test Mode" → Save. Currently `test=1` in the iframe src shows the pink "Test Mode: jump to outcome" button. **Must do before sharing with AOD.**
-- [ ] **Commit all local changes** — `app/routes/quiz-embed.tsx`, `app/routes/api.quiz.submit.tsx`, `app/entry.theme.tsx`, `app/components/quiz/QuizContainer.tsx`, `app/routes/quiz-bundle-js.tsx`, `extensions/quiz-block/blocks/symptom-quiz.liquid`, `public/quiz-bundle.*`, `HANDOFF.md`. All on disk but untracked/unstaged.
+- [ ] **Turn off Test Mode** — Shopify admin → Themes → Customize → AlleDrops Quiz block → uncheck "Enable Test Mode" → Save.
 
 **Verify after Test Mode is off:**
-- [ ] Submit one full quiz as `askinne2@gmail.com` and confirm `customerLinked: true` in Fly logs (`fly logs -a alle-drops-quiz-app --no-tail | grep customerLinked`).
-- [ ] Check Customer Account history page — should show all 4 assessments (3 backfilled + 1 new).
-- [ ] Verify E2E: Tennessee → fill patient info → answer all parts → see results → use a CTA redirect button (confirms postMessage navigation).
+- [ ] Submit one full quiz as `askinne2@gmail.com` and confirm `customerLinked: true` in Fly logs.
+- [ ] Check Customer Account history page — should show all 4 assessments.
 
-**Pre-launch blockers:**
-- [ ] **CONTENT-1 (BLOCKER)** — Replace `[PENDING — Treatment policy page language]` in consent form. File: `app/components/quiz/ConsentStep.tsx`. Awaiting copy from William.
+**Content work — remaining open items from `docs/STOREFRONT_CONTENT_AUDIT.md`:**
+
+HIGH blockers — must fix before launch:
+- [ ] **Product descriptions (TN + TX)** — Full rewrite. Still has "no allergy tests needed" claim, no contraindications, no emergency 911 instruction, broken grammar, all-caps insurance note. Awaiting William for allergen list and contraindications.
+- [ ] **Quiz page medical disclaimer** — Still reads "for product recommendation purposes only." Requires William and/or counsel to rewrite.
+- [ ] **Create `/pages/consult`** — Still 404. Needs Shopify native calendar widget + $99 fee + provider independence statement. Awaiting William for consultation format details.
+- [ ] **Fix consultation booking** — "Schedule" button on `/products/allergy-consultation` still has no mechanism.
+- [ ] **Contact page — add 911 notice** — Must appear above the form before launch.
+- [ ] **Privacy policy** — Replace `andrew@21adsmedia.com` contact email. Requires HIPAA NPP from AOD counsel before launch.
+- [ ] **`/pages/our-team` is now 404** — NEW: page disappeared. Decide: restore, or confirm intentional removal and remove any nav references. About page now has a trimmed "Meet Your Provider" section (Dr. Ryan Sullivan only) — verify with William.
+
+MEDIUM items:
+- [ ] **Product name dashes** — "Tennessee - AlleDrops" / "Texas - AlleDrops" → remove dashes in Shopify admin.
+- [ ] **Footer FDA notice — stray closing quote** — NEW: `…FDA-approved allergen extracts."` ends with an errant `"`. Fix in Shopify theme footer content. Appears globally on every page.
+- [ ] **About page** — "thousands of patients" claim needs William verification; "personalized regional formula" overstates; no treatment duration mentioned.
+- [ ] **How It Works** — Add link to `/pages/test-options`; mention $99 fee in Step 3.
+- [ ] **`/pages/test-options`** — William must confirm/approve clinical copy before promoting this page.
+- [ ] **Collections page** — Hide Allergy Consultation from `/collections/all` browse view.
+- [ ] **Quiz "What are AlleDrops" section** — Add treatment duration (3–6 months / 2–3 years).
+
+CONTENT-1 placeholder (quiz app):
+- [ ] **`app/components/quiz/ConsentStep.tsx`** — `[PENDING — Treatment policy page language]` still needs William's consent/liability copy.
 
 **Carry-over:**
 - [ ] Remove duplicate quiz-history block from profile page customizer.
@@ -80,22 +111,28 @@ Prototype the iframe architecture for the AOD team. The quiz runs inside a cross
 
 ### Resume context
 
-- **Branch:** `main` — all session 11–13 changes are **uncommitted**. Commit before any branch operations.
-- **How to verify:** `https://allergist-on-demand.myshopify.com/pages/allergy-quiz` (password: `allergy`) — quiz should load in iframe with correct AlleDrops brand colors, no Test Mode button, scroll-to-top on navigation.
+- **Branch:** `main` — all session 11–14 changes are **uncommitted**. Commit before any branch operations.
+- **How to verify:** `https://allergist-on-demand.myshopify.com/pages/allergy-quiz` — quiz loads in iframe, correct brand colors, no Test Mode button, scroll-to-top on navigation.
 - **Deploy sequence for future changes:**
   - Server-side route changes only → `fly deploy -a alle-drops-quiz-app`
   - Quiz UI/CSS changes → `npm run build:theme` → `fly deploy -a alle-drops-quiz-app`
+  - App block extension changes → `shopify app deploy` (from `alle-drops-quiz-app/`)
+  - Theme section/template changes → `shopify theme push` (from `allergist-on-demand/`)
   - React Router `npm run build` does NOT rebuild the quiz bundle
 - **Key files:**
-  - `app/routes/quiz-embed.tsx` — embed page HTML; reads `?shop=` param, sets `shopUrl` in config
-  - `app/entry.theme.tsx` — dual-mode; passes `shop: window.location.hostname` to iframe URL; handles `quiz:scrollToTop` postMessage
-  - `app/components/quiz/QuizContainer.tsx` — sends `X-Shopify-Shop-Domain` header; fires `quiz:scrollToTop` on step/part change
+  - `app/routes/quiz-embed.tsx` — embed page HTML
+  - `app/entry.theme.tsx` — dual-mode; passes `shop: window.location.hostname` to iframe URL
+  - `app/components/quiz/QuizContainer.tsx` — sends `X-Shopify-Shop-Domain` header; scroll-to-top
   - `app/routes/api.quiz.submit.tsx` — submit route; direct-token fallback for customer linking
+  - `app/components/quiz/ResultsDisplay.tsx` — disclaimer shown on quiz results screen
   - `app/components/quiz/ConsentStep.tsx` — CONTENT-1 placeholder awaiting William
-  - `public/quiz-bundle.js` / `public/quiz-bundle.css` — rebuilt dual-mode bundle (session 13)
+  - `extensions/quiz-block/blocks/symptom-quiz.liquid` — app block template; needs `shopify app deploy`
+  - `docs/STOREFRONT_CONTENT_AUDIT.md` — full storefront audit, updated this session
+  - `public/quiz-bundle.js` / `public/quiz-bundle.css` — rebuilt dual-mode bundle
 - **Fly app:** `alle-drops-quiz-app`. Logs: `fly logs -a alle-drops-quiz-app`
 - **Shopify app:** "AlleDrops Quiz Production" (`client_id = "1af0c030f06eea4b8b46d3c006f431d3"`)
-- **Known Cloud SQL state:** `askinne2@gmail.com` has GID `gid://shopify/Customer/6822520881358`. 3 previously unlinked submissions were backfilled in session 13. Only one OAuth session in Fly SQLite: `offline_aod-dev.myshopify.com`.
+- **Known Cloud SQL state:** `askinne2@gmail.com` has GID `gid://shopify/Customer/6822520881358`. Only one OAuth session in Fly SQLite: `offline_aod-dev.myshopify.com`.
+- **Confirmed fee structure:** Optional consultation = $99 (Shopify product now correct).
 - **CSS variables in embed page** (update here if theme colors change):
   - `--color-foreground: 46, 42, 57` | `--color-background: 229, 244, 237` | `--color-button: 44, 62, 63`
   - `--color-button-text: 253, 251, 247` | `--color-link: 44, 62, 63`

@@ -160,8 +160,7 @@ export function ResultsDisplay({
 
           <div className={styles.quizResults__disclaimer}>
             <p>
-              <strong>Disclaimer:</strong> This assessment is not a medical diagnosis. Consult a qualified healthcare
-              provider before starting any treatment.
+              <strong>Disclaimer:</strong> This assessment is a clinical symptom screening tool. Results are used to determine whether sublingual immunotherapy may be appropriate for you. This tool does not diagnose conditions and does not replace evaluation by a licensed healthcare provider.
             </p>
           </div>
 

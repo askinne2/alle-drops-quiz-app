@@ -28,12 +28,11 @@
       <p class="symptom-quiz__subtitle">{{ block.settings.subheading }}</p>
     {%- endif -%}
 
-    {%- if block.settings.show_disclaimer -%}
+    {%- if block.settings.show_disclaimer and block.settings.disclaimer_text != blank -%}
       <div class="symptom-quiz__disclaimer">
         <p>
           <strong>Medical Disclaimer:</strong>
-          This assessment is for product recommendation purposes only and does not constitute medical advice.
-          It does not replace consultation with a healthcare provider.
+          {{ block.settings.disclaimer_text }}
         </p>
       </div>
     {%- endif -%}
@@ -69,14 +68,6 @@
       })();
     </script>
 
-    {%- if block.settings.privacy_policy_url != blank -%}
-      <div class="symptom-quiz__privacy">
-        <p>
-          Your data is protected. Read our
-          <a href="{{ block.settings.privacy_policy_url }}" target="_blank" rel="noopener">Privacy Policy</a>.
-        </p>
-      </div>
-    {%- endif -%}
 
   </div>
 </div>
@@ -109,6 +100,12 @@
       "id": "show_disclaimer",
       "label": "Show Medical Disclaimer",
       "default": true
+    },
+    {
+      "type": "textarea",
+      "id": "disclaimer_text",
+      "label": "Medical Disclaimer Text",
+      "default": "This assessment is a clinical symptom screening tool. Results are used to determine whether sublingual immunotherapy may be appropriate for you. This tool does not diagnose conditions and does not replace evaluation by a licensed healthcare provider."
     },
     {
       "type": "header",
@@ -149,15 +146,6 @@
       "id": "test_options_redirect_url",
       "label": "Test options redirect URL",
       "info": "Where to send users when they choose allergy testing first (defaults to /pages/test-options if blank)."
-    },
-    {
-      "type": "header",
-      "content": "Privacy"
-    },
-    {
-      "type": "url",
-      "id": "privacy_policy_url",
-      "label": "Privacy Policy URL"
     },
     {
       "type": "header",
