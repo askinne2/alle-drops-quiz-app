@@ -90,14 +90,12 @@ describe('delete list invariant', () => {
 
 describe('deleteMetafields error tolerance', () => {
   it('accumulates errors without throwing', async () => {
-    // Mock the fetch to return a mix of success + userErrors
     const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
+      ok: true, status: 200,
       json: async () => ({
         data: {
           metafieldsDelete: {
-            deletedMetafields: [{ key: 'quiz_score', namespace: 'alledrops', ownerId: 'gid://shopify/Customer/1' }],
+            deletedMetafields: [{ ownerId: 'gid://shopify/Customer/1', namespace: 'alledrops', key: 'quiz_score' }],
             userErrors: [{ field: ['metafields', '1'], message: 'Metafield not found' }],
           },
         },

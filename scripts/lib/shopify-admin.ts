@@ -175,9 +175,9 @@ export async function getCustomerMetafieldsWithValues(
 // ── Delete metafield values ───────────────────────────────────────────────
 
 const METAFIELDS_DELETE_MUTATION = /* graphql */ `
-  mutation DeleteMetafields($metafields: [MetafieldsDeleteInput!]!) {
+  mutation DeleteMetafields($metafields: [MetafieldIdentifierInput!]!) {
     metafieldsDelete(metafields: $metafields) {
-      deletedMetafields { key namespace ownerId }
+      deletedMetafields { ownerId namespace key }
       userErrors { field message }
     }
   }
@@ -185,7 +185,7 @@ const METAFIELDS_DELETE_MUTATION = /* graphql */ `
 
 interface MetafieldsDeleteData {
   metafieldsDelete: {
-    deletedMetafields: Array<{ key: string; namespace: string; ownerId: string }>;
+    deletedMetafields: Array<{ ownerId: string; namespace: string; key: string }> | null;
     userErrors: Array<{ field: string[]; message: string }>;
   };
 }
@@ -201,10 +201,11 @@ export async function deleteMetafields(
 
   for (let i = 0; i < items.length; i += BATCH) {
     const batch = items.slice(i, i + BATCH);
-    const data = await shopifyGraphQL<MetafieldsDeleteData>(METAFIELDS_DELETE_MUTATION, {
-      metafields: batch,
-    });
-    deleted += data.metafieldsDelete.deletedMetafields.length;
+    const data: MetafieldsDeleteData = await shopifyGraphQL<MetafieldsDeleteData>(
+      METAFIELDS_DELETE_MUTATION,
+      { metafields: batch },
+    );
+    deleted += data.metafieldsDelete.deletedMetafields?.length ?? 0;
     for (const e of data.metafieldsDelete.userErrors) {
       errors.push(`${e.field.join('.')}: ${e.message}`);
     }
