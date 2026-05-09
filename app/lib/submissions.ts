@@ -13,7 +13,6 @@ import type { QuizSubmissionData } from "./quiz-validation";
 
 export interface InsertSubmissionInput extends QuizSubmissionData {
   customer_id_shopify?: string | null;
-  consent_version?: string | null;
   consent_ip_address?: string | null;
   consent_user_agent?: string | null;
 }

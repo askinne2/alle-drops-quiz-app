@@ -157,7 +157,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const inserted = await insertSubmission({
       ...quizData,
       customer_id_shopify: customerIdShopify,
-      consent_version: null, // wired up when ConsentStep is integrated with PDF version
+      consent_version: typeof quizData.consent_version === 'string' ? quizData.consent_version : undefined,
       consent_ip_address:
         request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
         request.headers.get("cf-connecting-ip") ||

@@ -18,6 +18,7 @@ import {
   type ScoreBracket,
 } from "../../lib/quiz/scoring";
 import { type QuizAnswers } from "../../lib/quiz/types";
+import { CONSENT_VERSION } from "../../lib/consent-version";
 import { PRODUCT_HANDLE_BY_STATE } from "../../lib/quiz/product-links";
 import styles from "../../styles/quiz.module.css";
 
@@ -148,6 +149,7 @@ export function QuizContainer() {
         quiz_date: new Date().toISOString(),
         answers,
         completion_time: Math.round((Date.now() - startTime) / 1000),
+        consent_version: CONSENT_VERSION,
         ...extra,
       };
     },
