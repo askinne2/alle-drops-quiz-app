@@ -10,7 +10,10 @@ import { verifyCustomerToken } from '../app/lib/customer-auth'
 import * as jose from 'jose'
 
 describe('verifyCustomerToken', () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+    process.env.SHOPIFY_API_SECRET = 'test-secret'
+  })
 
   it('returns customerId GID when token is valid', async () => {
     vi.mocked(jose.jwtVerify).mockResolvedValue({
