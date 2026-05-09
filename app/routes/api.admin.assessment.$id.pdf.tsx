@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from 'react-router'
 import { authenticate } from '../shopify.server'
-import { getSubmissionByIdForAdmin } from '../lib/submissions'
+import { getSubmissionByIdForAdmin, logSubmissionAccess } from '../lib/submissions'
 import type { SubmissionFullRow } from '../lib/submissions'
 import { generateVisitSummaryPdf } from '../lib/pdf'
 
@@ -58,6 +58,9 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   }
 
   console.log(`[admin] generated PDF id=${id} shop=${shop}`)
+  logSubmissionAccess({ submission_id: id, actor_shop: shop, action: 'pdf' }).catch(
+    (err) => console.error('[admin] access log write failed:', err)
+  )
 
   return new Response(new Uint8Array(pdfBuffer), {
     status: 200,

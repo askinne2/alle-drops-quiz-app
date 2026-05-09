@@ -6,6 +6,7 @@ vi.mock('../app/shopify.server', () => ({
 
 vi.mock('../app/lib/submissions', () => ({
   getSubmissionByIdForAdmin: vi.fn(),
+  logSubmissionAccess: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('../app/lib/pdf', () => ({
@@ -17,6 +18,7 @@ import * as shopifyServer from '../app/shopify.server'
 import * as submissions from '../app/lib/submissions'
 import * as pdf from '../app/lib/pdf'
 import type { SubmissionFullRow } from '../app/lib/submissions'
+import { logSubmissionAccess } from '../app/lib/submissions'
 
 const mockSession = { shop: 'allergist-on-demand.myshopify.com', id: 'session-1' }
 
@@ -69,6 +71,11 @@ describe('GET /api/admin/assessment/:id/pdf', () => {
     expect(res.headers.get('Content-Type')).toBe('application/pdf')
     expect(res.headers.get('Content-Disposition')).toContain('assessment-uuid-1.pdf')
     expect(res.headers.get('Cache-Control')).toBe('no-store')
+    expect(logSubmissionAccess).toHaveBeenCalledWith({
+      submission_id: 'uuid-1',
+      actor_shop: 'allergist-on-demand.myshopify.com',
+      action: 'pdf',
+    })
   })
 
   it('returns 404 for non-existent submission', async () => {
