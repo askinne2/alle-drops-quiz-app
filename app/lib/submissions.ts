@@ -270,3 +270,21 @@ export async function getSubmissionByIdForAdmin(
   );
   return result.rows[0] ?? null;
 }
+
+/** Write one row to submission_access_log for HIPAA audit trail. Fire-and-forget safe. */
+export async function logSubmissionAccess({
+  submission_id,
+  actor_shop,
+  action,
+}: {
+  submission_id: string | null
+  actor_shop: string
+  action: 'list' | 'detail' | 'pdf'
+}): Promise<void> {
+  const pool = getPool();
+  await pool.query(
+    `INSERT INTO submission_access_log (submission_id, actor_shop, action)
+     VALUES ($1, $2, $3)`,
+    [submission_id, actor_shop, action]
+  );
+}

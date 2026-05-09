@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from 'react-router'
 import { authenticate } from '../shopify.server'
-import { listAdminSubmissions } from '../lib/submissions'
+import { listAdminSubmissions, logSubmissionAccess } from '../lib/submissions'
 import type { AdminSubmissionsPage } from '../lib/submissions'
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -40,6 +40,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // 4. Audit log (no PHI — shop + count only)
   console.log(
     `[admin] fetched submissions shop=${shop} count=${page.rows.length} hasNextPage=${page.hasNextPage}`
+  )
+  logSubmissionAccess({ submission_id: null, actor_shop: shop, action: 'list' }).catch(
+    (err) => console.error('[admin] access log write failed:', err)
   )
 
   return new Response(JSON.stringify(page), {
