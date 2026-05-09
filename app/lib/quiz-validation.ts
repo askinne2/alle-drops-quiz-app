@@ -27,6 +27,7 @@ export interface QuizSubmissionData {
   completion_time?: number;
   personal_history?: string[];
   family_history?: string[];
+  consent_version?: string;
 }
 
 export interface ValidationResult {

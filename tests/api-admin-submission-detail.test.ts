@@ -6,12 +6,14 @@ vi.mock('../app/shopify.server', () => ({
 
 vi.mock('../app/lib/submissions', () => ({
   getSubmissionByIdForAdmin: vi.fn(),
+  logSubmissionAccess: vi.fn().mockResolvedValue(undefined),
 }))
 
 import { loader } from '../app/routes/api.admin.submission.$id'
 import * as shopifyServer from '../app/shopify.server'
 import * as submissions from '../app/lib/submissions'
 import type { SubmissionFullRow } from '../app/lib/submissions'
+import { logSubmissionAccess } from '../app/lib/submissions'
 
 const mockSession = { shop: 'allergist-on-demand.myshopify.com', id: 'session-1' }
 
@@ -63,6 +65,11 @@ describe('GET /api/admin/submission/:id', () => {
     expect(body.patient_name).toBe('Jane Doe')
     expect(body.answers_json).toEqual({ taking_meds: 'no' })
     expect(body.patient_dob).toBe('1990-01-15')
+    expect(logSubmissionAccess).toHaveBeenCalledWith({
+      submission_id: 'uuid-1',
+      actor_shop: 'allergist-on-demand.myshopify.com',
+      action: 'detail',
+    })
   })
 
   it('returns 404 for non-existent submission', async () => {

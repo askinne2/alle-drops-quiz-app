@@ -6,12 +6,14 @@ vi.mock('../app/shopify.server', () => ({
 
 vi.mock('../app/lib/submissions', () => ({
   listAdminSubmissions: vi.fn(),
+  logSubmissionAccess: vi.fn().mockResolvedValue(undefined),
 }))
 
 import { loader } from '../app/routes/api.admin.submissions'
 import * as shopifyServer from '../app/shopify.server'
 import * as submissions from '../app/lib/submissions'
 import type { AdminSubmissionsPage } from '../app/lib/submissions'
+import { logSubmissionAccess } from '../app/lib/submissions'
 
 const mockSession = { shop: 'allergist-on-demand.myshopify.com', id: 'session-1' }
 
@@ -59,6 +61,11 @@ describe('GET /api/admin/submissions', () => {
     expect(body.rows[0].id).toBe('uuid-1')
     expect(body.hasNextPage).toBe(false)
     expect(body.cursor).toBeNull()
+    expect(logSubmissionAccess).toHaveBeenCalledWith({
+      submission_id: null,
+      actor_shop: 'allergist-on-demand.myshopify.com',
+      action: 'list',
+    })
   })
 
   it('passes all filter params to listAdminSubmissions', async () => {

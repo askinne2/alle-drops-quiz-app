@@ -13,7 +13,6 @@ import type { QuizSubmissionData } from "./quiz-validation";
 
 export interface InsertSubmissionInput extends QuizSubmissionData {
   customer_id_shopify?: string | null;
-  consent_version?: string | null;
   consent_ip_address?: string | null;
   consent_user_agent?: string | null;
 }
@@ -269,4 +268,22 @@ export async function getSubmissionByIdForAdmin(
     [id]
   );
   return result.rows[0] ?? null;
+}
+
+/** Write one row to submission_access_log for HIPAA audit trail. Fire-and-forget safe. */
+export async function logSubmissionAccess({
+  submission_id,
+  actor_shop,
+  action,
+}: {
+  submission_id: string | null
+  actor_shop: string
+  action: 'list' | 'detail' | 'pdf'
+}): Promise<void> {
+  const pool = getPool();
+  await pool.query(
+    `INSERT INTO submission_access_log (submission_id, actor_shop, action)
+     VALUES ($1, $2, $3)`,
+    [submission_id, actor_shop, action]
+  );
 }

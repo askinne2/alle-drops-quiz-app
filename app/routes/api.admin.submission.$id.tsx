@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from 'react-router'
 import { authenticate } from '../shopify.server'
-import { getSubmissionByIdForAdmin } from '../lib/submissions'
+import { getSubmissionByIdForAdmin, logSubmissionAccess } from '../lib/submissions'
 import type { SubmissionFullRow } from '../lib/submissions'
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -42,6 +42,9 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   }
 
   console.log(`[admin] fetched submission id=${id} shop=${shop}`)
+  logSubmissionAccess({ submission_id: id, actor_shop: shop, action: 'detail' }).catch(
+    (err) => console.error('[admin] access log write failed:', err)
+  )
 
   return new Response(JSON.stringify(row), {
     status: 200,
