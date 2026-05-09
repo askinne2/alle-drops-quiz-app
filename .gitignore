@@ -68,6 +68,9 @@ temp/
 # Documents (do not commit)
 docs/2026-AOD questionnaire.pdf
 
+# PHI cleanup script outputs — contain PHI, never commit
+scripts/output/
+
 # Fly.io (keep fly.toml but ignore local state)
 .fly/
 
