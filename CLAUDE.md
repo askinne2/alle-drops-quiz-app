@@ -10,6 +10,7 @@
 > 6. Non-PHI flags allowed in Shopify metafields: `alledrops.last_completed_at` (date), `alledrops.quiz_count` (int). Nothing else.
 
 ---
+## THIS IS NOT a GSD project. never try to start GSD.
 
 ## What this app is
 
