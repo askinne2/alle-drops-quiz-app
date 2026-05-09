@@ -1,53 +1,27 @@
-# Handoff — AlleDrops quiz app (2026-05-09 session 16)
+# Handoff — AlleDrops quiz app (2026-05-09 session 17)
 
-### Status: WS1 COMPLETE — ready to start WS2
-
----
-
-### What just shipped (WS1 — `fix/phi-metafield-cleanup`, PR #8)
-
-PHI metafield cleanup — fully executed and verified on production:
-
-- **58 PHI values deleted** across 6 customers (`alledrops` + `klaviyo` namespaces)
-- **18 definitions dropped** — fields cannot be re-populated
-- **`alledrops.last_completed_at` + `alledrops.quiz_count` preserved** on every customer
-- **`npx tsx scripts/phi-cleanup-verify.ts` exits 0** — store is clean
-
-Namespaces cleaned:
-- `alledrops` — 6 PHI definitions: `quiz_score`, `quiz_region`, `quiz_date`, `severity_level`, `quiz_history`, `symptom_profile_id`
-- `klaviyo` — 12 definitions from legacy QuizKit: question/answer JSON, `lastName`, `QuizCompletionDate`, `resultName`, `resultPageUrl`, etc.
-
-Scripts live in `scripts/` and are safe to re-run for future audits (`phi-cleanup-verify.ts`).
+### Status: WS2 COMPLETE — live in production
 
 ---
 
-### Next: WS2 — Phase 2 admin view
+### What just shipped (WS2 — `feature/phase-2-admin-view`, PR #9, merged to main)
 
-**Branch to create:** `feature/phase-2-admin-view` off `main`
+Phase 2 admin view — fully built, tested, merged, and deployed to Fly.io:
 
-**What to build:**
+- **`GET /api/admin/submissions`** — paginated (50/page, cursor-based), filterable by state / bracket / date range / search. Admin-authenticated.
+- **`GET /api/admin/submission/:id`** — full submission row for detail modal. Admin-authenticated.
+- **`GET /api/admin/assessment/:id/pdf`** — admin-authenticated PDF (different from patient endpoint). Same PDFKit library, different auth.
+- **`app/routes/app.quiz-results.tsx`** — replaced Phase 2 placeholder with real data table: date / name / email / state / bracket / score columns, filter bar, 300ms debounced search, row-click detail modal (full PHI + answers JSON), Download PDF via App Bridge `idToken()`.
+- **Audit log** on every admin fetch: `[admin] fetched ...` to Fly logs (shop + count, no PHI).
+- **12 new tests** all passing. 1 pre-existing `customer-auth.test.ts` failure exists on main before this branch.
 
-1. **`GET /api/admin/submissions`** — paginated list (50/page), filters: state/bracket/date/search, auth via `authenticate.admin(request)`. Returns: id, symptom_profile_id, patient_name, patient_email, patient_state, score_bracket, quiz_score, created_at, customer_id_shopify.
-
-2. **`GET /api/admin/submission/:id`** — full row including answers_json, history, consent record.
-
-3. **`GET /api/admin/assessment/:id/pdf`** — admin-authenticated PDF (different auth from patient endpoint `/api/me/assessment/:id/pdf`).
-
-4. **Refactor `app/routes/app.quiz-results.tsx`** — replace placeholder with Polaris table: columns for date/name/email/state/bracket/score, filter controls (state dropdown, bracket dropdown, date range, search), click row → modal with full detail + "Download PDF" button.
-
-5. **Audit log every fetch** — `[admin] fetched submission(s)` with actor GID + count. Goes to Fly logs.
-
-**Auth boundary:** admin endpoints use `authenticate.admin(request)` — look at other `app/routes/app.*` routes for the pattern. NOT the Customer Account session auth.
-
-**Full spec:** `~/Documents/Claude/Projects/AoD/claude-code-prompt-phi-cleanup-and-phase-2.md` (WORKSTREAM 2 section)
-
-**Out of scope for WS2:** provider review workflow, notes, real-time notifications, audit dashboards, bulk ops.
+**Verified working in production** (screenshot confirms table loaded 7 real submissions from Cloud SQL with filters visible).
 
 ---
 
-### Still pending (non-WS2)
+### Still pending (not WS2)
 
-**Deploy from session 14 — not yet pushed to Shopify:**
+**Deploy to Shopify extensions — not yet done:**
 - [ ] `shopify app deploy` from `alle-drops-quiz-app/` — configurable disclaimer in app block
 - [ ] Turn off Test Mode — Shopify admin → Themes → Customize → AlleDrops Quiz block
 
@@ -55,21 +29,45 @@ Scripts live in `scripts/` and are safe to re-run for future audits (`phi-cleanu
 - HIGH: Product descriptions (TN/TX rewrite), quiz page disclaimer, `/pages/consult` (404), consultation booking, contact 911 notice, privacy policy (replace andrew@21adsmedia.com), `/pages/our-team` (404), ConsentStep.tsx placeholder
 - MEDIUM: Product name dashes, footer stray quote, about page copy, How It Works updates, test-options page, collections page, quiz treatment duration
 
+**Infrastructure / HIPAA (pre-first-patient):**
+- Fly.io BAA — sales conversation
+- Production cutover to AOD's Google Cloud project (current GCP project is dev under 21adsmedia.com)
+- In-house counsel review (parallel, AOD-side)
+- NPP draft, Privacy/Security Officer designation, workforce HIPAA training (AOD-side)
+
+---
+
+### Next work candidates
+
+**Phase 2.5 (provider workflow — deferred from WS2):**
+- Provider review status: `new → reviewed → contacted → scheduled`
+- Provider notes on submissions
+- Audit dashboard (who viewed what, when)
+- Bulk operations
+
+**Thread A — PDF & Ledger (from aod-mvp-plan.md):**
+- Customer Account UI extension refactor — read submissions from Fly API, not metafields (metafields no longer exist)
+- The extension currently shows empty state
+
+**Thread B — Iframe embed:**
+- Theme App Block → cross-origin iframe (`quiz.allerdrops.com`)
+- Custom domain on Fly (`fly certs create quiz.allerdrops.com -a alle-drops-quiz-app`)
+
 ---
 
 ### Resume context
 
-- **Active branch after merge:** `main`
-- **Start WS2 by:** `git checkout main && git pull && git checkout -b feature/phase-2-admin-view`
-- **Key files for WS2:**
-  - `app/routes/app.quiz-results.tsx` — Phase 2 placeholder to replace
-  - `app/lib/submissions.ts` — existing DB helpers to reuse/extend
-  - `app/lib/db.ts` — pg pool
-  - `app/shopify.server.ts` — `authenticate.admin` lives here
-  - Any `app/routes/app.*` route — auth pattern to copy
-- **Fly app:** `alle-drops-quiz-app`. Logs: `fly logs -a alle-drops-quiz-app`
+- **Active branch:** `main` (WS2 merged)
+- **Fly app:** `alle-drops-quiz-app` — deployed and healthy
+- **Key files added in WS2:**
+  - `app/routes/api.admin.submissions.tsx`
+  - `app/routes/api.admin.submission.$id.tsx`
+  - `app/routes/api.admin.assessment.$id.pdf.tsx`
+  - `app/routes/app.quiz-results.tsx` (fully replaced)
+  - `app/lib/submissions.ts` — new helpers: `listAdminSubmissions`, `getSubmissionByIdForAdmin`
+- **Pre-existing test failure:** `tests/customer-auth.test.ts` — 1 test fails on main, unrelated to WS2
 - **Dev test customer:** `askinne2@gmail.com` = GID `gid://shopify/Customer/6822520881358`
-- **PR #8:** https://github.com/askinne2/alle-drops-quiz-app/pull/8 (WS1 — merge this first)
+- **PR #9:** https://github.com/askinne2/alle-drops-quiz-app/pull/9 (WS2 — merged)
 
 ---
 
