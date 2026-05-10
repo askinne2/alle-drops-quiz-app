@@ -219,70 +219,105 @@ export default function QuizResultsPage() {
 
             {detailFetcher.state !== 'loading' && detailRow && (
               <>
-                <DetailField label="ID" value={detailRow.id} />
-                <DetailField label="Profile" value={detailRow.symptom_profile_id} />
-                <DetailField label="Date" value={new Date(detailRow.created_at).toLocaleString()} />
-                <DetailField label="Name" value={detailRow.patient_name} />
-                <DetailField label="DOB" value={formatDate(detailRow.patient_dob)} />
-                <DetailField label="Email" value={detailRow.patient_email} />
-                <DetailField label="Phone" value={detailRow.patient_phone} />
-                <DetailField label="State" value={capitalize(detailRow.patient_state)} />
-                <DetailField label="Score" value={String(detailRow.quiz_score)} />
-                <DetailField label="Bracket" value={detailRow.score_bracket} />
-                {detailRow.consent_version && (
-                  <DetailField
-                    label="Consent"
-                    value={`${detailRow.consent_version} — ${formatDate(detailRow.consent_accepted_at)}`}
-                  />
-                )}
-                <div style={{ marginTop: '1rem' }}>
-                  <span style={fieldLabelStyle}>Symptom Responses</span>
-                  <div style={{ marginTop: '0.35rem' }}>
-                    {Object.entries(detailRow.answers_json ?? {}).map(([key, val]) => {
-                      const displayKey = capitalize(key.replace(/_/g, ' '))
-                      const displayVal = Array.isArray(val)
-                        ? val.join(', ')
-                        : val !== null && typeof val === 'object'
-                          ? JSON.stringify(val)
-                          : String(val ?? '—')
-                      return <DetailField key={key} label={displayKey} value={displayVal} />
-                    })}
+                {/* ── Score summary bar ── */}
+                <div style={scoreBannerStyle(detailRow.score_bracket)}>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.75, marginBottom: '0.2rem' }}>Score</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 800, lineHeight: 1 }}>{detailRow.quiz_score}</div>
+                  </div>
+                  <div style={{ borderLeft: '1px solid currentColor', opacity: 0.2, alignSelf: 'stretch' }} />
+                  <div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.75, marginBottom: '0.25rem' }}>Bracket</div>
+                    <BracketBadge bracket={detailRow.score_bracket} />
+                  </div>
+                  <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.75rem', opacity: 0.75 }}>{new Date(detailRow.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                    {detailRow.consent_version && (
+                      <div style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: '0.15rem' }}>Consent: {detailRow.consent_version}</div>
+                    )}
                   </div>
                 </div>
+
+                {/* ── Patient info grid ── */}
+                <SectionHeader>Patient Information</SectionHeader>
+                <div style={infoGridStyle}>
+                  <InfoCell label="Name" value={detailRow.patient_name} />
+                  <InfoCell label="Date of Birth" value={formatDate(detailRow.patient_dob)} />
+                  <InfoCell label="Email" value={detailRow.patient_email} />
+                  <InfoCell label="Phone" value={detailRow.patient_phone} />
+                  <InfoCell label="State" value={capitalize(detailRow.patient_state)} />
+                </div>
+
+                {/* ── Symptom responses ── */}
+                <SectionHeader>Symptom Responses</SectionHeader>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  {Object.entries(detailRow.answers_json ?? {}).map(([key, val]) => {
+                    const displayKey = capitalize(key.replace(/_/g, ' '))
+                    const displayVal = Array.isArray(val)
+                      ? val.join(', ')
+                      : val !== null && typeof val === 'object'
+                        ? JSON.stringify(val)
+                        : String(val ?? '—')
+                    return (
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0.5rem', borderRadius: '5px', background: '#f8f9fa' }}>
+                        <span style={{ fontSize: '0.875rem', color: '#374151' }}>{displayKey}</span>
+                        <SeverityPill value={displayVal} />
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* ── Medical history ── */}
                 {((detailRow.personal_history_json?.length ?? 0) > 0 || (detailRow.family_history_json?.length ?? 0) > 0) && (
-                  <div style={{ marginTop: '1rem' }}>
-                    <span style={fieldLabelStyle}>Medical History</span>
+                  <>
+                    <SectionHeader>Medical History</SectionHeader>
                     {(detailRow.personal_history_json?.length ?? 0) > 0 && (
-                      <div style={{ marginTop: '0.35rem' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Personal:</span>
-                        <ul style={{ margin: '0.2rem 0 0.5rem 1.2rem', padding: 0, fontSize: '0.9rem' }}>
-                          {detailRow.personal_history_json!.map((item, i) => <li key={i}>{item}</li>)}
-                        </ul>
+                      <div style={{ marginBottom: '0.6rem' }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280', marginBottom: '0.35rem' }}>Personal</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                          {detailRow.personal_history_json!.map((item, i) => (
+                            <span key={i} style={historyTagStyle}>{item}</span>
+                          ))}
+                        </div>
                       </div>
                     )}
                     {(detailRow.family_history_json?.length ?? 0) > 0 && (
                       <div>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Family:</span>
-                        <ul style={{ margin: '0.2rem 0 0 1.2rem', padding: 0, fontSize: '0.9rem' }}>
-                          {detailRow.family_history_json!.map((item, i) => <li key={i}>{item}</li>)}
-                        </ul>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280', marginBottom: '0.35rem' }}>Family</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                          {detailRow.family_history_json!.map((item, i) => (
+                            <span key={i} style={historyTagStyle}>{item}</span>
+                          ))}
+                        </div>
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
+
+                {/* ── Utility IDs ── */}
+                <div style={{ marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid #f0f0f0' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#9ca3af', fontFamily: 'monospace', lineHeight: 1.6 }}>
+                    <span style={{ fontWeight: 600 }}>ID</span> {detailRow.id}<br />
+                    <span style={{ fontWeight: 600 }}>Profile</span> {detailRow.symptom_profile_id}
+                  </div>
+                </div>
+
                 {pdfError && (
-                  <div style={{ color: '#c00', marginTop: '0.5rem', fontSize: '0.875rem' }}>
+                  <div style={{ color: '#dc2626', marginTop: '0.75rem', fontSize: '0.875rem', padding: '0.5rem 0.75rem', background: '#fef2f2', borderRadius: '5px' }}>
                     {pdfError}
                   </div>
                 )}
-                <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem' }}>
+
+                {/* ── Actions ── */}
+                <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.75rem' }}>
                   <button
                     onClick={() => handleDownloadPdf(detailRow.id)}
-                    style={{ ...btnStyle, background: '#0070f3' }}
+                    style={pdfBtnStyle}
                   >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '0.4rem' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Download PDF
                   </button>
-                  <button onClick={closeDetail} style={btnStyle}>Close</button>
+                  <button onClick={closeDetail} style={closeBtnSecStyle}>Close</button>
                 </div>
               </>
             )}
@@ -329,12 +364,47 @@ function SubmissionRow({
   )
 }
 
-function DetailField({ label, value }: { label: string; value: string }) {
+function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.35rem', fontSize: '0.9rem' }}>
-      <span style={fieldLabelStyle}>{label}:</span>
-      <span>{value}</span>
+    <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6b7280', margin: '1.1rem 0 0.5rem', paddingBottom: '0.3rem', borderBottom: '1px solid #e5e7eb' }}>
+      {children}
     </div>
+  )
+}
+
+function InfoCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: '0.2rem' }}>{label}</div>
+      <div style={{ fontSize: '0.9rem', color: '#111827', fontWeight: 500 }}>{value}</div>
+    </div>
+  )
+}
+
+function BracketBadge({ bracket }: { bracket: string }) {
+  const map: Record<string, { bg: string; color: string; label: string }> = {
+    '0-2': { bg: '#dcfce7', color: '#15803d', label: '0–2 Low' },
+    '3-6': { bg: '#fef9c3', color: '#a16207', label: '3–6 Moderate' },
+    '7+':  { bg: '#fee2e2', color: '#b91c1c', label: '7+ High' },
+  }
+  const t = map[bracket] ?? { bg: '#f3f4f6', color: '#374151', label: bracket }
+  return (
+    <span style={{ background: t.bg, color: t.color, fontWeight: 700, fontSize: '0.8rem', padding: '0.2rem 0.6rem', borderRadius: '999px', letterSpacing: '0.02em' }}>
+      {t.label}
+    </span>
+  )
+}
+
+function SeverityPill({ value }: { value: string }) {
+  const v = value.toLowerCase()
+  let bg = '#f3f4f6', color = '#374151'
+  if (['never', 'no', 'none', 'rarely'].includes(v)) { bg = '#dcfce7'; color = '#15803d' }
+  else if (['sometimes', 'occasionally', 'mild', 'moderate'].includes(v)) { bg = '#fef9c3'; color = '#a16207' }
+  else if (['often', 'daily', 'always', 'severe', 'yes'].includes(v)) { bg = '#fee2e2'; color = '#b91c1c' }
+  return (
+    <span style={{ background: bg, color, fontSize: '0.78rem', fontWeight: 600, padding: '0.15rem 0.55rem', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+      {value}
+    </span>
   )
 }
 
@@ -362,10 +432,24 @@ const inputStyle: CSSProperties = { padding: '0.4rem 0.5rem', borderRadius: '4px
 const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse' }
 const thStyle: CSSProperties = { padding: '0.6rem 0.75rem', textAlign: 'left', background: '#f5f5f5', border: '1px solid #ddd', fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }
 const tdStyle: CSSProperties = { padding: '0.6rem 0.75rem', border: '1px solid #e5e5e5', fontSize: '0.9rem' }
-const overlayStyle: CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }
-const modalStyle: CSSProperties = { background: 'white', borderRadius: '8px', padding: '1.5rem', width: '600px', maxWidth: '90vw', maxHeight: '82vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }
+const overlayStyle: CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }
+const modalStyle: CSSProperties = { background: 'white', borderRadius: '10px', padding: '1.5rem', width: '660px', maxWidth: '92vw', maxHeight: '85vh', overflow: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.28)' }
 const btnStyle: CSSProperties = { padding: '0.45rem 1rem', background: '#333', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem' }
-const closeBtnStyle: CSSProperties = { background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#666', lineHeight: 1, padding: '0.25rem' }
+const closeBtnStyle: CSSProperties = { background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#9ca3af', lineHeight: 1, padding: '0.25rem', transition: 'color 150ms' }
+const pdfBtnStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', padding: '0.5rem 1.1rem', background: '#0070f3', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }
+const closeBtnSecStyle: CSSProperties = { padding: '0.5rem 1.1rem', background: 'white', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 }
+const infoGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem 1.5rem' }
+const historyTagStyle: CSSProperties = { background: '#eff6ff', color: '#1d4ed8', fontSize: '0.8rem', fontWeight: 500, padding: '0.2rem 0.65rem', borderRadius: '999px', border: '1px solid #bfdbfe' }
+
+function scoreBannerStyle(bracket: string): CSSProperties {
+  const map: Record<string, { bg: string; color: string }> = {
+    '0-2': { bg: '#f0fdf4', color: '#14532d' },
+    '3-6': { bg: '#fefce8', color: '#713f12' },
+    '7+':  { bg: '#fff1f2', color: '#881337' },
+  }
+  const t = map[bracket] ?? { bg: '#f8fafc', color: '#1e293b' }
+  return { display: 'flex', alignItems: 'center', gap: '1.25rem', background: t.bg, color: t.color, borderRadius: '8px', padding: '0.9rem 1.1rem', marginBottom: '0.25rem' }
+}
 
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs)
