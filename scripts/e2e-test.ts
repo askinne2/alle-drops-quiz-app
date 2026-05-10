@@ -309,7 +309,27 @@ if (!process.env.SHOPIFY_API_SECRET) {
   process.exit(1);
 }
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// pg's URL parser mishandles special chars in passwords; use Node's URL class
+// (which correctly decodes percent-encoding) and pass explicit params instead.
+function parseConnectionString(url: string): import('pg').PoolConfig {
+  const u = new URL(url);
+  const config: import('pg').PoolConfig = {
+    host: u.hostname,
+    port: Number(u.port) || 5432,
+    database: u.pathname.replace(/^\//, ''),
+    user: u.username,
+    password: u.password, // URL auto-decodes %7D → } etc.
+  };
+  const sslmode = u.searchParams.get('sslmode');
+  if (sslmode === 'disable') {
+    config.ssl = false;
+  } else if (sslmode === 'no-verify') {
+    config.ssl = { rejectUnauthorized: false };
+  }
+  return config;
+}
+
+const pool = new Pool(parseConnectionString(process.env.DATABASE_URL!));
 let submissionIds: SubmitResult[] = [];
 
 try {
