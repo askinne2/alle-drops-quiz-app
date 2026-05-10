@@ -1,6 +1,6 @@
-# Handoff — AlleDrops quiz app (2026-05-10 session 23)
+# Handoff — AlleDrops quiz app (2026-05-10 session 24)
 
-### Status: All pre-launch engineering gates closed. Modal redesigned. Pending: `fly deploy` + theme relic cleanup.
+### Status: All pre-launch engineering gates closed. Modal deployed. 3 low-severity security findings to fix before first patient. Theme relic cleanup still pending.
 
 ---
 
@@ -23,20 +23,12 @@
 | Consent version — `CONSENT_VERSION` wired into payload + DB | ✅ done | PR #11 |
 | Breach response runbook | ✅ done | PR #11 |
 | E2E bracket test suite (`scripts/e2e-test.ts`) | ✅ done | PR #12 / `981330d` |
-| Admin assessment modal redesign (clinical UX) | ✅ committed | `b4ef25a` — **needs `fly deploy`** |
+| Admin assessment modal redesign (clinical UX) | ✅ deployed | `b4ef25a` |
+| Doc cleanup — stale plans, status docs, investigation artifacts | ✅ done | `d0632b5` |
+| Simplify refactor — shared format utils, hoisted lookups, HistoryTagList | ✅ done | `4a81abf` |
 | Custom domain `quiz.allerdrops.com` | ⏸ blocked on client | — |
 
 **46/46 tests passing. Typecheck clean.**
-
----
-
-## Immediate action needed
-
-```bash
-fly deploy -a alle-drops-quiz-app
-```
-
-The modal redesign (`b4ef25a`) is committed to `main` but the Fly machine is running the previous image. One deploy gets it live.
 
 ---
 
@@ -70,11 +62,10 @@ The modal redesign (`b4ef25a`) is committed to `main` but the Fly machine is run
 
 ---
 
-## Admin modal redesign (session 23)
+## Admin modal redesign (session 23) — deployed
 
-`app/routes/app.quiz-results.tsx` — committed `b4ef25a`, needs deploy.
+`app/routes/app.quiz-results.tsx` — live at `b4ef25a`, refactored at `4a81abf`.
 
-What changed:
 - Score + color-coded bracket badge (green 0-2 / amber 3-6 / red 7+) as visual anchor
 - 2-column patient info grid
 - Section headers: Patient Information / Symptom Responses / Medical History
@@ -82,6 +73,35 @@ What changed:
 - Medical history as tag chips
 - UUID/Profile ID demoted to small monospace utility row
 - Download PDF button with icon; Close as ghost button
+
+---
+
+## Security findings — fix before first real patient
+
+Identified during session 24 security review. All below the automated threshold (confidence 7/10) but real issues for a HIPAA app. Low-effort fixes.
+
+### 1. JWT `aud` check conditionally skipped
+**File:** `app/lib/customer-auth.ts:20`
+**Issue:** `audience` is only set in `jwtVerify` options when `SHOPIFY_API_KEY` env var is present. If absent, any HS256 token signed with the correct secret passes — even one minted for a different app.
+**Fix:** Make it fail-closed — throw at startup if `SHOPIFY_API_KEY` is missing, same as `SHOPIFY_API_SECRET`:
+```typescript
+if (!apiKey) throw new Error('SHOPIFY_API_KEY not configured')
+// always pass audience:
+const { payload } = await jwtVerify(token, key, { algorithms: ['HS256'], audience: apiKey })
+```
+
+### 2. Bearer token accepted as `?token=` URL query param
+**File:** `app/routes/api.me.assessment.$id.pdf.tsx:21-22`
+**Issue:** PDF endpoint falls back to `url.searchParams.get('token')` when no `Authorization` header. The JWT then appears in Fly.io access logs, browser history, and referrer headers — all accessible to anyone with deploy access.
+**Fix:** Remove the `?token=` fallback. Require `Authorization: Bearer` only. If the Customer Account extension can't set headers for binary downloads, use a short-lived single-use download token instead.
+
+### 3. `dbErr.message` returned in 500 response body
+**File:** `app/routes/api.quiz.submit.tsx:172-175`
+**Issue:** Raw `dbErr.message` is returned to unauthenticated callers. The current schema has no UNIQUE constraint on PHI columns, so no active leak — but any future `UNIQUE` index on `patient_email` would expose that email verbatim in the error body.
+**Fix:** Strip `details` from the 500 response:
+```typescript
+return jsonResponse({ error: "Could not save assessment" }, 500)
+```
 
 ---
 
@@ -137,13 +157,17 @@ This determines Task 2A (delete section outright) vs Task 2B (replace with thin 
 
 ## Resume context
 
-- **Active branch:** `main`
-- **Fly app:** `alle-drops-quiz-app` — healthy, but needs `fly deploy` for modal redesign
+- **Active branch:** `main` at `4a81abf`
+- **Fly app:** `alle-drops-quiz-app` — deployed and healthy (`curl` → 200)
 - **How to verify:** `npm test` (46 pass), `npm run typecheck` (clean)
-- **Cloud SQL password:** changed this session — retrieve from `fly ssh console -a alle-drops-quiz-app -C "printenv DATABASE_URL"`
+- **Cloud SQL password:** retrieve from `fly ssh console -a alle-drops-quiz-app -C "printenv DATABASE_URL"`
 - **Key files:**
   - `scripts/e2e-test.ts` — E2E test suite
-  - `app/routes/app.quiz-results.tsx` — admin submissions page + modal (redesigned)
+  - `app/routes/app.quiz-results.tsx` — admin submissions page + modal
+  - `app/lib/format.ts` — shared `capitalize`, `formatDate`, `formatAnswerValue`
+  - `app/lib/customer-auth.ts` — JWT auth (Finding 1: harden `aud` check)
+  - `app/routes/api.me.assessment.$id.pdf.tsx` — patient PDF (Finding 2: remove `?token=`)
+  - `app/routes/api.quiz.submit.tsx` — submit endpoint (Finding 3: strip `details` from 500)
   - `app/lib/consent-version.ts` — bump when counsel finalizes consent text
   - `app/components/quiz/ConsentStep.tsx` — update consent text when finalized
 - **Full MVP plan:** `~/Documents/Claude/Projects/AoD/aod-mvp-plan.md`
