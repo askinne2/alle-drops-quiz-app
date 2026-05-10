@@ -6,6 +6,7 @@ import { authenticate } from '../shopify.server'
 import { boundary } from '@shopify/shopify-app-react-router/server'
 import { listAdminSubmissions } from '../lib/submissions'
 import type { AdminSubmissionsPage, SubmissionFullRow } from '../lib/submissions'
+import { capitalize, formatDate, formatAnswerValue } from '../lib/format'
 
 declare global {
   interface Window {
@@ -219,7 +220,6 @@ export default function QuizResultsPage() {
 
             {detailFetcher.state !== 'loading' && detailRow && (
               <>
-                {/* ── Score summary bar ── */}
                 <div style={scoreBannerStyle(detailRow.score_bracket)}>
                   <div>
                     <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.75, marginBottom: '0.2rem' }}>Score</div>
@@ -238,7 +238,6 @@ export default function QuizResultsPage() {
                   </div>
                 </div>
 
-                {/* ── Patient info grid ── */}
                 <SectionHeader>Patient Information</SectionHeader>
                 <div style={infoGridStyle}>
                   <InfoCell label="Name" value={detailRow.patient_name} />
@@ -248,53 +247,24 @@ export default function QuizResultsPage() {
                   <InfoCell label="State" value={capitalize(detailRow.patient_state)} />
                 </div>
 
-                {/* ── Symptom responses ── */}
                 <SectionHeader>Symptom Responses</SectionHeader>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  {Object.entries(detailRow.answers_json ?? {}).map(([key, val]) => {
-                    const displayKey = capitalize(key.replace(/_/g, ' '))
-                    const displayVal = Array.isArray(val)
-                      ? val.join(', ')
-                      : val !== null && typeof val === 'object'
-                        ? JSON.stringify(val)
-                        : String(val ?? '—')
-                    return (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0.5rem', borderRadius: '5px', background: '#f8f9fa' }}>
-                        <span style={{ fontSize: '0.875rem', color: '#374151' }}>{displayKey}</span>
-                        <SeverityPill value={displayVal} />
-                      </div>
-                    )
-                  })}
+                  {Object.entries(detailRow.answers_json ?? {}).map(([key, val]) => (
+                    <div key={key} style={answerRowStyle}>
+                      <span style={{ fontSize: '0.875rem', color: '#374151' }}>{capitalize(key.replace(/_/g, ' '))}</span>
+                      <SeverityPill value={formatAnswerValue(val)} />
+                    </div>
+                  ))}
                 </div>
 
-                {/* ── Medical history ── */}
                 {((detailRow.personal_history_json?.length ?? 0) > 0 || (detailRow.family_history_json?.length ?? 0) > 0) && (
                   <>
                     <SectionHeader>Medical History</SectionHeader>
-                    {(detailRow.personal_history_json?.length ?? 0) > 0 && (
-                      <div style={{ marginBottom: '0.6rem' }}>
-                        <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280', marginBottom: '0.35rem' }}>Personal</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                          {detailRow.personal_history_json!.map((item, i) => (
-                            <span key={i} style={historyTagStyle}>{item}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {(detailRow.family_history_json?.length ?? 0) > 0 && (
-                      <div>
-                        <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280', marginBottom: '0.35rem' }}>Family</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                          {detailRow.family_history_json!.map((item, i) => (
-                            <span key={i} style={historyTagStyle}>{item}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <HistoryTagList label="Personal" items={detailRow.personal_history_json} />
+                    <HistoryTagList label="Family" items={detailRow.family_history_json} />
                   </>
                 )}
 
-                {/* ── Utility IDs ── */}
                 <div style={{ marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid #f0f0f0' }}>
                   <div style={{ fontSize: '0.72rem', color: '#9ca3af', fontFamily: 'monospace', lineHeight: 1.6 }}>
                     <span style={{ fontWeight: 600 }}>ID</span> {detailRow.id}<br />
@@ -308,7 +278,6 @@ export default function QuizResultsPage() {
                   </div>
                 )}
 
-                {/* ── Actions ── */}
                 <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.75rem' }}>
                   <button
                     onClick={() => handleDownloadPdf(detailRow.id)}
@@ -381,13 +350,26 @@ function InfoCell({ label, value }: { label: string; value: string }) {
   )
 }
 
+function HistoryTagList({ label, items }: { label: string; items: string[] | null | undefined }) {
+  if (!items?.length) return null
+  return (
+    <div style={{ marginBottom: '0.6rem' }}>
+      <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280', marginBottom: '0.35rem' }}>{label}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+        {items.map((item, i) => <span key={i} style={historyTagStyle}>{item}</span>)}
+      </div>
+    </div>
+  )
+}
+
+const BRACKET_BADGE_COLORS: Record<string, { bg: string; color: string; label: string }> = {
+  '0-2': { bg: '#dcfce7', color: '#15803d', label: '0–2 Low' },
+  '3-6': { bg: '#fef9c3', color: '#a16207', label: '3–6 Moderate' },
+  '7+':  { bg: '#fee2e2', color: '#b91c1c', label: '7+ High' },
+}
+
 function BracketBadge({ bracket }: { bracket: string }) {
-  const map: Record<string, { bg: string; color: string; label: string }> = {
-    '0-2': { bg: '#dcfce7', color: '#15803d', label: '0–2 Low' },
-    '3-6': { bg: '#fef9c3', color: '#a16207', label: '3–6 Moderate' },
-    '7+':  { bg: '#fee2e2', color: '#b91c1c', label: '7+ High' },
-  }
-  const t = map[bracket] ?? { bg: '#f3f4f6', color: '#374151', label: bracket }
+  const t = BRACKET_BADGE_COLORS[bracket] ?? { bg: '#f3f4f6', color: '#374151', label: bracket }
   return (
     <span style={{ background: t.bg, color: t.color, fontWeight: 700, fontSize: '0.8rem', padding: '0.2rem 0.6rem', borderRadius: '999px', letterSpacing: '0.02em' }}>
       {t.label}
@@ -395,12 +377,16 @@ function BracketBadge({ bracket }: { bracket: string }) {
   )
 }
 
+const SEVERITY_LOW  = new Set(['never', 'no', 'none', 'rarely'])
+const SEVERITY_MED  = new Set(['sometimes', 'occasionally', 'mild', 'moderate'])
+const SEVERITY_HIGH = new Set(['often', 'daily', 'always', 'severe', 'yes'])
+
 function SeverityPill({ value }: { value: string }) {
   const v = value.toLowerCase()
   let bg = '#f3f4f6', color = '#374151'
-  if (['never', 'no', 'none', 'rarely'].includes(v)) { bg = '#dcfce7'; color = '#15803d' }
-  else if (['sometimes', 'occasionally', 'mild', 'moderate'].includes(v)) { bg = '#fef9c3'; color = '#a16207' }
-  else if (['often', 'daily', 'always', 'severe', 'yes'].includes(v)) { bg = '#fee2e2'; color = '#b91c1c' }
+  if (SEVERITY_LOW.has(v))       { bg = '#dcfce7'; color = '#15803d' }
+  else if (SEVERITY_MED.has(v))  { bg = '#fef9c3'; color = '#a16207' }
+  else if (SEVERITY_HIGH.has(v)) { bg = '#fee2e2'; color = '#b91c1c' }
   return (
     <span style={{ background: bg, color, fontSize: '0.78rem', fontWeight: 600, padding: '0.15rem 0.55rem', borderRadius: '999px', whiteSpace: 'nowrap' }}>
       {value}
@@ -408,25 +394,10 @@ function SeverityPill({ value }: { value: string }) {
   )
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function capitalize(s: string): string {
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-  } catch {
-    return iso
-  }
-}
-
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const filterLabelStyle: CSSProperties = { display: 'block', fontSize: '0.8rem', color: '#555', marginBottom: '0.25rem', fontWeight: 600 }
-const fieldLabelStyle: CSSProperties = { fontWeight: 600, minWidth: '72px', color: '#444', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.03em' }
+const answerRowStyle: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0.5rem', borderRadius: '5px', background: '#f8f9fa' }
 const selectStyle: CSSProperties = { padding: '0.4rem 0.5rem', borderRadius: '4px', border: '1px solid #ccc', fontSize: '0.9rem' }
 const inputStyle: CSSProperties = { padding: '0.4rem 0.5rem', borderRadius: '4px', border: '1px solid #ccc', fontSize: '0.9rem' }
 const tableStyle: CSSProperties = { width: '100%', borderCollapse: 'collapse' }
@@ -441,13 +412,14 @@ const closeBtnSecStyle: CSSProperties = { padding: '0.5rem 1.1rem', background: 
 const infoGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem 1.5rem' }
 const historyTagStyle: CSSProperties = { background: '#eff6ff', color: '#1d4ed8', fontSize: '0.8rem', fontWeight: 500, padding: '0.2rem 0.65rem', borderRadius: '999px', border: '1px solid #bfdbfe' }
 
+const BRACKET_BANNER_COLORS: Record<string, { bg: string; color: string }> = {
+  '0-2': { bg: '#f0fdf4', color: '#14532d' },
+  '3-6': { bg: '#fefce8', color: '#713f12' },
+  '7+':  { bg: '#fff1f2', color: '#881337' },
+}
+
 function scoreBannerStyle(bracket: string): CSSProperties {
-  const map: Record<string, { bg: string; color: string }> = {
-    '0-2': { bg: '#f0fdf4', color: '#14532d' },
-    '3-6': { bg: '#fefce8', color: '#713f12' },
-    '7+':  { bg: '#fff1f2', color: '#881337' },
-  }
-  const t = map[bracket] ?? { bg: '#f8fafc', color: '#1e293b' }
+  const t = BRACKET_BANNER_COLORS[bracket] ?? { bg: '#f8fafc', color: '#1e293b' }
   return { display: 'flex', alignItems: 'center', gap: '1.25rem', background: t.bg, color: t.color, borderRadius: '8px', padding: '0.9rem 1.1rem', marginBottom: '0.25rem' }
 }
 

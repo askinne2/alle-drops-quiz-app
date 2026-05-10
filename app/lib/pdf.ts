@@ -1,21 +1,11 @@
 import PDFDocument from 'pdfkit'
 import type { SubmissionFullRow } from './submissions'
+import { capitalize, formatDate, formatAnswerValue } from './format'
 
 const BRACKET_LABELS: Record<string, string> = {
   '0-2': '0–2 (Low)',
   '3-6': '3–6 (Moderate)',
   '7+':  '7+ (High)',
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—'
-  try {
-    return new Date(iso).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric',
-    })
-  } catch {
-    return iso
-  }
 }
 
 function formatDateTime(iso: string | null): string {
@@ -25,10 +15,6 @@ function formatDateTime(iso: string | null): string {
   } catch {
     return iso
   }
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 export function generateVisitSummaryPdf(row: SubmissionFullRow): Promise<Buffer> {
@@ -93,12 +79,7 @@ export function generateVisitSummaryPdf(row: SubmissionFullRow): Promise<Buffer>
     } else {
       for (const [key, val] of answerEntries) {
         const displayKey = key.replace(/_/g, ' ')
-        const displayVal = Array.isArray(val)
-          ? val.join(', ')
-          : val !== null && typeof val === 'object'
-            ? JSON.stringify(val)
-            : String(val ?? '—')
-        labelValue(capitalize(displayKey), displayVal)
+        labelValue(capitalize(displayKey), formatAnswerValue(val))
       }
     }
     doc.moveDown(0.8)
