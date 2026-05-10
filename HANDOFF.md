@@ -1,10 +1,10 @@
-# Handoff — AlleDrops quiz app (2026-05-10 session 22)
+# Handoff — AlleDrops quiz app (2026-05-10 session 23)
 
-### Status: E2E bracket test suite complete and passing. All pre-launch engineering gates closed.
+### Status: All pre-launch engineering gates closed. Modal redesigned. Pending: `fly deploy` + theme relic cleanup.
 
 ---
 
-## What's actually built (post-session 22)
+## What's actually built (post-session 23)
 
 | Feature | Status | Merged |
 |---|---|---|
@@ -23,49 +23,65 @@
 | Consent version — `CONSENT_VERSION` wired into payload + DB | ✅ done | PR #11 |
 | Breach response runbook | ✅ done | PR #11 |
 | E2E bracket test suite (`scripts/e2e-test.ts`) | ✅ done | PR #12 / `981330d` |
+| Admin assessment modal redesign (clinical UX) | ✅ committed | `b4ef25a` — **needs `fly deploy`** |
 | Custom domain `quiz.allerdrops.com` | ⏸ blocked on client | — |
 
-**46/46 tests passing. Typecheck clean. Deployed to Fly.**
+**46/46 tests passing. Typecheck clean.**
+
+---
+
+## Immediate action needed
+
+```bash
+fly deploy -a alle-drops-quiz-app
+```
+
+The modal redesign (`b4ef25a`) is committed to `main` but the Fly machine is running the previous image. One deploy gets it live.
 
 ---
 
 ## E2E test suite — confirmed passing (session 22)
 
-`scripts/e2e-test.ts` ran clean against the deployed Fly app:
-
-```
-Step 1: POST submissions          ✓ 0-2 TN / 3-6 TX / 7+ TN
-Step 2: DB row verification       ✓ bracket, state, consent_version, answers, history
-Step 3: Customer ledger           ✓ all 3 IDs appear in /api/me/assessments
-Step 4: PDF verification          ✓ all 3 PDFs: valid Content-Type + %PDF magic bytes
-Step 5: Cleanup                   ✓ 3 test rows deleted
-=== ALL STEPS PASSED ===
-```
+`scripts/e2e-test.ts` ran clean against the deployed Fly app.
 
 ### How to run it
 
-Prerequisites:
-1. **Cloud SQL Auth Proxy** running on port 5433:
+1. **Cloud SQL Auth Proxy** on port 5433:
    ```bash
    /opt/homebrew/share/google-cloud-sdk/bin/cloud-sql-proxy \
      alledrops-quiz:us-east1:alledrops-quiz-data \
      --port=5433
    ```
-2. `.env` must have (use `127.0.0.1` not `localhost` — Docker occupies `::1:5433`):
+2. `.env` — use `127.0.0.1` not `localhost` (Docker occupies `::1:5433`):
    ```
-   DATABASE_URL=postgresql://alledrops_app:merrimack1@127.0.0.1:5433/alledrops_quiz_dev?sslmode=disable
-   SHOPIFY_API_SECRET=<from Partners dashboard or shopify app env pull>
-   SHOPIFY_API_KEY=<from Partners dashboard or shopify app env pull>
+   DATABASE_URL=postgresql://alledrops_app:<password>@127.0.0.1:5433/alledrops_quiz_dev?sslmode=disable
+   SHOPIFY_API_SECRET=<from shopify app env pull>
+   SHOPIFY_API_KEY=<from shopify app env pull>
    ```
+   Get the current password from Fly: `fly ssh console -a alle-drops-quiz-app -C "printenv DATABASE_URL"`
 3. Run: `npx tsx scripts/e2e-test.ts`
 
-### Auth mechanism (corrected from prior HANDOFF)
+### Known gotchas
 
-`/api/me/*` uses **JWT Bearer tokens** (HS256, signed with `SHOPIFY_API_SECRET`), not HMAC. The script mints a JWT with a fake `gid://shopify/Customer/E2ETEST{timestamp}` as `sub`, stamps that GID onto the test rows via direct SQL, then uses it for ledger + PDF lookups.
+- **Docker on localhost:5433** — Docker binds `::1:5433` (IPv6); proxy is on `127.0.0.1:5433` (IPv4). Always use `127.0.0.1` in local DATABASE_URL.
+- **Fly DATABASE_URL** must use the Cloud SQL public IP `34.139.97.17:5432` with `sslmode=no-verify` — not `localhost`.
+- **pg URL parser** mangles special chars in passwords. Script uses `new URL()` to parse explicitly — this is intentional, don't revert.
+- **Auth on `/api/me/*`** is JWT Bearer (HS256, `SHOPIFY_API_SECRET`), not HMAC. The script mints a JWT with a fake customer GID and stamps it on test rows via SQL.
 
-### Known gotcha: Docker on localhost:5433
+---
 
-Docker binds to `::1:5433` (IPv6). The Cloud SQL proxy binds to `127.0.0.1:5433` (IPv4). When `localhost` resolves to `::1` first, connections hit Docker instead of the proxy. Always use `127.0.0.1` explicitly in DATABASE_URL.
+## Admin modal redesign (session 23)
+
+`app/routes/app.quiz-results.tsx` — committed `b4ef25a`, needs deploy.
+
+What changed:
+- Score + color-coded bracket badge (green 0-2 / amber 3-6 / red 7+) as visual anchor
+- 2-column patient info grid
+- Section headers: Patient Information / Symptom Responses / Medical History
+- Severity pills on answers (never → green, daily → red)
+- Medical history as tag chips
+- UUID/Profile ID demoted to small monospace utility row
+- Download PDF button with icon; Close as ghost button
 
 ---
 
@@ -73,7 +89,9 @@ Docker binds to `::1:5433` (IPv6). The Cloud SQL proxy binds to `127.0.0.1:5433`
 
 ### 1. Consent text finalization
 
-`consent_version` is captured per submission (value: `'draft-2026-05-09'`). When William/counsel finalizes the consent text, update the text in `ConsentStep.tsx` and bump `CONSENT_VERSION` in `app/lib/consent-version.ts` to `'v1.0-YYYY-MM-DD'`.
+`consent_version` captured per submission (value: `'draft-2026-05-09'`). When counsel finalizes:
+- Update consent text in `app/components/quiz/ConsentStep.tsx`
+- Bump `CONSENT_VERSION` in `app/lib/consent-version.ts` to `'v1.0-YYYY-MM-DD'`
 
 ---
 
@@ -119,13 +137,14 @@ This determines Task 2A (delete section outright) vs Task 2B (replace with thin 
 
 ## Resume context
 
-- **Active branch:** `main` (session 22 changes merged and pushed)
-- **Fly app:** `alle-drops-quiz-app` — deployed and healthy
-- **How to verify:** `npm test` (46 pass), `npm run typecheck` (clean), `npx tsx scripts/e2e-test.ts` (all steps pass)
-- **Cloud SQL password:** `alledrops_app` / `merrimack1` (reset this session — Fly secret updated)
+- **Active branch:** `main`
+- **Fly app:** `alle-drops-quiz-app` — healthy, but needs `fly deploy` for modal redesign
+- **How to verify:** `npm test` (46 pass), `npm run typecheck` (clean)
+- **Cloud SQL password:** changed this session — retrieve from `fly ssh console -a alle-drops-quiz-app -C "printenv DATABASE_URL"`
 - **Key files:**
-  - `scripts/e2e-test.ts` — E2E test suite (complete)
-  - `app/lib/consent-version.ts` — bump to `v1.0-YYYY-MM-DD` when counsel finalizes text
+  - `scripts/e2e-test.ts` — E2E test suite
+  - `app/routes/app.quiz-results.tsx` — admin submissions page + modal (redesigned)
+  - `app/lib/consent-version.ts` — bump when counsel finalizes consent text
   - `app/components/quiz/ConsentStep.tsx` — update consent text when finalized
 - **Full MVP plan:** `~/Documents/Claude/Projects/AoD/aod-mvp-plan.md`
 
