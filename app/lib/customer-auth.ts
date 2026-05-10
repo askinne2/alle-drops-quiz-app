@@ -14,12 +14,11 @@ export async function verifyCustomerToken(token: string): Promise<CustomerTokenP
   try {
     const secret = process.env.SHOPIFY_API_SECRET
     if (!secret) throw new Error('SHOPIFY_API_SECRET not configured')
+    const apiKey = process.env.SHOPIFY_API_KEY
+    if (!apiKey) throw new Error('SHOPIFY_API_KEY not configured')
 
     const key = new TextEncoder().encode(secret)
-    const options: Parameters<typeof jwtVerify>[2] = { algorithms: ['HS256'] }
-    if (process.env.SHOPIFY_API_KEY) options.audience = process.env.SHOPIFY_API_KEY
-
-    const { payload } = await jwtVerify(token, key, options)
+    const { payload } = await jwtVerify(token, key, { algorithms: ['HS256'], audience: apiKey })
     if (!payload.sub) throw new Error('no sub claim')
     return { customerId: payload.sub }
   } catch {

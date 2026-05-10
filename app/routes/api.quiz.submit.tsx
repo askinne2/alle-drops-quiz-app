@@ -168,13 +168,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     submissionCreatedAt = inserted.created_at;
   } catch (dbErr) {
     console.error("[submit] Cloud SQL INSERT failed:", dbErr);
-    return jsonResponse(
-      {
-        error: "Could not save assessment",
-        details: dbErr instanceof Error ? dbErr.message : "Unknown error",
-      },
-      500
-    );
+    return jsonResponse({ error: "Could not save assessment" }, 500);
   }
 
   // ---------- 4. Best-effort non-PHI metafields ----------
