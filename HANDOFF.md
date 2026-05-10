@@ -1,10 +1,10 @@
-# Handoff — AlleDrops quiz app (2026-05-10 session 21)
+# Handoff — AlleDrops quiz app (2026-05-10 session 22)
 
-### Status: All pre-launch engineering gates closed + admin UI improved. Next: E2E bracket test suite.
+### Status: E2E bracket test suite complete and passing. All pre-launch engineering gates closed.
 
 ---
 
-## What's actually built (post-session 21)
+## What's actually built (post-session 22)
 
 | Feature | Status | Merged |
 |---|---|---|
@@ -22,140 +22,58 @@
 | Audit logging — `submission_access_log` + `logSubmissionAccess()` | ✅ done | PR #11 |
 | Consent version — `CONSENT_VERSION` wired into payload + DB | ✅ done | PR #11 |
 | Breach response runbook | ✅ done | PR #11 |
+| E2E bracket test suite (`scripts/e2e-test.ts`) | ✅ done | PR #12 / `981330d` |
 | Custom domain `quiz.allerdrops.com` | ⏸ blocked on client | — |
 
 **46/46 tests passing. Typecheck clean. Deployed to Fly.**
 
 ---
 
-## Next task — E2E bracket test suite
+## E2E test suite — confirmed passing (session 22)
 
-**Goal:** Prove the full submission → DB → ledger → PDF pipeline works for all 3 score brackets before the first real patient.
-
-**Implement as:** `scripts/e2e-test.ts` (tsx script, same pattern as `phi-cleanup-verify.ts`)
-
-**Run with:** `npx tsx scripts/e2e-test.ts` (requires `DATABASE_URL` in env or `.env` file)
-
----
-
-### What to test
-
-Three submissions, one per bracket, both states covered:
-
-| Test case | Score | Bracket | State | Extra fields |
-|---|---|---|---|---|
-| `E2E-LOW-TN` | 1 | `0-2` | tennessee | No history |
-| `E2E-MOD-TX` | 5 | `3-6` | texas | No history |
-| `E2E-HIGH-TN` | 9 | `7+` | tennessee | personal_history + family_history |
-
-For each submission, verify:
-1. **POST /api/quiz/submit** → 200, body has `id` + `symptom_profile_id` + `created_at`
-2. **DB row** (direct SQL) → `score_bracket`, `patient_state`, `consent_version = 'draft-2026-05-09'`, `answers_json` not empty
-3. For `7+` only: `personal_history_json` and `family_history_json` populated
-4. **GET /api/me/assessments** (HMAC-signed) → submission appears in ledger
-5. **GET /api/me/assessment/{id}/pdf** (HMAC-signed) → 200, `Content-Type: application/pdf`, body starts with `%PDF`
-6. **Cleanup** — DELETE all 3 test rows from `submissions` at end
-
----
-
-### Auth for customer-facing endpoints
-
-`/api/me/*` requires a Shopify HMAC signature. The script must compute it:
-
-```typescript
-import crypto from 'crypto'
-
-function signRequest(payload: object, secret: string): string {
-  const body = JSON.stringify(payload)
-  return crypto.createHmac('sha256', secret).update(body).digest('hex')
-}
-```
-
-The `X-Shopify-Hmac-Sha256` header carries the hex HMAC of the JSON body, signed with `SHOPIFY_API_SECRET`. That secret is available as `process.env.SHOPIFY_API_SECRET` (set it in `.env` for local runs; it's already a Fly secret).
-
-For the ledger + PDF endpoints, the customer identity is resolved by email (fallback path — no Shopify customer_id needed for test submissions). Pass email in the request body or as the query param the endpoint expects.
-
----
-
-### Script structure
+`scripts/e2e-test.ts` ran clean against the deployed Fly app:
 
 ```
-scripts/e2e-test.ts
-├── setup: load env, define 3 test payloads with unique emails (e2e+low@example.com, etc.)
-├── step 1: POST all 3 submissions, collect IDs
-├── step 2: DB verify — SELECT from submissions WHERE patient_email IN (test emails)
-│   └── assert bracket, state, consent_version, answers_json non-empty
-│   └── assert 7+ row has personal/family history
-├── step 3: ledger verify — GET /api/me/assessments for each email
-│   └── assert submission ID appears in response
-├── step 4: PDF verify — GET /api/me/assessment/{id}/pdf for each ID
-│   └── assert 200, content-type application/pdf, body starts %PDF
-├── step 5: cleanup — DELETE FROM submissions WHERE patient_email IN (test emails)
-└── exit 0 (success) or exit 1 (any assertion failed, with details)
+Step 1: POST submissions          ✓ 0-2 TN / 3-6 TX / 7+ TN
+Step 2: DB row verification       ✓ bracket, state, consent_version, answers, history
+Step 3: Customer ledger           ✓ all 3 IDs appear in /api/me/assessments
+Step 4: PDF verification          ✓ all 3 PDFs: valid Content-Type + %PDF magic bytes
+Step 5: Cleanup                   ✓ 3 test rows deleted
+=== ALL STEPS PASSED ===
 ```
 
----
+### How to run it
 
-### Key implementation notes
+Prerequisites:
+1. **Cloud SQL Auth Proxy** running on port 5433:
+   ```bash
+   /opt/homebrew/share/google-cloud-sdk/bin/cloud-sql-proxy \
+     alledrops-quiz:us-east1:alledrops-quiz-data \
+     --port=5433
+   ```
+2. `.env` must have (use `127.0.0.1` not `localhost` — Docker occupies `::1:5433`):
+   ```
+   DATABASE_URL=postgresql://alledrops_app:merrimack1@127.0.0.1:5433/alledrops_quiz_dev?sslmode=disable
+   SHOPIFY_API_SECRET=<from Partners dashboard or shopify app env pull>
+   SHOPIFY_API_KEY=<from Partners dashboard or shopify app env pull>
+   ```
+3. Run: `npx tsx scripts/e2e-test.ts`
 
-- **BASE_URL** — default `https://alle-drops-quiz-app.fly.dev`, overridable via env for local dev testing
-- **SHOPIFY_API_SECRET** — needed to sign customer endpoint requests. Load from `.env` (already in `.gitignore`).
-- **DATABASE_URL** — needed for DB verify + cleanup. Same connection string as the app.
-- The `0-2` bracket auto-submits silently (no manual consent step in the UI). The API POST path is identical — this tests that the server-side INSERT works for that bracket.
-- Use distinct `symptom_profile_id` values per test case (e.g. `E2E-LOW-TN-{timestamp}`) so rows are easy to identify and clean up.
-- Print a clean pass/fail summary per step. Exit 1 immediately on first failure so the error is obvious.
+### Auth mechanism (corrected from prior HANDOFF)
 
----
+`/api/me/*` uses **JWT Bearer tokens** (HS256, signed with `SHOPIFY_API_SECRET`), not HMAC. The script mints a JWT with a fake `gid://shopify/Customer/E2ETEST{timestamp}` as `sub`, stamps that GID onto the test rows via direct SQL, then uses it for ledger + PDF lookups.
 
-### Test payload examples
+### Known gotcha: Docker on localhost:5433
 
-**0–2 bracket (Tennessee):**
-```json
-{
-  "state": "tennessee",
-  "name": "E2E Test Low",
-  "dob": "1990-01-15",
-  "email": "e2e+low@example.com",
-  "phone": "6155550001",
-  "symptom_profile_id": "E2E-LOW-TN",
-  "quiz_score": 1,
-  "score_bracket": "0-2",
-  "quiz_date": "<ISO timestamp>",
-  "answers": { "sneezing": "rarely", "eye_itching": "never" },
-  "completion_time": 60,
-  "consent_version": "draft-2026-05-09"
-}
-```
-
-**7+ bracket (Tennessee, with history):**
-```json
-{
-  "state": "tennessee",
-  "name": "E2E Test High",
-  "dob": "1985-06-20",
-  "email": "e2e+high@example.com",
-  "phone": "6155550003",
-  "symptom_profile_id": "E2E-HIGH-TN",
-  "quiz_score": 9,
-  "score_bracket": "7+",
-  "quiz_date": "<ISO timestamp>",
-  "answers": { "sneezing": "daily", "eye_itching": "often", "nasal_congestion": "daily" },
-  "completion_time": 180,
-  "consent_version": "draft-2026-05-09",
-  "personal_history": ["asthma", "eczema"],
-  "family_history": ["hay fever"]
-}
-```
+Docker binds to `::1:5433` (IPv6). The Cloud SQL proxy binds to `127.0.0.1:5433` (IPv4). When `localhost` resolves to `::1` first, connections hit Docker instead of the proxy. Always use `127.0.0.1` explicitly in DATABASE_URL.
 
 ---
 
 ## What's NOT built (remaining pre-launch gates)
 
-### 1. E2E bracket test suite (next task — plan above)
+### 1. Consent text finalization
 
-### 2. Consent text finalization
-
-`consent_version` is now captured per submission (value: `'draft-2026-05-09'`). When William/counsel finalizes the consent text, update the text in `ConsentStep.tsx` and bump `CONSENT_VERSION` in `app/lib/consent-version.ts` to `'v1.0-YYYY-MM-DD'`.
+`consent_version` is captured per submission (value: `'draft-2026-05-09'`). When William/counsel finalizes the consent text, update the text in `ConsentStep.tsx` and bump `CONSENT_VERSION` in `app/lib/consent-version.ts` to `'v1.0-YYYY-MM-DD'`.
 
 ---
 
@@ -184,7 +102,7 @@ scripts/e2e-test.ts
 
 ---
 
-## Plan B (after E2E suite) — Theme relic cleanup (separate repo)
+## Plan B — Theme relic cleanup (separate repo)
 
 **Plan:** `/Users/andrewskinner/Local Sites/allergist-on-demand/docs/superpowers/plans/2026-05-09-theme-relic-cleanup.md`
 **Repo:** `/Users/andrewskinner/Local Sites/allergist-on-demand`
@@ -201,21 +119,16 @@ This determines Task 2A (delete section outright) vs Task 2B (replace with thin 
 
 ## Resume context
 
-- **Active branch:** `main` (session 21 changes deployed)
+- **Active branch:** `main` (session 22 changes merged and pushed)
 - **Fly app:** `alle-drops-quiz-app` — deployed and healthy
-- **How to verify:** `npm test` (46 pass), `npm run typecheck` (clean)
-- **Key files for next task:**
-  - `scripts/e2e-test.ts` — CREATE THIS (does not exist yet)
-  - `scripts/phi-cleanup-verify.ts` — reference for script structure/pattern
-  - `app/routes/api.me.assessments.tsx` — customer ledger endpoint (check auth mechanism)
-  - `app/routes/api.me.assessment.$id.pdf.tsx` — customer PDF endpoint (check auth mechanism)
-  - `app/lib/quiz-validation.ts` — schema for what the submit endpoint accepts
-- **Cloud SQL access (for verify + cleanup):**
-  - Proxy: `/opt/homebrew/share/google-cloud-sdk/bin/cloud-sql-proxy`
-  - IAM user `andrew@21adsmedia.com` created — but NOT granted on `submissions` table yet (only `alledrops_app` has access). Script should use `DATABASE_URL` (alledrops_app credentials) not IAM auth.
-  - ADC configured at `~/.config/gcloud/application_default_credentials.json`
+- **How to verify:** `npm test` (46 pass), `npm run typecheck` (clean), `npx tsx scripts/e2e-test.ts` (all steps pass)
+- **Cloud SQL password:** `alledrops_app` / `merrimack1` (reset this session — Fly secret updated)
+- **Key files:**
+  - `scripts/e2e-test.ts` — E2E test suite (complete)
+  - `app/lib/consent-version.ts` — bump to `v1.0-YYYY-MM-DD` when counsel finalizes text
+  - `app/components/quiz/ConsentStep.tsx` — update consent text when finalized
 - **Full MVP plan:** `~/Documents/Claude/Projects/AoD/aod-mvp-plan.md`
 
 ---
 
-**Pickup:** `@HANDOFF.md` and say "continue from the handoff — implement the E2E test suite."
+**Pickup:** `@HANDOFF.md` and say "continue from the handoff."
