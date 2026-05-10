@@ -236,11 +236,40 @@ export default function QuizResultsPage() {
                   />
                 )}
                 <div style={{ marginTop: '1rem' }}>
-                  <span style={fieldLabelStyle}>Answers</span>
-                  <pre style={preStyle}>
-                    {JSON.stringify(detailRow.answers_json, null, 2)}
-                  </pre>
+                  <span style={fieldLabelStyle}>Symptom Responses</span>
+                  <div style={{ marginTop: '0.35rem' }}>
+                    {Object.entries(detailRow.answers_json ?? {}).map(([key, val]) => {
+                      const displayKey = capitalize(key.replace(/_/g, ' '))
+                      const displayVal = Array.isArray(val)
+                        ? val.join(', ')
+                        : val !== null && typeof val === 'object'
+                          ? JSON.stringify(val)
+                          : String(val ?? '—')
+                      return <DetailField key={key} label={displayKey} value={displayVal} />
+                    })}
+                  </div>
                 </div>
+                {((detailRow.personal_history_json?.length ?? 0) > 0 || (detailRow.family_history_json?.length ?? 0) > 0) && (
+                  <div style={{ marginTop: '1rem' }}>
+                    <span style={fieldLabelStyle}>Medical History</span>
+                    {(detailRow.personal_history_json?.length ?? 0) > 0 && (
+                      <div style={{ marginTop: '0.35rem' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Personal:</span>
+                        <ul style={{ margin: '0.2rem 0 0.5rem 1.2rem', padding: 0, fontSize: '0.9rem' }}>
+                          {detailRow.personal_history_json!.map((item, i) => <li key={i}>{item}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {(detailRow.family_history_json?.length ?? 0) > 0 && (
+                      <div>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Family:</span>
+                        <ul style={{ margin: '0.2rem 0 0 1.2rem', padding: 0, fontSize: '0.9rem' }}>
+                          {detailRow.family_history_json!.map((item, i) => <li key={i}>{item}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {pdfError && (
                   <div style={{ color: '#c00', marginTop: '0.5rem', fontSize: '0.875rem' }}>
                     {pdfError}
@@ -337,7 +366,6 @@ const overlayStyle: CSSProperties = { position: 'fixed', inset: 0, background: '
 const modalStyle: CSSProperties = { background: 'white', borderRadius: '8px', padding: '1.5rem', width: '600px', maxWidth: '90vw', maxHeight: '82vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }
 const btnStyle: CSSProperties = { padding: '0.45rem 1rem', background: '#333', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem' }
 const closeBtnStyle: CSSProperties = { background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#666', lineHeight: 1, padding: '0.25rem' }
-const preStyle: CSSProperties = { background: '#f5f5f5', padding: '0.75rem', borderRadius: '4px', overflow: 'auto', fontSize: '0.82rem', maxHeight: '180px', marginTop: '0.25rem' }
 
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs)
