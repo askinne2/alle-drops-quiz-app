@@ -24,7 +24,7 @@ function getMultiAnswer(answer: string | string[] | number | undefined): string[
 }
 
 function isExclusiveNoneQuestion(q: QuizQuestion): boolean {
-  return q.id === "timing_triggers";
+  return ["timing_triggers", "symptoms_nasal", "symptoms_eye", "symptoms_sinus"].includes(q.id);
 }
 
 export function QuizPartRenderer({ questions, answers, onAnswerChange, disabled = false }: QuizPartRendererProps) {
@@ -41,37 +41,6 @@ export function QuizPartRenderer({ questions, answers, onAnswerChange, disabled 
 
         switch (question.type) {
           case "checkbox_multi":
-            return (
-              <div key={question.id} className={styles.questionCard}>
-                <label className={styles.questionCard__label} id={key}>
-                  {question.text}
-                </label>
-                <div className={styles.questionCard__optionsVertical} role="group" aria-labelledby={key}>
-                  {(question.options || []).map((opt) => {
-                    const selected = getMultiAnswer(answers[question.id]).includes(opt.value);
-                    return (
-                      <label
-                        key={opt.value}
-                        className={`${styles.questionCard__optionVertical} ${selected ? styles.questionCard__optionSelected : ""}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          disabled={disabled}
-                          onChange={() => {
-                            const cur = getMultiAnswer(answers[question.id]);
-                            const next = selected ? cur.filter((v) => v !== opt.value) : [...cur, opt.value];
-                            onAnswerChange(question.id, next);
-                          }}
-                        />
-                        <span>{opt.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-
           case "radio_multi": {
             const raw = getMultiAnswer(answers[question.id]);
             const exclusiveNone = isExclusiveNoneQuestion(question);
