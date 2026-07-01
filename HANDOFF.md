@@ -1,6 +1,44 @@
-# Handoff — AlleDrops quiz app (2026-06-24 session 27)
+# Handoff — AlleDrops quiz app (2026-07-01 session 28)
 
-### Status: Engineering still essentially done. Today was an emergency DB recovery before an AOD call, plus domain-ownership research and policy-page drafting. Security branch `fix-security-findings` @ `596210e` still pending PR + merge (untouched today).
+### Status: Security branch merged, quiz warranty bugs fixed, and a real storefront deploy-pipeline gap found + fixed. Everything from today is merged to `main` and deployed. William sent a trimmed acknowledgment reply (business/scope-creep side handled in the ads-os vault, not this repo).
+
+---
+
+## Session 28 (2026-07-01) — what happened today
+
+### Goal
+Assess feasibility of William's 6/27 feature requests against the original quote/contract (business-side task, see ads-os vault: `[[AOD-Phase2-Scope-Position]]`, `[[2026-07-01-aod-warranty-fixes-and-reply-sent]]`), fix the two "warranty" bugs he reported (Part 1 missing "None of the above", Part 5 dev-string leak), and get those fixes actually live on the storefront.
+
+### Current progress — all merged to `main`, all deployed, all verified live
+- **PR #13** (`fix-security-findings` → `main`, merged) — bundled the pending security hardening from session 26/27 (`596210e`, JWT `aud` always enforced) with the two new quiz warranty fixes (`03ff72b`): Part 1 "None of the above" on all 3 symptom questions (`symptoms_nasal/eye/sinus`), Part 5 dev-string leak removed from `med_list`/`med_control`. Added `app/components/quiz/QuizPartRenderer.test.ts` (4 new tests) — no prior coverage existed for `isPartComplete`/`scoreQuestion`. Suite went 47/47 → 51/51.
+- **First deploy attempt "succeeded" but changed nothing live.** Root cause (found via direct Chrome DevTools DOM inspection of the live storefront, not just HTTP checks): `public/quiz-bundle.js` — what `/quiz-bundle-js` and `/quiz-bundle.js` actually serve, read straight off disk — is a **committed static artifact** built by a completely separate command, `npm run build:theme` (vite lib build from `app/entry.theme.tsx`). The `Dockerfile` only ever ran `npm run build` (react-router build). Every deploy has been shipping whatever was last checked into `public/quiz-bundle.js` (a May 8 build) regardless of source changes — this is not new to today, it's a pre-existing gap.
+- **PR #14** (`fix-theme-bundle-deploy-gap` → `main`, merged) — rebuilt `public/quiz-bundle.js` from current source and added `npm run build:theme` to the `Dockerfile`.
+- **That deploy failed at build time**: `Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@vitejs/plugin-react'`. It's a devDependency; the Dockerfile runs `npm ci --omit=dev`. Plain `vite` already worked in prod because it's a transitive dependency of `@react-router/dev` (a real dependency) — `@vitejs/plugin-react` has no such path in.
+- **PR #15** (`fix-vitejs-plugin-react-prod-dep` → `main`, merged) — moved `@vitejs/plugin-react` to `dependencies`. Regenerated `package-lock.json` locally (see note below — it's gitignored in this repo, so there's nothing to commit for it; it just needs to exist in the working tree at deploy time).
+- **Final deploy succeeded and was verified live** via Chrome DevTools MCP: navigated the actual storefront quiz (`allergist-on-demand.myshopify.com/pages/allergy-quiz`), filled patient info, reached Part 1, confirmed "None of the above" renders on all 3 questions, clicked it, confirmed it correctly disables the other checkboxes in each group (matching Part 2's existing exclusive-none pattern) and enables "Next →". No test submissions were completed/submitted during this verification (stopped at Part 1), so no test rows landed in the PHI DB.
+- **CLAUDE.md** — Andrew edited it mid-session himself to change "Don't deploy from a branch" to explicitly authorize Claude to deploy with his sign-off. That edit is included in this handoff commit since it's clearly intentional.
+
+### What worked
+- **Don't trust HTTP-header cache theories over live DOM evidence.** Early in the session a `cache-control: public, max-age=300` header led to a wrong "it's just a caching quirk, wait 5 minutes" conclusion. It was wrong — the bug was a completely different bundle never being rebuilt. The fix came from actually navigating the live page in Chrome DevTools and inspecting rendered DOM + the exact network response bytes, not from reasoning about headers.
+- Fetching the real live page HTML first (via curl with the Shopify storefront password flow) to extract the *actual* iframe URL the theme embeds, rather than assuming it matched what local code implied.
+- Diffing occurrence counts of a known string (`"None of the above"`) across bundle versions (1 → 4) as a quick sanity check before/after each redeploy attempt.
+
+### What didn't work
+- Trusting a "successful" `fly deploy` + matching HTTP headers as proof the fix was live. It wasn't — the deploy was real, the app was healthy, but it was serving a stale static file that the build process never touched.
+- Assuming `npm run build:theme`'s dependencies would "just work" in the production Docker install because the main `npm run build` did — `vite` itself is a transitive dependency of something real, but `@vitejs/plugin-react` isn't pulled in by anything else.
+
+### Next steps
+- [ ] Andrew: full click-through of the live storefront quiz beyond Part 1 (this was the first rebuild of `quiz-bundle.js` in a while — worth confirming nothing else regressed).
+- [ ] **Flagged, not fixed:** `allergist-on-demand.myshopify.com/pages/allergy-quiz` is loading Klaviyo (`static.klaviyo.com`, `static-tracking.klaviyo.com`) directly on the quiz page. This repo's own `CLAUDE.md` explicitly bans Klaviyo (named) on any PHI-collecting page. Worth a real look — this may be theme-level, not app-level.
+- [ ] **Flagged, not fixed:** `package-lock.json` is gitignored in this repo — unusual for reproducible builds. Not touched; just noting it in case it's not intentional.
+- [ ] Business/scope side (William's 6/27 feature requests — Part 6/7 additions, score display rework, gated-purchase approval system) — not started. See ads-os vault `[[AOD-Phase2-Scope-Position]]` for the feasibility breakdown and negotiation position; the $1,800 invoice + Phase 2 SOW conversation are both still deliberately held for a scoping call, not yet scheduled as of this session.
+- [ ] Carryover from session 27, still not confirmed done: delete the diagnostic test row — `DELETE FROM submissions WHERE patient_email = 'diag+preflight@example.com';`
+
+---
+
+## Prior handoff — session 27 (2026-06-24)
+
+### Status at the time: Engineering still essentially done. That session was an emergency DB recovery before an AOD call, plus domain-ownership research and policy-page drafting. Security branch `fix-security-findings` @ `596210e` was pending PR + merge — **now merged as of session 28, see above.**
 
 ---
 
@@ -157,16 +195,20 @@ collaboration space.
 | Simplify refactor — shared format utils, hoisted lookups, HistoryTagList | ✅ done | `4a81abf` |
 | Theme relic cleanup (allergist-on-demand repo) | ✅ done | PRs #1, #2 |
 | Sense theme upgrade 15.4.0 → 15.4.1 | ✅ done | PR #2 |
-| Security hardening — all 3 findings fixed | ✅ branch ready | `fix-security-findings` @ `596210e` |
+| Security hardening — all 3 findings fixed | ✅ merged + deployed | PR #13 |
+| Quiz Part 1 "None of the above" (all 3 symptom questions) | ✅ merged + deployed, live-verified | PR #13 / `03ff72b` |
+| Quiz Part 5 dev-string leak removed | ✅ merged + deployed, live-verified | PR #13 / `03ff72b` |
+| Storefront theme bundle rebuilt into Docker build (deploy pipeline fix) | ✅ merged + deployed | PR #14 |
+| `@vitejs/plugin-react` moved to prod dependency (deploy pipeline fix) | ✅ merged + deployed | PR #15 |
 | Custom domain `quiz.alledrops.com` | ⏸ blocked on client | — |
 
-**47/47 tests passing. Typecheck clean.**
+**51/51 tests passing (was 47/47 before session 28's +4). Typecheck clean.**
 
 ---
 
-## Security findings — FIXED (session 26, pending merge)
+## Security findings — FIXED and merged (session 26 fix, merged session 28)
 
-All three are on branch `fix-security-findings` (commit `596210e`). PR not yet opened.
+All three landed via PR #13 (`fix-security-findings` @ `596210e`, merged into `main` 2026-07-01).
 
 ### 1. JWT `aud` check ✅ fixed
 **File:** `app/lib/customer-auth.ts`
@@ -231,11 +273,7 @@ All legacy quiz system artifacts removed from `allergist-on-demand` Shopify them
 
 ## What's NOT built (remaining pre-launch gates)
 
-### 1. Open PR for security fixes
-
-Branch `fix-security-findings` is committed and verified. Next step: open a PR against `main` and merge.
-
-### 2. Consent text finalization
+### 1. Consent text finalization
 
 `consent_version` captured per submission (value: `'draft-2026-05-09'`). When counsel finalizes:
 - Update consent text in `app/components/quiz/ConsentStep.tsx`
@@ -257,7 +295,7 @@ Branch `fix-security-findings` is committed and verified. Next step: open a PR a
 | Treatment policy + quiz disclaimer copy | William/counsel | **Starter drafts exist** → `policy-drafts/03`, `04`. Apply to `ConsentStep.tsx` / `symptom-quiz.liquid` / `ResultsDisplay.tsx` once approved (bump `CONSENT_VERSION`) |
 | Privacy/Security Officer designation | William | Before first real patient |
 | HIPAA workforce training | William | Before first real patient |
-| Send William the launch punch-list | Andrew | Never sent any emails to William yet — refresh May 8 list + attach policy drafts |
+| Continue William feasibility/scope-creep thread | Andrew | Trimmed acknowledgment reply sent 7/1; $1,800 invoice + Phase 2 SOW conversation deliberately held for a scoping call (not yet scheduled). See ads-os vault `[[AOD-Phase2-Scope-Position]]` |
 
 ---
 
@@ -273,12 +311,12 @@ Branch `fix-security-findings` is committed and verified. Next step: open a PR a
 
 ## Resume context
 
-- **Active branch:** `fix-security-findings` @ `596210e` — ready to PR
-- **Fly app:** `alle-drops-quiz-app` — deployed and healthy (main branch, security fixes not yet deployed)
-- **How to verify:** `npm test` (47 pass), `npm run typecheck` (clean). DB live: `curl -s -o /dev/null -w "%{http_code}" -X POST https://alle-drops-quiz-app.fly.dev/api/quiz/submit -H "Content-Type: application/json" -H "Origin: https://allergist-on-demand.myshopify.com" -d '{...}'` → expect `200`.
-- **Immediate leftover:** delete diagnostic test row → `DELETE FROM submissions WHERE patient_email = 'diag+preflight@example.com';`
-- **Engineering next action:** `gh pr create` from `fix-security-findings` → `main`, then merge and `fly deploy`
-- **Client/content next action:** finalize policy drafts in `~/Documents/Claude/Projects/AoD/policy-drafts/` with counsel; send William the (never-sent) launch punch-list
+- **Active branch:** `main` — everything from PRs #13, #14, #15 merged and deployed as of 2026-07-01
+- **Fly app:** `alle-drops-quiz-app` — deployed, healthy, live-verified via Chrome DevTools (storefront Part 1 shows "None of the above" correctly)
+- **How to verify:** `npm test` (51 pass), `npm run typecheck` (clean). Storefront: `allergist-on-demand.myshopify.com/pages/allergy-quiz` (password `allergy`) → Part 1 should show "None of the above" on all 3 symptom questions. DB live: `curl -s -o /dev/null -w "%{http_code}" -X POST https://alle-drops-quiz-app.fly.dev/api/quiz/submit -H "Content-Type: application/json" -H "Origin: https://allergist-on-demand.myshopify.com" -d '{...}'` → expect `200`.
+- **Immediate leftover (carried over from session 27, still not confirmed done):** delete diagnostic test row → `DELETE FROM submissions WHERE patient_email = 'diag+preflight@example.com';`
+- **Engineering next action:** full manual click-through of the storefront quiz beyond Part 1 (first rebuild of `quiz-bundle.js` in a while); look into the Klaviyo-on-quiz-page compliance flag; consider whether `package-lock.json` should actually be tracked
+- **Client/content next action:** schedule the scoping call with William for the gated-purchase approval system + remaining feature requests before any Phase 2 work starts (see ads-os vault `[[AOD-Phase2-Scope-Position]]`); finalize policy drafts in `~/Documents/Claude/Projects/AoD/policy-drafts/` with counsel
 - **Key files:**
   - `app/lib/customer-auth.ts` — Finding 1 fixed (aud always checked)
   - `app/routes/api.me.assessment.$id.pdf.tsx` — Finding 2 fixed (no ?token= fallback)
