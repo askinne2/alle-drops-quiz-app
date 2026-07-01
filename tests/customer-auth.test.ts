@@ -13,6 +13,7 @@ describe('verifyCustomerToken', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     process.env.SHOPIFY_API_SECRET = 'test-secret'
+    process.env.SHOPIFY_API_KEY = 'test-api-key'
   })
 
   it('returns customerId GID when token is valid', async () => {
@@ -24,6 +25,12 @@ describe('verifyCustomerToken', () => {
     const result = await verifyCustomerToken('fake.jwt.token')
 
     expect(result).toEqual({ customerId: 'gid://shopify/Customer/9876543210' })
+  })
+
+  it('throws when SHOPIFY_API_KEY is missing', async () => {
+    delete process.env.SHOPIFY_API_KEY
+
+    await expect(verifyCustomerToken('fake.jwt.token')).rejects.toThrow('Invalid session token')
   })
 
   it('throws when jwtVerify rejects', async () => {

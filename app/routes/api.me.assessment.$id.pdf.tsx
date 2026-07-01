@@ -15,11 +15,10 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     return new Response(null, { status: 204, headers: corsHeaders })
   }
 
-  // ── 1. Extract Bearer token (header first, then ?token= for s-link downloads) ─
+  // ── 1. Extract Bearer token ──────────────────────────────────────────────────
   const authHeader = request.headers.get('Authorization') ?? ''
   const match = authHeader.match(/^Bearer\s+(.+)$/i)
-  const url = new URL(request.url)
-  const token = match?.[1]?.trim() ?? url.searchParams.get('token') ?? ''
+  const token = match?.[1]?.trim() ?? ''
   if (!token) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,

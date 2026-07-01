@@ -17,7 +17,9 @@ export const PART1_SYMPTOM_CHECKLIST: QuizQuestion[] = [
       { value: "nasal_congestion", label: "Nasal congestion or stuffiness" },
       { value: "itchy_nose", label: "Itchy nose" },
       { value: "postnasal_drip", label: "Postnasal drip" },
+      { value: "none", label: "None of the above" },
     ],
+    excludeFromScore: ["none"],
     order: 10,
   },
   {
@@ -30,7 +32,9 @@ export const PART1_SYMPTOM_CHECKLIST: QuizQuestion[] = [
       { value: "red_eyes", label: "Red or bloodshot eyes" },
       { value: "watery_eyes", label: "Watery eyes" },
       { value: "swollen_eyelids", label: "Swollen eyelids" },
+      { value: "none", label: "None of the above" },
     ],
+    excludeFromScore: ["none"],
     order: 11,
   },
   {
@@ -42,7 +46,9 @@ export const PART1_SYMPTOM_CHECKLIST: QuizQuestion[] = [
       { value: "facial_pressure", label: "Facial pressure or pain" },
       { value: "headaches", label: "Headaches" },
       { value: "smell_loss", label: "Reduced sense of smell" },
+      { value: "none", label: "None of the above" },
     ],
+    excludeFromScore: ["none"],
     order: 12,
   },
 ];
@@ -189,8 +195,7 @@ export const PART5_TREATMENT: QuizQuestion[] = [
     id: "med_list",
     type: "text_input",
     part: 5,
-    text: "Please list your current allergy medications:",
-    subtitle: "Only shown if taking_meds = yes",
+    text: "Please list your current allergy medications and dosages (required):",
     order: 51,
   },
   {
@@ -198,7 +203,6 @@ export const PART5_TREATMENT: QuizQuestion[] = [
     type: "control_0_3",
     part: 5,
     text: "How well controlled are your symptoms with current treatment?",
-    subtitle: "Only shown if taking_meds = yes",
     options: [
       { value: "completely", label: "Completely controlled", score: 0 },
       { value: "well", label: "Well controlled", score: 0 },
