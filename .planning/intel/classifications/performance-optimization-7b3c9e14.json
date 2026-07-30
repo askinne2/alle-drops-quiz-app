@@ -1,0 +1,25 @@
+{
+  "source_path": "/Users/andrewskinner/Local Sites/alle-drops-quiz-app/docs/PERFORMANCE_OPTIMIZATION.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Fly.io Performance Optimization Guide",
+  "summary": "Operational guide for reducing Fly.io cold starts on the quiz app via health checks, uptime pinging, VM sizing options, and bundle optimization.",
+  "scope": [
+    "Fly.io deployment",
+    "cold start latency",
+    "/health endpoint (app/routes/health.tsx)",
+    "fly.toml configuration",
+    "min_machines_running",
+    "UptimeRobot monitoring",
+    "VM sizing (shared vs dedicated CPU, RAM)",
+    "React SSR bundle optimization",
+    "code splitting and lazy loading",
+    "hosting cost tiers",
+    "SQLite to PostgreSQL migration for multi-machine scaling"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": 8,
+  "notes": "Manifest declared DOC; content confirms it — tutorial/runbook prose with setup steps, config snippets, and cost comparison table. No decision record, user stories, or binding contracts. Contains recommendations (dedicated CPU, UptimeRobot ping, Postgres above 10k req/day) that are advisory context, not requirements."
+}

@@ -1,0 +1,31 @@
+{
+  "source_path": "/Users/andrewskinner/Local Sites/alle-drops-quiz-app/docs/quiz-questions-schema.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "AlleDrops Clinical Quiz Questions Schema",
+  "summary": "Technical specification of the hardcoded pre-call clinical questionnaire: state gate, patient info step, Parts 1-6 question definitions, scoring brackets, submission payload, and validation rules.",
+  "scope": [
+    "clinical quiz questionnaire",
+    "state eligibility gate (Tennessee, Texas)",
+    "patient information step",
+    "Part 1 symptom checklist",
+    "Part 2 symptom timing and triggers",
+    "Part 3 symptom severity",
+    "Part 4 daily life impact",
+    "Part 5 current treatment",
+    "Part 6 medical history",
+    "score brackets (0-2, 3-6, 7+)",
+    "symptom_profile_id",
+    "quiz submission payload",
+    "Shopify customer metafield storage",
+    "quiz_history",
+    "legacy quiz_region / severity_level fields",
+    "validation rules",
+    "testing scenarios"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": 2,
+  "notes": "Manifest declared type SPEC with precedence 2; heuristic and content signals agree (schema tables, question type definitions, payload field lists, validation rules, code snippets). Version 2.0, last updated 2026-04-23. Describes the PRE-CALL quiz design. Code reference (not a doc cross-ref): app/lib/quiz/questions.ts. CONFLICT FLAGS vs docs/REQUIREMENTS-AND-GAPS-2026-07-29.md (precedence 0, client decision 2026-07-29): (1) Line 58 - bracket `3-6` outcome path is 'Allergist guidance with consultation or purchase continuation', permitting purchase without allergy testing. (2) Line 59 - bracket `7+` 'Higher-acuity branch that can continue to testing or medical history / consent' treats testing as one optional branch rather than a hard gate. (3) Lines 21 and 236 - Part 6 medical history/consent is 'optionally' shown and 'only for the higher-acuity path after results', implying lower brackets bypass consent/history entirely. (4) Lines 282-326 - submission payload and validation rules contain no allergy-test-result or testing-completion field, so nothing in this spec enforces a testing prerequisite before purchase. (5) Line 71 - deprecates the legacy 0-60 total and minimal/mild/moderate/severe bands; verify the higher-precedence doc did not restore that model. Classified faithfully as written; the flagged statements are likely reversed by the 2026-07-29 decision and should defer to the precedence-0 doc during synthesis."
+}

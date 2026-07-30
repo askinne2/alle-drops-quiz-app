@@ -1,0 +1,30 @@
+{
+  "source_path": "/Users/andrewskinner/Local Sites/alle-drops-quiz-app/docs/UX-AUDIT.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "UX/UI Audit — AlleDrops Symptom Quiz Front-End",
+  "summary": "Audit of the AlleDrops symptom quiz front-end cataloging CSS bugs, UX gaps, content blockers, and visual polish issues with fixes and remediation status.",
+  "scope": [
+    "symptom quiz front-end",
+    "QuizContainer.tsx",
+    "StateGate.tsx",
+    "ResultsDisplay.tsx",
+    "ConsentStep.tsx",
+    "IneligibleMessage.tsx",
+    "QuizProgress.tsx",
+    "quiz.module.css",
+    "quiz-theme.css",
+    "quiz-bundle.css route caching",
+    "Shopify theme app block / theme variables",
+    "test mode gating",
+    "consent form content",
+    "WCAG accessibility and touch targets",
+    "progress indicator",
+    "results score display and severity brackets"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": 6,
+  "notes": "Manifest declared DOC; content confirms it — prose-and-table audit findings with recommendations, no locked decision, no user stories, no API/schema contracts. Contains prescriptive fixes and pre-launch blockers (CONTENT-1 placeholder consent language, CONTENT-2 test mode visible in production) plus one open UX item (UX-4 progress indicator) that may be worth surfacing as context for requirements."
+}

@@ -1,0 +1,26 @@
+{
+  "source_path": "/Users/andrewskinner/Local Sites/alle-drops-quiz-app/docs/HIPAA_COMPLIANCE_ANALYSIS.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "HIPAA Compliance Analysis: AlleDrops Quiz Data Storage",
+  "summary": "Analyzes whether allergy quiz responses are HIPAA PHI and defines the resulting data-storage split between Shopify metafields and Google Sheets.",
+  "scope": [
+    "HIPAA compliance",
+    "PHI determination",
+    "quiz data storage",
+    "Shopify customer metafields",
+    "Google Sheets integration",
+    "Google Workspace BAA",
+    "profile ID linkage",
+    "quiz submission API"
+  ],
+  "cross_refs": [
+    "app/lib/shopify/metafields.ts",
+    "app/lib/google-sheets.ts",
+    "app/routes/api.quiz.submit.tsx"
+  ],
+  "locked": false,
+  "precedence": 1,
+  "notes": "MANIFEST_TYPE=SPEC treated as authoritative. Content signals lean DOC/ADR-hybrid: prose legal analysis plus a stated 'Current Strategy' decision (treat quiz data as PHI; summary data in Shopify metafields, full 35-question responses in Google Sheets linked by profile ID). Carries binding non-functional constraints (BAA required for Google Workspace; Shopify is not HIPAA-compliant and must not hold PHI), which supports the SPEC designation. No 'Status: Accepted' marker, so locked=false. cross_refs are source-code paths, not sibling docs; external references are HHS, Shopify, and Google Workspace HIPAA URLs. Document explicitly defers final determination to a healthcare attorney, so downstream constraints should be flagged as pending legal confirmation."
+}
