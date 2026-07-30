@@ -97,7 +97,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-04-PLAN.md — Rebuild and commit the theme bundle, amend the stale CLAUDE.md GSD line, record out-of-scope findings
+- [x] 01-04-PLAN.md — Rebuild and commit the theme bundle, amend the stale CLAUDE.md GSD line, record out-of-scope findings
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -371,7 +371,7 @@ exposures today.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Live Defect Fixes | 3/6 | In Progress|  |
+| 1. Live Defect Fixes | 4/6 | In Progress|  |
 | 2. Quiz Schema Foundation | 0/TBD | Not started | - |
 | 3. Mandatory Medical History | 0/TBD | Not started | - |
 | 4. Mandatory Allergy Testing | 0/TBD | Not started | - |
