@@ -59,8 +59,8 @@
       app and its built-in handle map both expect. An unselected, hidden, or deleted product is
       blank, which encodes to an empty param that the app reads as absent and falls back on.
     {%- endcomment -%}
-    {%- assign _tn_enc = block.settings.tn_product.handle | url_encode -%}
-    {%- assign _tx_enc = block.settings.tx_product.handle | url_encode -%}
+    {%- assign _tn_enc = block.settings.tn_product_handle | url_encode -%}
+    {%- assign _tx_enc = block.settings.tx_product_handle | url_encode -%}
     {%- assign _embed_src = fly_url | append: '/quiz-embed?consult=' | append: _consult_enc | append: '&testOptions=' | append: _test_enc | append: '&test=' | append: _test_flag | append: '&tnProduct=' | append: _tn_enc | append: '&txProduct=' | append: _tx_enc -%}
 
     <iframe
@@ -241,16 +241,18 @@
       "content": "Product Pages"
     },
     {
-      "type": "product",
-      "id": "tn_product",
-      "label": "Tennessee AlleDrops product",
-      "info": "The product the quiz sends Tennessee patients to. Leave this blank and the quiz uses its built-in product, tennessee-alledrops."
+      "type": "text",
+      "id": "tn_product_handle",
+      "label": "Tennessee AlleDrops product handle",
+      "default": "tennessee-alledrops",
+      "info": "The product handle the quiz sends Tennessee patients to. Enter the handle only, not a full URL — the part after \/products\/. Leave blank and the quiz falls back to its built-in handle."
     },
     {
-      "type": "product",
-      "id": "tx_product",
-      "label": "Texas AlleDrops product",
-      "info": "The product the quiz sends Texas patients to. Leave this blank and the quiz uses its built-in product, texas-alledrops."
+      "type": "text",
+      "id": "tx_product_handle",
+      "label": "Texas AlleDrops product handle",
+      "default": "texas-alledrops",
+      "info": "The product handle the quiz sends Texas patients to. Enter the handle only, not a full URL — the part after \/products\/. Leave blank and the quiz falls back to its built-in handle."
     },
     {
       "type": "header",

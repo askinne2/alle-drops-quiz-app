@@ -85,10 +85,46 @@ describe('symptom-quiz.liquid parent handler contract', () => {
     expect(LIQUID).toContain('isFinite')
   })
 
-  it('exposes both product picker settings in the schema (D-10)', () => {
-    expect(LIQUID).toContain('"type": "product"')
-    expect(LIQUID).toContain('"id": "tn_product"')
-    expect(LIQUID).toContain('"id": "tx_product"')
+  /**
+   * D-10, revised after Shopify rejected the app version.
+   *
+   * The original form of this assertion required two `"type": "product"` settings. Shopify's
+   * extension validator refuses that outright — a theme app extension block may declare at most
+   * ONE product setting:
+   *
+   *   bundle: [blocks/symptom-quiz.liquid] Invalid tag 'schema':
+   *     settings: exceeds limit of 1 for type 'product'
+   *
+   * Both settings are now `"type": "text"` holding the product HANDLE, which is what the Liquid
+   * consumed anyway (it read `.handle` off the product object). Two consequences, both good:
+   * text settings have no per-block count limit, and unlike `product` they CAN declare a
+   * `default` — which restores the D-11 clause Plan 01-03 had to record as not implementable.
+   *
+   * Nothing was lost in the migration: both pickers shipped blank because `product` settings
+   * cannot be defaulted, and the live block's settings in the theme's page.quiz.json contained
+   * neither key, so no merchant-configured value existed to migrate.
+   */
+  it('exposes both product handle settings in the schema, with defaults (D-10/D-11)', () => {
+    expect(LIQUID).toContain('"id": "tn_product_handle"')
+    expect(LIQUID).toContain('"id": "tx_product_handle"')
+    expect(LIQUID).toContain('"default": "tennessee-alledrops"')
+    expect(LIQUID).toContain('"default": "texas-alledrops"')
+  })
+
+  it('declares no product-type setting, which Shopify caps at one per block (D-10)', () => {
+    // Guards the platform limit that rejected the first app version. If a future edit reintroduces
+    // even one product picker alongside another, `shopify app deploy` fails at validation rather
+    // than here — so fail here first, where the message explains why.
+    expect(LIQUID).not.toContain('"type": "product"')
+  })
+
+  it('reads the handle settings as plain strings, not product objects', () => {
+    // A `text` setting is the handle itself; `.handle` on a string yields nil and would silently
+    // send every patient to /products/ with no handle.
+    expect(LIQUID).toContain('block.settings.tn_product_handle | url_encode')
+    expect(LIQUID).toContain('block.settings.tx_product_handle | url_encode')
+    expect(LIQUID).not.toContain('.tn_product.handle')
+    expect(LIQUID).not.toContain('.tx_product.handle')
   })
 
   it('passes both product handles through the embed src (D-12)', () => {
