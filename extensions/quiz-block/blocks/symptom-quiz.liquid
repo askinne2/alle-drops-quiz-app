@@ -52,7 +52,16 @@
     {%- assign _consult_enc = block.settings.consult_redirect_url | url_encode -%}
     {%- assign _test_enc = block.settings.test_options_redirect_url | url_encode -%}
     {%- assign _test_flag = '0' -%}{%- if block.settings.enable_test_mode -%}{%- assign _test_flag = '1' -%}{%- endif -%}
-    {%- assign _embed_src = fly_url | append: '/quiz-embed?consult=' | append: _consult_enc | append: '&testOptions=' | append: _test_enc | append: '&test=' | append: _test_flag -%}
+    {%- comment -%}
+      Product handles for the two states. .handle is used explicitly rather than relying on the
+      backwards-compatibility behaviour where printing the setting yields its handle, and .url is
+      deliberately not used — that would yield a full product path and diverge from the shape the
+      app and its built-in handle map both expect. An unselected, hidden, or deleted product is
+      blank, which encodes to an empty param that the app reads as absent and falls back on.
+    {%- endcomment -%}
+    {%- assign _tn_enc = block.settings.tn_product.handle | url_encode -%}
+    {%- assign _tx_enc = block.settings.tx_product.handle | url_encode -%}
+    {%- assign _embed_src = fly_url | append: '/quiz-embed?consult=' | append: _consult_enc | append: '&testOptions=' | append: _test_enc | append: '&test=' | append: _test_flag | append: '&tnProduct=' | append: _tn_enc | append: '&txProduct=' | append: _tx_enc -%}
 
     <iframe
       id="alledrops-quiz-{{ block.id }}"
@@ -217,6 +226,22 @@
       "id": "test_options_redirect_url",
       "label": "Test options redirect URL",
       "info": "Where to send users when they choose allergy testing first (defaults to /pages/test-options if blank)."
+    },
+    {
+      "type": "header",
+      "content": "Product Pages"
+    },
+    {
+      "type": "product",
+      "id": "tn_product",
+      "label": "Tennessee AlleDrops product",
+      "info": "The product the quiz sends Tennessee patients to. Leave this blank and the quiz uses its built-in product, tennessee-alledrops."
+    },
+    {
+      "type": "product",
+      "id": "tx_product",
+      "label": "Texas AlleDrops product",
+      "info": "The product the quiz sends Texas patients to. Leave this blank and the quiz uses its built-in product, texas-alledrops."
     },
     {
       "type": "header",
