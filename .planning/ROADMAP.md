@@ -72,7 +72,15 @@ Zero scoring work is needed for medical history, the testing split, or the diagn
      with no `(required):` suffix, and is still enforced as required
   5. The batch deploys to production on its own with 51/51 tests still passing, verified against
      rendered DOM rather than deploy success
-**Plans**: TBD
+**Plans**: 6 plans in 5 waves
+
+Plans:
+- [ ] 01-01-PLAN.md — Canonical path validator, corrected product handles, and the Wave 0 contract-test scaffold
+- [ ] 01-02-PLAN.md — Delete the location.assign override, route all five exits through navigateParent, correct the medication label
+- [ ] 01-03-PLAN.md — Harden the Liquid message handler (origin guard + same-origin path allowlist), add the scroll listener, add both product pickers
+- [ ] 01-04-PLAN.md — Rebuild and commit the theme bundle, amend the stale CLAUDE.md GSD line, record out-of-scope findings
+- [ ] 01-05-PLAN.md — Three-channel deploy with provenance Gates A/B/C on served bytes (needs merge + deploy authorization)
+- [ ] 01-06-PLAN.md — Theme-editor Gate D, Gate E, behavioral Gate F, and PHI verification-row cleanup (human-owned)
 **Notes**: Roughly 4 hours total. The `window.location.assign` override is the root cause of three
 of the four broken redirects — `Location.assign` is `[LegacyUnforgeable]`, so the patch silently
 no-ops. The anchor-based product link works through a separate, legitimate click interceptor
@@ -296,7 +304,7 @@ exposures today.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Live Defect Fixes | 0/TBD | Not started | - |
+| 1. Live Defect Fixes | 0/6 | Not started | - |
 | 2. Quiz Schema Foundation | 0/TBD | Not started | - |
 | 3. Mandatory Medical History | 0/TBD | Not started | - |
 | 4. Mandatory Allergy Testing | 0/TBD | Not started | - |
