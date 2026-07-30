@@ -114,9 +114,44 @@ None captured yet.
   libraries, so nothing in it can close this. A green Phase 1 must not be read as a clean
   patient-facing page — confirmed independently by Plans 01-03 and 01-04.
 - Test Mode button rendering on the production page — bypasses all validation.
+  **Appears already resolved:** the live quiz page served `test=0` on 2026-07-30 and the installed
+  block carries `enable_test_mode: false`. Re-confirm during Phase 8 rather than assuming.
 - Placeholder text on two live clinical surfaces.
 - Live app→DB round trip never verified after the 2026-07-28 Cloud SQL downsize.
 - Leftover `diag+preflight@example.com` row, carried since session 27.
+
+**Gate D (`test_options_redirect_url`) — status 2026-07-30, mid-Phase-1:**
+
+Confirmed live on served bytes, not inferred: `/pages/allergy-quiz` served
+`testOptions=%2Fproducts%2Fallergy-consultation`, identical to `consult`. Root cause found in the
+theme repo at `templates/page.quiz.json` — the app block's `test_options_redirect_url` was set to
+`shopify://products/allergy-consultation`.
+
+- Andrew is applying the fix in the Shopify theme editor (chosen over a `shopify theme push`, because
+  `templates/page.quiz.json` carries uncommitted drift — its git HEAD still references a
+  `quiz-kit-smart-product-finder` block, so a push could apply unrelated changes). Target value:
+  `/pages/test-options`.
+- A matching local edit exists in the theme working tree, uncommitted and unpushed, so local tracks
+  intended live state. **Do not commit or push the theme repo** without first reconciling that drift.
+- Verification owed: re-fetch the live page and assert `testOptions=%2Fpages%2Ftest-options`.
+
+Corrected page inventory, measured while authenticated past the storefront password. Two of these
+contradict `01-VALIDATION.md`, which relied on unauthenticated 200s — every unauthenticated request
+302s to `/password` and returns 200 for the password page, so those checks were false positives:
+
+| Path | Live |
+|------|------|
+| `/pages/test-options` | 200, titled "Test Options" — exists |
+| `/products/allergy-consultation` | 200 — exists |
+| `/pages/consult` | **404** — the previously documented consult fallback |
+| `/pages/testing-options` | **404** — `templates/page.testing-options.json` is an orphaned template |
+
+**Out-of-plan code change landed in Phase 1 (verifier must account for it):** commits `bb51ce0` and
+`3c0e469` add `app/lib/quiz/redirects.ts` + `redirects.test.ts`, rewire `QuizContainer`'s three
+inline fallbacks through it, correct the extension schema help text, and rebuild the theme bundle
+(184236 → 184349 bytes). Reason: the consult fallback pointed at `/pages/consult`, a 404, so blanking
+that theme setting sent a patient who had just completed a clinical intake to a dead page. Not in any
+01-0x plan; authorized directly by Andrew during the Wave 3/4 checkpoint. Suite 122 → 133 passing.
 
 **Open questions — one message to William closes all three:** R6 diagnosis-question scope, the third
 medical-history free-text label, and whether resume/edit was ever expected.
