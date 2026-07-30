@@ -63,6 +63,24 @@ describe('symptom-quiz.liquid parent handler contract', () => {
     expect(LIQUID).not.toMatch(/location\.assign\(\s*e\.data\./)
   })
 
+  it('ports every positional rule from navigation.ts, including the reverse solidus (T-1-03/T-1-06)', () => {
+    // The assertion above is an ABSENCE check: it proves the old signature is gone, not that
+    // the replacement validator is complete. A port missing any one rule below reintroduces
+    // the open redirect on the patient-facing page while the suite stays green. So each rule
+    // in isSafeRelativePath is asserted individually here.
+    //
+    // The reverse-solidus rule is the one the phase's own research got wrong. It is not
+    // defensive: the WHATWG parser treats that character as equivalent to a solidus for
+    // special schemes, so at index 1 it enters the authority state and resolves to a foreign
+    // origin. Measured, and recorded in navigation.ts and navigation.test.ts.
+    expect(LIQUID).toContain("typeof p !== 'string' || p === ''")
+    expect(LIQUID).toContain("p.charAt(0) !== '/'")
+    expect(LIQUID).toContain("p.charAt(1) === '/'")
+    expect(LIQUID).toContain("p.charAt(1) === '\\\\'")
+    // The decision is delegated to the browser's own URL parser, not to a regex allowlist.
+    expect(LIQUID).toContain('u.origin === window.location.origin')
+  })
+
   it('hardens the resize handler against a non-finite height (D-05)', () => {
     expect(LIQUID).toContain('isFinite')
   })

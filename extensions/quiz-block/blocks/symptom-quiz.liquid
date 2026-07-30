@@ -15,6 +15,15 @@
       padding-bottom: {{ block.settings.padding_bottom }}px;
     }
   }
+
+  #alledrops-quiz-{{ block.id }} {
+    /* Sticky-header offset for the step-change scroll. The theme's header reveals itself on
+       an upward scroll and exposes no header-height custom property on this page, so there
+       is nothing to read at runtime. The scroll API honours this margin, so the handler
+       needs no bounding-rect math. Hardcoded on purpose; a merchant-tunable range setting
+       is a follow-up candidate. */
+    scroll-margin-top: 100px;
+  }
 {%- endstyle -%}
 
 <div class="symptom-quiz-wrapper section-{{ section.id }}-padding">
@@ -43,7 +52,16 @@
     {%- assign _consult_enc = block.settings.consult_redirect_url | url_encode -%}
     {%- assign _test_enc = block.settings.test_options_redirect_url | url_encode -%}
     {%- assign _test_flag = '0' -%}{%- if block.settings.enable_test_mode -%}{%- assign _test_flag = '1' -%}{%- endif -%}
-    {%- assign _embed_src = fly_url | append: '/quiz-embed?consult=' | append: _consult_enc | append: '&testOptions=' | append: _test_enc | append: '&test=' | append: _test_flag -%}
+    {%- comment -%}
+      Product handles for the two states. .handle is used explicitly rather than relying on the
+      backwards-compatibility behaviour where printing the setting yields its handle, and .url is
+      deliberately not used — that would yield a full product path and diverge from the shape the
+      app and its built-in handle map both expect. An unselected, hidden, or deleted product is
+      blank, which encodes to an empty param that the app reads as absent and falls back on.
+    {%- endcomment -%}
+    {%- assign _tn_enc = block.settings.tn_product.handle | url_encode -%}
+    {%- assign _tx_enc = block.settings.tx_product.handle | url_encode -%}
+    {%- assign _embed_src = fly_url | append: '/quiz-embed?consult=' | append: _consult_enc | append: '&testOptions=' | append: _test_enc | append: '&test=' | append: _test_flag | append: '&tnProduct=' | append: _tn_enc | append: '&txProduct=' | append: _tx_enc -%}
 
     <iframe
       id="alledrops-quiz-{{ block.id }}"
@@ -53,16 +71,78 @@
       scrolling="no"
     ></iframe>
 
+    {%- comment -%}
+      Reduce the embed URL to a bare scheme-plus-host origin. Derived from fly_url rather than
+      from block.settings.app_url so the blank-fallback above is inherited. This is the only
+      origin the page trusts for quiz messages.
+    {%- endcomment -%}
+    {%- assign _origin_parts = fly_url | split: '/' -%}
+    {%- assign _app_origin = _origin_parts[0] | append: '//' | append: _origin_parts[2] -%}
+
     <script>
       (function() {
         var iframe = document.getElementById('alledrops-quiz-{{ block.id }}');
-        window.addEventListener('message', function(e) {
-          if (!e.data || typeof e.data !== 'object') return;
-          if (e.data.type === 'quiz:resize' && iframe) {
-            iframe.style.height = (e.data.height + 24) + 'px';
+        var APP_ORIGIN = {{ _app_origin | json }};
+
+        /*
+          Accept only a same-origin relative path as a navigation target.
+
+          Hand-port of isSafeRelativePath in app/lib/quiz/navigation.ts. The two must be kept
+          in sync — when the rules there change, change this function in the same commit.
+          Liquid is neither typechecked nor linted, so tests/liquid-block-contract.test.ts is
+          what guards this block's presence.
+
+          The rules are positional rather than pattern-based. Requiring a solidus at index 0
+          eliminates absolute URLs and every scheme-bearing URI. Rejecting a solidus at index
+          1 eliminates protocol-relative targets. Rejecting a reverse solidus at index 1 does
+          the same: the WHATWG URL parser treats that character as equivalent to a solidus for
+          special schemes, so it enters the same authority state and resolves to a foreign
+          origin — measured, not assumed. The rule is scoped to index 1 only, because the same
+          character later in the path normalises harmlessly and stays same-origin.
+
+          No regex, and no string comparison of the resolved URL: the final check delegates to
+          the browser's own parser, which is the authority the browser will actually use. The
+          try/catch is required because the URL constructor throws on malformed input.
+        */
+        function safeUrl(p) {
+          if (typeof p !== 'string' || p === '') return null;
+          if (p.charAt(0) !== '/') return null;
+          if (p.charAt(1) === '/') return null;
+          if (p.charAt(1) === '\\') return null;
+          try {
+            var u = new URL(p, window.location.origin);
+            return u.origin === window.location.origin ? u.href : null;
+          } catch (err) {
+            return null;
           }
-          if (e.data.type === 'quiz:navigate' && e.data.url) {
-            window.location.assign(e.data.url);
+        }
+
+        window.addEventListener('message', function(e) {
+          if (e.origin !== APP_ORIGIN) return;
+          if (!e.data || typeof e.data !== 'object') return;
+
+          if (e.data.type === 'quiz:resize' && iframe) {
+            var h = Number(e.data.height);
+            if (isFinite(h) && h > 0) {
+              iframe.style.height = (h + 24) + 'px';
+            }
+          }
+
+          if (e.data.type === 'quiz:scrollToTop' && iframe) {
+            iframe.scrollIntoView({ block: 'start', behavior: 'instant' });
+          }
+
+          if (e.data.type === 'quiz:navigate') {
+            var raw = e.data.path;
+            var target = safeUrl(raw);
+            if (target) {
+              window.location.assign(target);
+            } else {
+              console.warn(
+                'AlleDrops quiz: ignored a navigation request because the target is not a same-origin relative path. Received a ' +
+                  (typeof raw) + ' of ' + JSON.stringify(raw) + '. Redirect settings must be site-relative paths.'
+              );
+            }
           }
         });
       })();
@@ -116,7 +196,7 @@
       "id": "app_url",
       "label": "App URL",
       "default": "https://alle-drops-quiz-app.fly.dev",
-      "info": "Fly app URL. Swap to quiz.alledrops.com once the custom domain is set up."
+      "info": "Fly app URL. Swap to quiz.alledrops.com once the custom domain is set up. Security-relevant: this value is also the only origin the page trusts for messages from the quiz, so an incorrect or stale value silently stops all quiz scrolling and navigation with no visible error."
     },
     {
       "type": "checkbox",
@@ -146,6 +226,22 @@
       "id": "test_options_redirect_url",
       "label": "Test options redirect URL",
       "info": "Where to send users when they choose allergy testing first (defaults to /pages/test-options if blank)."
+    },
+    {
+      "type": "header",
+      "content": "Product Pages"
+    },
+    {
+      "type": "product",
+      "id": "tn_product",
+      "label": "Tennessee AlleDrops product",
+      "info": "The product the quiz sends Tennessee patients to. Leave this blank and the quiz uses its built-in product, tennessee-alledrops."
+    },
+    {
+      "type": "product",
+      "id": "tx_product",
+      "label": "Texas AlleDrops product",
+      "info": "The product the quiz sends Texas patients to. Leave this blank and the quiz uses its built-in product, texas-alledrops."
     },
     {
       "type": "header",
