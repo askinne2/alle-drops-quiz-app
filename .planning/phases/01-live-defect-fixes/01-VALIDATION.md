@@ -1,10 +1,11 @@
 ---
 phase: 1
 slug: live-defect-fixes
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-07-30
+updated: 2026-07-30
 ---
 
 # Phase 1 — Validation Strategy
@@ -43,23 +44,40 @@ created: 2026-07-30
 
 ## Per-Task Verification Map
 
+Task IDs follow `{padded_phase}-{plan}-{task}`; tasks are positional within each plan's `<tasks>` block. 16 tasks across 6 plans.
+
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | TBD | DEF-01 | — | N/A | contract | `npx vitest run tests/liquid-block-contract.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEF-01 (D-06 instant) | — | N/A | contract | same | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEF-02 (override removed) | — | N/A | contract | `npx vitest run tests/quiz-embed-contract.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEF-02 (no resolve vs `location.href`) | — | N/A | contract | same | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEF-02 (`isSafeRelativePath` matrix) | T-1-01 | Rejects off-origin, protocol-relative, `javascript:` | unit | `npx vitest run app/lib/quiz/navigation.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEF-03 (corrected handles) | — | N/A | unit | `npx vitest run app/lib/quiz/product-links.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEF-03 (config wins, blank falls back) | — | N/A | unit | same | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | DEF-03 (live 200) | — | N/A | integration | Gate E below | ✅ passing | ⬜ pending |
-| TBD | TBD | TBD | DEF-04 (exact label) | — | N/A | unit | `npx vitest run app/components/quiz/QuizPartRenderer.test.ts` | ✅ +1 test | ⬜ pending |
-| TBD | TBD | TBD | DEF-04 / D-13 (still required) | — | N/A | unit | same | ✅ +1 test | ⬜ pending |
-| TBD | TBD | TBD | D-05 (origin guard present) | T-1-01 | Only same-origin relative paths navigate | contract | `npx vitest run tests/liquid-block-contract.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | D-12 (handle params in `_embed_src`) | — | N/A | contract | same | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | Schema is valid JSON | — | Blocks a failed `shopify app deploy` | contract | same | ❌ W0 | ⬜ pending |
+| 01-01-01 | 01-01 | 1 | DEF-02 (`isSafeRelativePath` matrix) | T-1-01 | Rejects off-origin, protocol-relative, `javascript:` | unit | `npx vitest run app/lib/quiz/navigation.test.ts` | ❌ W0 | ⬜ pending |
+| 01-01-02 | 01-01 | 1 | DEF-03 (corrected handles) | — | N/A | unit | `npx vitest run app/lib/quiz/product-links.test.ts` | ❌ W0 | ⬜ pending |
+| 01-01-02 | 01-01 | 1 | DEF-03 (config wins, blank falls back) | — | N/A | unit | same | ❌ W0 | ⬜ pending |
+| 01-01-03 | 01-01 | 1 | DEF-01 / DEF-02 / D-05 / D-12 contract scaffold | T-1-01 | Assertions must be non-vacuous | contract | **expects non-zero exit** — see Red-by-Design | ❌ W0 | ⬜ pending |
+| 01-02-01 | 01-02 | 2 | DEF-02 (override removed) | T-1-01 | No unforgeable-property monkey-patch | contract | `npx vitest run tests/quiz-embed-contract.test.ts` | ❌ W0 | ⬜ pending |
+| 01-02-01 | 01-02 | 2 | DEF-02 (no resolve vs `location.href`) | T-1-02 | Child never asserts an origin | contract | same | ❌ W0 | ⬜ pending |
+| 01-02-02 | 01-02 | 2 | DEF-02 (five exits → `navigateParent`) | T-1-01 | Relative path only, key renamed `url`→`path` | unit + manual | `npm run typecheck && npx vitest run --exclude "tests/liquid-block-contract.test.ts"` | ❌ W0 | ⬜ pending |
+| 01-02-03 | 01-02 | 2 | DEF-04 (exact label) | — | N/A | unit | `npx vitest run app/components/quiz/QuizPartRenderer.test.ts` | ✅ +1 test | ⬜ pending |
+| 01-02-03 | 01-02 | 2 | DEF-04 / D-13 (still required) | — | N/A | unit | same | ✅ +1 test | ⬜ pending |
+| 01-03-01 | 01-03 | 2 | DEF-01 (scroll listener) | — | N/A | contract | `npx vitest run tests/liquid-block-contract.test.ts` | ❌ W0 | ⬜ pending |
+| 01-03-01 | 01-03 | 2 | DEF-01 (D-06 instant + `scroll-margin-top`) | — | N/A | contract | same | ❌ W0 | ⬜ pending |
+| 01-03-01 | 01-03 | 2 | D-05 (origin guard present) | T-1-01 | Only same-origin relative paths navigate | contract | same | ❌ W0 | ⬜ pending |
+| 01-03-02 | 01-03 | 2 | DEF-03 / D-12 (pickers + `_embed_src` params) | — | N/A | contract | same, incl. `{% schema %}` JSON validity | ❌ W0 | ⬜ pending |
+| 01-04-01 | 01-04 | 3 | all four (bundle rebuild) | — | N/A | integration | `npm run typecheck && npm test` — first unqualified full-green gate | ✅ | ⬜ pending |
+| 01-04-02 | 01-04 | 3 | — (CLAUDE.md amend + findings record) | — | PHI compliance block preserved | contract | grep guards on `CLAUDE.md` | ✅ | ⬜ pending |
+| 01-05-01..03 | 01-05 | 4 | all four (deploy + Gates A/B/C) | T-1-01 | Redirect closed in production | integration | Gates A, B, C on served bytes | n/a | ⬜ pending |
+| 01-06-01 | 01-06 | 5 | DEF-02 criterion #2 (fifth defect) | — | N/A | **manual, theme editor** | Gate D | n/a | ⬜ pending |
+| 01-06-02 | 01-06 | 5 | all four (behavioral) | T-1-01 | Origin guard proven load-bearing | **manual, browser** | Gates E + F | n/a | ⬜ pending |
+| 01-06-03 | 01-06 | 5 | — (PHI cleanup) | — | Zero residual verification rows | integration | `STATE.md` `PHI-CLEANUP` counts line | n/a | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+
+### Red-by-Design Contract Tests
+
+`tests/liquid-block-contract.test.ts` and `tests/quiz-embed-contract.test.ts` assert the **fixed** state, so they must fail while the code is still broken.
+
+- **Task 01-01-03 requires a non-zero exit.** A pass there means the assertions are vacuous.
+- **Through Waves 1–2, the green gate is the `--exclude` form**, never plain `npm test`. Plan 01-02 excludes `tests/liquid-block-contract.test.ts` (Plan 01-03's target); Plan 01-03 excludes `tests/quiz-embed-contract.test.ts` (Plan 01-02's target). This preserves wave-2 parallelism — the two plans have zero `files_modified` overlap.
+- **Plan 01-04 (wave 3) owns the first unqualified full-green gate.** Do not add one earlier: an executor told to make `npm test` green during wave 2 would weaken the DEF-01 scroll, `e.origin`, and `scroll-margin-top` assertions to comply.
+- Every plan carries a grep-gate hygiene rule forbidding comments that quote removed tokens — otherwise the absence assertions silently self-invalidate.
 
 ---
 
@@ -127,12 +145,14 @@ Exact commands live in `01-RESEARCH.md` §"Deploy-Artifact Provenance Gates".
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 5s
-- [ ] Gates A–F all pass against served bytes
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies — 16/16
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references — all five files created by Plan 01-01
+- [x] No watch-mode flags
+- [x] Feedback latency < 5s — baseline 519 ms
+- [ ] Gates A–F all pass against served bytes — *execution-time, waves 4–5*
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-07-30 (plan-checker verified; Dimension 8 satisfied)
+
+Gates A–F remain unchecked deliberately: they assert on deployed bytes and cannot pass until Plan 01-05 (wave 4) and Plan 01-06 (wave 5) run. `wave_0_complete` stays `false` until Plan 01-01 lands.

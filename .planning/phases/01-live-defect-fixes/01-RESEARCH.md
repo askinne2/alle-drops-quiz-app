@@ -1335,9 +1335,15 @@ treated as enabled.
 | A8 | The `3-6` double-submit unique-constraint violation (Pitfall 6 side note) is real but out of scope | Pitfall 6 | Low — Phase 4 (TEST-05) deletes the path; if reproduced during verification it may be mistaken for a Phase 1 regression |
 | A9 | Newly added non-`product` schema settings do not receive defaults on already-placed blocks | Runtime State Inventory | None as scoped — both new settings are `product` type, which cannot have defaults at all, so the question does not arise. Becomes live if the planner adds a `text`/`range`/`checkbox` setting (e.g. the scroll-offset range suggested in Pitfall 4) — verify before relying on its default. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does D-05's same-origin-only rule need an escape hatch for external URLs?**
+> **All four resolved during planning, 2026-07-30.** Each recommendation below was adopted:
+> Q1 → Plan 01-03 ships the relative-only rule as locked, adds a `console.warn` on rejection, and records the Phase 7 / TELE-01 tension as threat `T-1-15`.
+> Q2 → Plan 01-06 Task 1 is `autonomous: false` and gates DEF-02 criterion #2 only, not DEF-03.
+> Q3 → Plan 01-05 Task 1 carries the decision checkpoint; the decomposed low-PHI protocol is the recommended option, with a blocking cleanup `DELETE` covering the session-27 orphan.
+> Q4 → Plan 01-04 Task 2 records the bundle-route `ETag` recommendation in `STATE.md` as a Phase 8 candidate; it stays out of scope here.
+
+1. **Does D-05's same-origin-only rule need an escape hatch for external URLs?** *(RESOLVED — ship locked, warn on rejection)*
    - **What we know:** both live redirect settings are internal relative paths, so there is **zero**
      current exposure `[VERIFIED]`. The `url` setting type does return absolute URLs for external
      addresses.
