@@ -92,8 +92,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — Delete the location.assign override, route all five exits through navigateParent, correct the medication label
-- [ ] 01-03-PLAN.md — Harden the Liquid message handler (origin guard + same-origin path allowlist), add the scroll listener, add both product pickers
+- [x] 01-02-PLAN.md — Delete the location.assign override, route all five exits through navigateParent, correct the medication label
+- [x] 01-03-PLAN.md — Harden the Liquid message handler (origin guard + same-origin path allowlist), add the scroll listener, add both product pickers
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -371,7 +371,7 @@ exposures today.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Live Defect Fixes | 1/6 | In Progress|  |
+| 1. Live Defect Fixes | 3/6 | In Progress|  |
 | 2. Quiz Schema Foundation | 0/TBD | Not started | - |
 | 3. Mandatory Medical History | 0/TBD | Not started | - |
 | 4. Mandatory Allergy Testing | 0/TBD | Not started | - |
