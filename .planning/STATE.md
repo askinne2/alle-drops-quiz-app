@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-07-30T09:55:16.165Z"
-last_activity: 2026-07-30 -- Phase 01 execution started
+status: ready_to_plan
+stopped_at: Phase 01 complete (6/6) — ready to discuss Phase 2
+last_updated: 2026-07-30T17:54:11.385Z
+last_activity: 2026-07-30 -- Phase 01 complete (6/6), deployed and verified
 progress:
   total_phases: 8
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 0
-  percent: 0
+  completed_plans: 6
+  percent: 13
 ---
 
 # Project State
@@ -22,25 +22,28 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 01 — live-defect-fixes
+**Current focus:** Phase 2 — quiz schema foundation
 
 ## Current Position
 
-Phase: 01 (live-defect-fixes) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 01
-Last activity: 2026-07-30 -- Phase 01 execution started
+Phase: 2
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-30
 
 Progress: [░░░░░░░░░░] 0%
 
-Codebase baseline: `main`, 51/51 tests passing, typecheck clean, deployed to Fly
-(`alle-drops-quiz-app`, iad). No application code has changed since session 28 (2026-07-01).
+Codebase baseline: `main` @ Phase 1 complete, **173 tests / 17 files passing**, typecheck clean,
+build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) releases v46+v47, and Shopify app version
+`alledrops-quiz-production-21`. Phase 1 changed application code for the first time since session 28
+and shipped it — DEF-01..04 plus three security fixes, one of which (an open redirect in
+`entry.theme.tsx`) was live and exploitable in production.
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 6
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -48,7 +51,7 @@ Codebase baseline: `main`, 51/51 tests passing, typecheck clean, deployed to Fly
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01 | 6 | - | - |
 
 **Recent Trend:** No data yet.
 
@@ -129,7 +132,7 @@ None captured yet.
   turning the toggle on before counsel delivers would publish the placeholder instead.
 - **Apntly appointment-booking app embed** is enabled site-wide in the theme's `settings_data.json`
   (`disabled: false`) but `apntly` appears 0 times in the served quiz-page HTML, versus `klaviyo` at
-  4. So it does not appear to load on the PHI page. Recorded to close out the question; Klaviyo
+  10 occurrences. So it does not appear to load on the PHI page. Recorded to close out the question; Klaviyo
   remains the live exposure. Re-check if the embed's loader is ever renamed.
 - Live app→DB round trip never verified after the 2026-07-28 Cloud SQL downsize.
 - ~~Leftover `diag+preflight@example.com` row, carried since session 27.~~ **CLOSED 2026-07-30.**

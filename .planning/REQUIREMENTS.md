@@ -39,17 +39,17 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 
 ### Live Defects (already-shipped work)
 
-- [ ] **DEF-01**: The parent storefront page scrolls to the top of the quiz on every step change —
+- [x] **DEF-01**: The parent storefront page scrolls to the top of the quiz on every step change —
   the `quiz:scrollToTop` message is already posted, but the listener is missing from
   `extensions/quiz-block/blocks/symptom-quiz.liquid:56-69` (`REQ-scroll-to-top-on-step-change`)
-- [ ] **DEF-02**: All four in-quiz redirects navigate the parent storefront page, not the iframe —
+- [x] **DEF-02**: All four in-quiz redirects navigate the parent storefront page, not the iframe —
   delete the silently-failing `window.location.assign` override at `app/routes/quiz-embed.tsx:57-59`
   and add a `navigateParent(url)` helper that resolves relative URLs against the shop origin
   (`REQ-iframe-parent-navigation`)
-- [ ] **DEF-03**: The AlleDrops product link resolves to a live product page in both states —
+- [x] **DEF-03**: The AlleDrops product link resolves to a live product page in both states —
   `app/lib/quiz/product-links.ts:2-5` uses `tennessee-allerdrops` / `texas-allerdrops`; the live
   handles are `tennessee-alledrops` / `texas-alledrops` (`REQ-correct-product-handles`)
-- [ ] **DEF-04**: The medication question label reads exactly "Please list your current allergy
+- [x] **DEF-04**: The medication question label reads exactly "Please list your current allergy
   medications and dosages" — drop the `(required):` suffix at `app/lib/quiz/questions.ts:198`
   while keeping required-ness enforced (`REQ-medication-question-copy`)
 
@@ -224,10 +224,10 @@ Acknowledged, not in the v1.0 roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DEF-01 | Phase 1 | Pending |
-| DEF-02 | Phase 1 | Pending |
-| DEF-03 | Phase 1 | Pending |
-| DEF-04 | Phase 1 | Pending |
+| DEF-01 | Phase 1 | Complete (2026-07-30, verified live) |
+| DEF-02 | Phase 1 | Complete (2026-07-30, verified live) |
+| DEF-03 | Phase 1 | Complete (2026-07-30, verified live) |
+| DEF-04 | Phase 1 | Complete (2026-07-30, verified live) |
 | SCH-01 | Phase 2 | Pending |
 | SCH-02 | Phase 2 | Pending |
 | HIST-01 | Phase 3 | Pending |
