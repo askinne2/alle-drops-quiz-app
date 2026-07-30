@@ -33,6 +33,29 @@ the way to what William now expects, and that third is mostly the pre-call desig
 
 <!-- Shipped and confirmed working against the 2026-07-29 code audit. Verify, do not rebuild. -->
 
+**Validated in Phase 1: Live Defect Fixes (complete 2026-07-30, deployed and verified on served bytes)**
+
+- ✓ **DEF-01** — parent storefront scrolls to the top of the quiz on step change, instantly, clear of
+  the sticky header (desktop measured; mobile clearance is the one open human-verification item)
+- ✓ **DEF-02** — all in-quiz redirects navigate the parent storefront, not the iframe; the
+  `quiz:navigate` payload is keyed on `path` so a version skew fails closed
+- ✓ **DEF-03** — product handles corrected (`tennessee-allerdrops` → `tennessee-alledrops`); both
+  handles return 200 live, both misspellings 404
+- ✓ **DEF-04** — medication label reads without the `(required)` suffix
+
+Also hardened in Phase 1, outside the original plan scope and authorized in-session:
+
+- ✓ Reflected XSS on `/quiz-embed` closed (`jsonForScript` + per-response nonce CSP). Three of six
+  sinks predated this phase, so it was **live in production**.
+- ✓ Open-redirect class closed across **four** hand-ported copies of the path validator. The WHATWG
+  parser strips TAB/LF/CR before parsing, defeating positional checks.
+- ✓ A **live, verified-exploitable** open redirect in `entry.theme.tsx` closed. Two independent
+  reviews had classified it as dead code; `/quiz-embed` loaded top-level reaches it.
+- ✓ Consult fallback moved off `/pages/consult`, which returns 404 — blanking that theme setting
+  sent a patient who had just completed a clinical intake to a dead page.
+
+Test suite went 51 → **173** across 17 files.
+
 - ✓ TN/TX eligibility gate (`StateGate.tsx`) — server-revalidated
 - ✓ Patient info step with 18+ DOB gate; DOB never written to Shopify
 - ✓ Scored questionnaire Parts 1–5 and bracket scoring (`0-2` / `3-6` / `7+`)
@@ -300,4 +323,4 @@ answer the registration question.
   checkboxes may not be able to read completion state at all. Spike before committing to that design.
 
 ---
-*Last updated: 2026-07-29 after `/gsd:new-project` ingest of 9 documents (`.planning/intel/`)*
+*Last updated: 2026-07-30 — Phase 1 complete (`/gsd:execute-phase 1`), deployed and verified on served bytes. Originally created 2026-07-29 from `/gsd:new-project` ingest of 9 documents (`.planning/intel/`).*
