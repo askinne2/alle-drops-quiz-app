@@ -10,7 +10,13 @@
 > 6. Non-PHI flags allowed in Shopify metafields: `alledrops.last_completed_at` (date), `alledrops.quiz_count` (int). Nothing else.
 
 ---
-## THIS IS NOT a GSD project. never try to start GSD.
+## This project is GSD-managed
+
+Planning state is committed under `.planning/` — `PROJECT.md`, `ROADMAP.md`, `REQUIREMENTS.md`,
+`STATE.md`, and per-phase plans in `.planning/phases/`. **Read `.planning/ROADMAP.md` and
+`.planning/STATE.md` before starting work** to establish the current milestone, the last completed
+phase, and any open blockers. Use the `/gsd:*` commands to plan and execute; don't hand-edit
+`ROADMAP.md` or `STATE.md` while a phase is mid-execution.
 
 ## What this app is
 
