@@ -51,6 +51,45 @@ const BACKSLASH_AFTER_SLASH = "/\\evil.com";
 // than banning backslashes outright and breaking legitimate paths.
 const BACKSLASH_IN_PATH = "/pages/a\\b";
 
+// DECIDED: REJECT, anywhere in the string. Code review finding CR-01/CR-02 class.
+//
+// The WHATWG URL parser REMOVES every ASCII TAB, LF, and CR from its input before parsing.
+// The positional rules above therefore inspect a different string than the browser resolves,
+// which makes these three characters a bypass primitive rather than a cosmetic concern.
+//
+// Derived by sweeping every character from 0x00 to 0x20 in front of an authority-shaped payload
+// on node v20.19.6. Exactly TAB/LF/CR bypassed the positional checks and resolved cross-origin;
+// no other control character did. Deeper placements are exploitable too, which is why the rule is
+// "anywhere" rather than "at index 1":
+//
+//   new URL("/\t/evil.com",   base).origin === "https://evil.com"
+//   new URL("/\n\\evil.com",  base).origin === "https://evil.com"
+//   new URL("/\t\t/evil.com", base).origin === "https://evil.com"
+//   new URL("/\t/\tevil.com", base).origin === "https://evil.com"
+//
+// Before this rule existed, isSafeRelativePath returned TRUE for every row below while
+// navigateParent handed the value to window.location.assign — a live open redirect off the
+// clinic's own app origin, fired after the intake had already been POSTed.
+const PARSER_STRIPPED_BYPASSES: readonly string[] = [
+  "/\t/evil.com",
+  "/\n/evil.com",
+  "/\r/evil.com",
+  "/\t\\evil.com",
+  "/\n\\evil.com",
+  "/\r\\evil.com",
+  "/\t\t/evil.com",
+  "/\t/\tevil.com",
+  "/\r\n/evil.com",
+];
+
+// Raw TAB/LF/CR are rejected even where the resolved origin would have been harmless. The rule
+// is about the validated string differing from the parsed string, not about each row's origin.
+const PARSER_STRIPPED_HARMLESS: readonly string[] = [
+  "/pages/a\tb",
+  "/\tpages/x",
+  "/pa\tges/x",
+];
+
 describe("isSafeRelativePath", () => {
   for (const input of ACCEPT) {
     it(`accepts ${JSON.stringify(input)} as a same-origin relative path`, () => {
@@ -93,6 +132,52 @@ describe("isSafeRelativePath", () => {
   it("rejects a slash followed by two backslashes", () => {
     expect(new URL("/\\\\evil.com", "https://shop.example.com").origin).toBe("https://evil.com");
     expect(isSafeRelativePath("/\\\\evil.com")).toBe(false);
+  });
+
+  // Each row is asserted twice: that the parser really does reach a foreign origin, and that the
+  // validator rejects it. A one-sided assertion here would pass against a validator that rejects
+  // everything, so the origin assertion is what makes these non-vacuous.
+  for (const input of PARSER_STRIPPED_BYPASSES) {
+    it(`rejects ${JSON.stringify(input)}, which the parser strips into a foreign origin`, () => {
+      expect(new URL(input, "https://alle-drops-quiz-app.fly.dev").origin).toBe(
+        "https://evil.com"
+      );
+      expect(isSafeRelativePath(input)).toBe(false);
+    });
+  }
+
+  for (const input of PARSER_STRIPPED_HARMLESS) {
+    it(`rejects ${JSON.stringify(input)} even though its resolved origin is harmless`, () => {
+      // Same-origin today, but the validated string still differs from the parsed one. The rule
+      // refuses that whole class rather than reasoning about each row's origin.
+      expect(new URL(input, "https://alle-drops-quiz-app.fly.dev").origin).toBe(
+        "https://alle-drops-quiz-app.fly.dev"
+      );
+      expect(isSafeRelativePath(input)).toBe(false);
+    });
+  }
+
+  // Guards the derivation itself: if a future runtime starts stripping another character, this
+  // sweep fails and points at the new one instead of silently reopening the hole.
+  it("no other character from 0x00 to 0x20 bypasses the validator into a foreign origin", () => {
+    const base = "https://alle-drops-quiz-app.fly.dev";
+    const escapes: string[] = [];
+    for (let cc = 0; cc <= 0x20; cc++) {
+      const ch = String.fromCharCode(cc);
+      for (const payload of ["/evil.com", "\\evil.com", "evil.com"]) {
+        const candidate = `/${ch}${payload}`;
+        let origin: string;
+        try {
+          origin = new URL(candidate, base).origin;
+        } catch {
+          continue;
+        }
+        if (origin !== base && isSafeRelativePath(candidate)) {
+          escapes.push(`0x${cc.toString(16).padStart(2, "0")} ${JSON.stringify(candidate)}`);
+        }
+      }
+    }
+    expect(escapes).toEqual([]);
   });
 
   it("rejects a slash followed by a backslash then a slash", () => {

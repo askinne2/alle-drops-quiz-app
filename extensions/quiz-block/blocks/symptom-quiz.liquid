@@ -106,6 +106,15 @@
         */
         function safeUrl(p) {
           if (typeof p !== 'string' || p === '') return null;
+          // The URL parser strips every TAB, LF and CR from its input before parsing, so these
+          // shift the indexes the positional checks below rely on: "/\tevil.com" becomes
+          // "//evil.com" and reaches a foreign origin. Checked FIRST, and anywhere in the string,
+          // mirroring PARSER_STRIPPED_CHARS in app/lib/quiz/navigation.ts. The origin equality
+          // check further down happens to catch these too, but relying on that would leave this
+          // port disagreeing with its canonical spec.
+          if (p.indexOf('\t') !== -1) return null;
+          if (p.indexOf('\n') !== -1) return null;
+          if (p.indexOf('\r') !== -1) return null;
           if (p.charAt(0) !== '/') return null;
           if (p.charAt(1) === '/') return null;
           if (p.charAt(1) === '\\') return null;
