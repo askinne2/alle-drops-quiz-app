@@ -16,6 +16,7 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
@@ -37,17 +38,22 @@ These produce dead code or duplicated hardcodes if violated:
    display is hardcoded by literal question ID at `QuizPartRenderer.tsx:36-38` and in
    `isPartComplete` at `:276-278,295-299`. Building the new sections first would add five more
    ID-literal special cases across two files.
+
 2. **Phase 3 before Phase 4.** `setStep("medical_history")` (`QuizContainer.tsx:243`) is the ONLY
    entry point to the medical history section, and it is reached exclusively through the
    proceed-without-testing flow that Phase 4 deletes. Deleting that path first makes medical history
    dead code. Recorded verbatim by the locked source as `CON-sequencing-r3-before-r5`.
+
 3. **Phase 1 ships alone.** It touches only already-shipped behavior and must deploy this week
    without waiting on any other phase.
+
 4. **SHOP-01 (metafield readability spike) before SHOP-02 and SHOP-03.** No metafield definition
    exists anywhere in the repo, so whether `customer.metafields.alledrops.quiz_count` is readable
    from Liquid is unverified — and the product-page prerequisite checkboxes may depend on it.
+
 5. **TELE-01 before TELE-02.** `/pages/consult` is a 404 today; the telehealth branch has nothing to
    route to until it exists.
+
 6. **Phase 8 runs in parallel, not last.** Its client-owned items have multi-week lead times
    (Workspace → BAA → GCP migration) and two of its items — LAUNCH-01 (Klaviyo) and LAUNCH-02 (Test
    Mode) — are live patient-facing exposures today. Start them immediately.
@@ -59,28 +65,48 @@ Zero scoring work is needed for medical history, the testing split, or the diagn
 ## Phase Details
 
 ### Phase 1: Live Defect Fixes
+
 **Goal**: Every navigation and label already shipped to patients behaves the way it was designed to
 **Depends on**: Nothing — deliberately independent of every other phase, ships this week
 **Requirements**: DEF-01, DEF-02, DEF-03, DEF-04
 **Success Criteria** (what must be TRUE):
+
   1. Advancing or going back a quiz step scrolls the parent storefront page to the top of the quiz
   2. "Test First", "Schedule Consult", and "Return Home" navigate the parent storefront page to the
      correct storefront URL instead of rendering a React Router 404 inside the quiz frame
+
   3. The AlleDrops product link from the quiz lands on a live product page in both Tennessee and
      Texas
+
   4. The medication question label reads "Please list your current allergy medications and dosages"
      with no `(required):` suffix, and is still enforced as required
+
   5. The batch deploys to production on its own with 51/51 tests still passing, verified against
      rendered DOM rather than deploy success
 **Plans**: 6 plans in 5 waves
 
 Plans:
+**Wave 1**
+
 - [ ] 01-01-PLAN.md — Canonical path validator, corrected product handles, and the Wave 0 contract-test scaffold
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 01-02-PLAN.md — Delete the location.assign override, route all five exits through navigateParent, correct the medication label
 - [ ] 01-03-PLAN.md — Harden the Liquid message handler (origin guard + same-origin path allowlist), add the scroll listener, add both product pickers
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 01-04-PLAN.md — Rebuild and commit the theme bundle, amend the stale CLAUDE.md GSD line, record out-of-scope findings
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 01-05-PLAN.md — Three-channel deploy with provenance Gates A/B/C on served bytes (needs merge + deploy authorization)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 01-06-PLAN.md — Theme-editor Gate D, Gate E, behavioral Gate F, and PHI verification-row cleanup (human-owned)
+
 **Notes**: Roughly 4 hours total. The `window.location.assign` override is the root cause of three
 of the four broken redirects — `Location.assign` is `[LegacyUnforgeable]`, so the patch silently
 no-ops. The anchor-based product link works through a separate, legitimate click interceptor
@@ -88,14 +114,17 @@ no-ops. The anchor-based product link works through a separate, legitimate click
 `app/entry.theme.tsx` — that embed path is not installed.
 
 ### Phase 2: Quiz Schema Foundation
+
 **Goal**: New quiz sections can express conditional visibility, required-ness, and static content
 declaratively, with no question-ID literals anywhere in the renderer
 **Depends on**: Nothing (sequenced after Phase 1)
 **Requirements**: SCH-01, SCH-02
 **Success Criteria** (what must be TRUE):
+
   1. A question marked required blocks step advance until answered, with no per-ID code
   2. A question with a `showIf` condition appears and disappears based on another answer, with no
      per-ID code
+
   3. A static info block can be placed inside a quiz part and renders without collecting an answer
   4. The existing `med_list` and `med_control` conditional behavior is identical after being
      re-expressed through the new schema, with the existing test suite still green
@@ -105,19 +134,25 @@ Ship it before Phases 3 and 4 or accept five more ID-literal special cases acros
 `QuizPartRenderer.tsx`.
 
 ### Phase 3: Mandatory Medical History
+
 **Goal**: Every patient supplies a medical history Dr. Sullivan can treat from, including patients
 who will only book a telehealth consult
 **Depends on**: Phase 2
 **Requirements**: HIST-01, HIST-02, HIST-03, HIST-04, HIST-05, DIAG-01
 **Success Criteria** (what must be TRUE):
+
   1. Every patient reaches the medical history section on the way to their results — including one
      who intends to book telehealth only
+
   2. The comorbidity checklist offers all eleven locked options including "none of the above", and
      any selection reveals the current-medications free-text field
+
   3. Previous surgeries, known allergies, and other medical conditions must all be answered before
      the patient can continue
+
   4. Answering "no" to Primary Care Physician shows the establish-with-a-PCP recommendation;
      answering "yes" collects clinic name and address
+
   5. Medical history answers appear in the clinical PDF and admin submission modal with no new
      plumbing, and the patient's score is unchanged by anything they answered here
 **Plans**: TBD
@@ -132,20 +167,27 @@ have."). Delete the `"medical_history"` `FlowStep`, its seeding effect, and the 
 special case as part of this phase.
 
 ### Phase 4: Mandatory Allergy Testing
+
 **Goal**: No patient — and no storefront page — can reach purchase without allergy testing
 **Depends on**: Phase 3 (hard: deleting the bypasses first would orphan medical history)
 **Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05, TEST-06, TEST-07
 **Success Criteria** (what must be TRUE):
+
   1. Every patient reaches an allergy-testing step before seeing their score, with exactly two
      choices and no way past it
+
   2. "I need allergy testing" takes the patient to the storefront testing-options page; "I've
      already had allergy testing" collects year, location, and reacted-to allergens
+
   3. A patient with existing results is told to email them to the testing address using the same
      email address they used on the quiz — and no file upload exists anywhere
+
   4. No surface, in the quiz or on the storefront, offers or implies a path to purchase without
      testing: both code bypasses are gone, `ResultsDisplay` is terminal, and the product-page and
      test-options copy no longer promise that testing can be skipped
+
   5. Every completed submission has passed through consent with a recorded `consent_version`
+
 **Plans**: TBD
 **UI hint**: yes
 **Notes**: ~1 day for the new step plus 2–3 h for the deletions. Two bypasses must go, not one — the
@@ -156,15 +198,19 @@ schema. TEST-04's email address depends on the unresolved domain spelling — us
 spelling or hold the copy string.
 
 ### Phase 5: Preliminary Score Page
+
 **Goal**: A patient sees a clinically honest preliminary result and knows a human is reviewing it
 **Depends on**: Phase 4 (the results page stops being a routing hub first)
 **Requirements**: SCORE-01, SCORE-02, SCORE-03
 **Success Criteria** (what must be TRUE):
+
   1. The page is titled "Preliminary Score" and tells the patient the clinical team will email
      final results within 1–2 business days
+
   2. No copy anywhere promises the patient will be able to purchase if approved
   3. A colour-banded bar directly above the score shows where the patient falls on the full scale,
      using the range and band boundaries William confirms
+
   4. The displayed ceiling is computed from the scored question set, so adding a scored question
      changes it automatically rather than silently rotting
 **Plans**: TBD
@@ -178,21 +224,28 @@ four-band colour classes at `quiz.module.css:295-299` — that is part of what n
 precedent to follow.
 
 ### Phase 6: Purchase Prerequisites & Returning Patients
+
 **Goal**: A patient buying SLIT is told, at the moment of purchase, what AOD requires before
 shipping — and a returning patient sees the credit for work already done
 **Depends on**: Phase 4 (the checkboxes must reference a testing step that exists)
 **Requirements**: SHOP-01, SHOP-02, SHOP-03, SHOP-04, SHOP-05, SHOP-06
 **Success Criteria** (what must be TRUE):
+
   1. Completion metafields are readable from Liquid on the storefront — or the spike has documented
      that they are not and named the fallback design
+
   2. A returning logged-in patient who has completed the quiz sees that state on the product page,
      not only on their customer profile
+
   3. Add-to-cart on both SLIT product pages requires two confirmations: quiz completed and allergy
      testing submitted
+
   4. After ordering, the thank-you page explains clinical review with a 2–3 business day
      expectation, and the same language appears in the order confirmation email, at checkout, and in
      the refund policy
+
   5. A written fulfillment verification step exists and is owned by AOD before the first shipment
+
 **Plans**: TBD
 **UI hint**: yes
 **Notes**: ~3–5 days; the largest phase. Two new extensions — a theme app extension block targeting
@@ -206,17 +259,22 @@ best-effort email matching, so a patient who quizzes with one email and buys wit
 unlinked.
 
 ### Phase 7: Telehealth Intake Path
+
 **Goal**: A patient who books the $99 consult can actually book it, and their intake reads as
 pre-appointment paperwork rather than a SLIT recommendation
 **Depends on**: Phase 3 (telehealth patients still supply history), Phase 5 (score page copy branch)
 **Requirements**: TELE-01, TELE-02
 **Success Criteria** (what must be TRUE):
+
   1. `/pages/consult` resolves and a patient can actually book a telehealth consultation, with
      format details present
+
   2. A patient who arrives via the telehealth path is recorded as such on their submission
   3. A telehealth patient sees the Preliminary Score followed by the pre-appointment copy about
      Dr. Sullivan reviewing their information, not the SLIT closing copy
+
   4. Telehealth patients still complete medical history before finishing
+
 **Plans**: TBD
 **UI hint**: yes
 **Notes**: ~1.5–2 days. TELE-01 is storefront plus scheduling-app configuration and depends on the
@@ -226,22 +284,29 @@ the mechanism (DEF-02) does not make the destination exist. Requires a migration
 field; the $99 consult product appears nowhere in code today.
 
 ### Phase 8: Launch Readiness
+
 **Goal**: Nothing outside the codebase is blocking a real patient from being safely and legally
 served on AOD's own infrastructure
 **Depends on**: Nothing — **runs in parallel from day one**; must complete before go-live
 **Requirements**: LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04, LAUNCH-05, LAUNCH-06, LAUNCH-07, LAUNCH-08
 **Success Criteria** (what must be TRUE):
+
   1. Nothing on a patient-facing page leaks data or bypasses validation — no Klaviyo, Pixel, or GA
      on any PHI-collecting page, and Test Mode does not render in production
+
   2. Every counsel-owned prerequisite is closed: no placeholder text on any clinical surface,
      `CONSENT_VERSION` bumped, NPP published, privacy policy HIPAA-compatible with an AOD-owned
      contact address, Privacy and Security Officers named, workforce training complete, and a signed
      BAA covering every PHI surface
+
   3. One real submission has been confirmed written to and read back from production Cloud SQL, and
      the `diag+preflight@example.com` row is gone
+
   4. Production runs on AOD-owned Google Workspace, Google Cloud, and Shopify, off the cross-client
      billing account, with the confirmed domain spelling live on the quiz subdomain
+
   5. No repo document describes Google Sheets as the live PHI store
+
 **Plans**: TBD
 **Ownership**:
 
@@ -283,8 +348,10 @@ transcript, before anyone registers or configures anything.**
 
 1. Is the "allergy diagnosis" question distinct from the medical-history checkbox list, or the same
    ask? Building it twice is waste. — gates DIAG-01
+
 2. What is the full text of the third medical-history free-text field? Truncated in the source
    email; probable: "Please list any other medical conditions that you have." — gates HIST-03
+
 3. Is resume/edit of an in-progress submission expected? It does not exist, is 1+ week of work, and
    was implied on the call but never committed. — **out of scope for v1.0, recorded as a risk**
 
