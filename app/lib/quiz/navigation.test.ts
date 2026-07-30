@@ -28,10 +28,28 @@ const REJECT: readonly string[] = [
   "\\/evil.com", // a backslash is not "/" at index 0
 ];
 
-// A leading "/" followed by a backslash. Under the index-0 / index-1 rules this ACCEPTS,
-// and new URL("/\\evil.com", origin) stays same-origin in WHATWG-compliant browsers, so
-// accepting it is safe. Asserted explicitly so the decision is recorded, not incidental.
+// DECIDED: REJECT. A leading "/" followed by a backslash.
+//
+// The plan predicted this would accept, on the stated reasoning that
+// new URL("/\evil.com", origin) "stays same-origin in WHATWG-compliant browsers".
+// That prediction is FALSE, and the assertions below are the evidence: the WHATWG URL
+// parser treats "\" as equivalent to "/" for special schemes (http/https), so "/\host"
+// enters the same authority state as "//host" and resolves to a DIFFERENT ORIGIN.
+// Measured on node v20.19.6, and browsers implement the same spec:
+//
+//   new URL("/\evil.com",  "https://shop.example.com").origin === "https://evil.com"
+//   new URL("/\\evil.com", "https://shop.example.com").origin === "https://evil.com"
+//   new URL("/\/evil.com", "https://shop.example.com").origin === "https://evil.com"
+//
+// Accepting these would be a live open redirect — the exact defect class D-05 exists to
+// close (threat T-1-06, disposition `mitigate`). So `isSafeRelativePath` rejects a
+// backslash at index 1, symmetric with the existing index-1 "/" rule.
 const BACKSLASH_AFTER_SLASH = "/\\evil.com";
+
+// A backslash LATER in the path is harmless and stays same-origin — the parser normalises
+// it to "/" inside the path. Asserted below so the rule stays narrow (index 1 only) rather
+// than banning backslashes outright and breaking legitimate paths.
+const BACKSLASH_IN_PATH = "/pages/a\\b";
 
 describe("isSafeRelativePath", () => {
   for (const input of ACCEPT) {
@@ -62,14 +80,31 @@ describe("isSafeRelativePath", () => {
     expect(isSafeRelativePath({})).toBe(false);
   });
 
-  it("accepts a leading slash followed by a backslash, because new URL keeps it same-origin", () => {
-    // Decided, not assumed: index 0 is "/" and index 1 is not "/", and the WHATWG URL
-    // parser resolves "/\evil.com" against the parent origin rather than treating the
-    // backslash as a second slash. The parent's own origin check is the backstop.
-    expect(isSafeRelativePath(BACKSLASH_AFTER_SLASH)).toBe(true);
+  it("rejects a leading slash followed by a backslash, which the URL parser resolves off-origin", () => {
+    // The reject is required, not stylistic. This assertion is the proof: the WHATWG parser
+    // treats "/\host" as protocol-relative, so accepting it would hand an attacker the
+    // parent's navigation. See the BACKSLASH_AFTER_SLASH comment above.
     expect(new URL(BACKSLASH_AFTER_SLASH, "https://shop.example.com").origin).toBe(
+      "https://evil.com"
+    );
+    expect(isSafeRelativePath(BACKSLASH_AFTER_SLASH)).toBe(false);
+  });
+
+  it("rejects a slash followed by two backslashes", () => {
+    expect(new URL("/\\\\evil.com", "https://shop.example.com").origin).toBe("https://evil.com");
+    expect(isSafeRelativePath("/\\\\evil.com")).toBe(false);
+  });
+
+  it("rejects a slash followed by a backslash then a slash", () => {
+    expect(new URL("/\\/evil.com", "https://shop.example.com").origin).toBe("https://evil.com");
+    expect(isSafeRelativePath("/\\/evil.com")).toBe(false);
+  });
+
+  it("still accepts a backslash later in the path, which stays same-origin", () => {
+    expect(new URL(BACKSLASH_IN_PATH, "https://shop.example.com").origin).toBe(
       "https://shop.example.com"
     );
+    expect(isSafeRelativePath(BACKSLASH_IN_PATH)).toBe(true);
   });
 });
 
@@ -93,7 +128,11 @@ describe("toRelativePath", () => {
     expect(toRelativePath({})).toBeNull();
   });
 
-  it("returns the leading-slash-backslash path unchanged", () => {
-    expect(toRelativePath(BACKSLASH_AFTER_SLASH)).toBe(BACKSLASH_AFTER_SLASH);
+  it("returns null for the leading-slash-backslash path", () => {
+    expect(toRelativePath(BACKSLASH_AFTER_SLASH)).toBeNull();
+  });
+
+  it("returns a backslash-in-path value unchanged", () => {
+    expect(toRelativePath(BACKSLASH_IN_PATH)).toBe(BACKSLASH_IN_PATH);
   });
 });
