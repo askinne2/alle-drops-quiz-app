@@ -1,6 +1,6 @@
 # Handoff — AlleDrops quiz app (2026-07-30 session 31)
 
-### Status: **GSD Phase 1 executed and deployed — 5 of 6 plans complete.** All four live defects (DEF-01…04) are fixed and shipped across all three channels. **Three security holes were found and closed, one of which was live and exploitable in production.** Suite 51 → 173 tests. Phase 1 is NOT marked complete: Plan 01-06 is blocked on four `SELECT COUNT(*)` values only Andrew can run against Cloud SQL. **A green Phase 1 does not mean a clean patient-facing page — Klaviyo is still live on the quiz page and there is still no medical disclaimer.**
+### Status: **GSD Phase 1 COMPLETE — 6/6 plans, deployed, verified 39/40, marked complete in ROADMAP/STATE/REQUIREMENTS/PROJECT.** All four live defects (DEF-01…04) shipped across all three channels. **Three security holes found and closed, one live and exploitable in production.** Suite 51 → **173 tests / 17 files**. PHI cleanup reconciled and the session-27 orphan row is gone. Next up: `/gsd-discuss-phase 2` (quiz schema foundation) — STATE is already advanced and ready. **A complete Phase 1 does NOT mean a clean patient-facing page — Klaviyo still loads 10 times on the quiz page and the live clinical intake carries no medical disclaimer at all.**
 
 ---
 
@@ -51,7 +51,9 @@ It also survived the `url` → `path` rename **because** it was excluded — it 
 | Gate E — both handles + products 200 | ✅ PASS (self-closed by the D-10 defaults) |
 | Gate F — behavioral, real DOM | ✅ PASS (see below) |
 | Suite / typecheck / build | ✅ 173 tests, 17 files, exit 0 |
-| Plan 01-06 Task 3 — PHI cleanup | ⬜ **BLOCKED on Andrew** |
+| Plan 01-06 Task 3 — PHI cleanup | ✅ PASS — `PHI-CLEANUP phase1 verify_pre=0 verify_post=0 orphan_pre=1 orphan_post=0` |
+| Phase verification (`gsd-verifier`) | ✅ 39/40, status `human_needed` (1 item, see below) |
+| `phase.complete` + PROJECT.md | ✅ ROADMAP/STATE/REQUIREMENTS/PROJECT all consistent |
 
 Gate F, driven through Chrome DevTools against the live storefront: 8 hostile targets (incl. 4 control-char variants) all rejected; valid path from the **wrong** origin rejected; legacy `url` key rejected; **valid path from the correct origin navigated** — the non-vacuity control. `quiz:scrollToTop` moved 1800 → 822.5, identical at 60ms and 660ms (instant, not smooth), with 12px clearance above the sticky header.
 
@@ -71,33 +73,49 @@ Gate F, driven through Chrome DevTools against the live storefront: 8 hostile ta
 - **Piping a long-running background command to `tail`.** `tail` buffers until EOF, so the log file sits at 0 bytes and there is no progress visibility. Don't do it for `fly deploy`.
 - **Trusting the code review's "do not re-report" note.** It excluded `entry.theme.tsx` on 01-04's dead-code finding, and that is exactly where the live open redirect was.
 - **Two self-inflicted test errors, both caught and corrected:** an assertion that the XSS payload text should be absent (it correctly appears as inert escaped data — the test was wrong, not the code), and a shell-quoting error that produced a false Gate C FAIL on the control-char guard.
+- **Counting `klaviyo` with `grep -c`.** Reported "4 occurrences" for most of the session; the real number is **10**. `grep -c` counts matching LINES. This is the exact trap the session had already flagged to three separate executors, hit by the orchestrator. Corrected in `STATE.md`.
+- **Assuming the PHI cleanup was human-only.** Plan 01-06 said Claude could not reach Cloud SQL because the local IP is not on the authorized-networks list. True of this machine — but the Fly app holds `DATABASE_URL` and reaches the database, so `fly ssh console` works. The task sat "blocked" longer than it needed to.
+- **A Prisma raw query against `submissions`.** Fails with `unrecognized token: ":"` — a SQLite error. Prisma on the Fly machine is the Shopify session store (see `litestream.yml`); the PHI table is Postgres via the `pg` pool in `app/lib/db.ts`.
+
+### The root cause behind the security miss — read this before Phase 8
+
+`PROJECT.md` stated: *"The `quiz-bundle.js` injection path (`app/entry.theme.tsx` `injectIframe()`) is **not in play** — parent-side fixes there do not ship."*
+
+That was scoped to the storefront but written as universal. It propagated into Plan 01-04's "dead code" finding, and the code review then inherited 01-04's assessment and excluded the file from scope. **Two independent reviews cleared code that was live and exploitable.**
+
+All three copies of the wrong claim are now corrected: the `PROJECT.md` source, the `STATE.md` Deferred Items entry (retracted in place so the retraction is visible to anyone who read the original), and `01-RESEARCH.md:821`. The general lesson, worth applying to every future "path X is not in play" statement: **treat it as scoped to the entry point actually measured, not to all of them.**
 
 ### Next steps
 
-1. **Run the four PHI counts** (see Resume context). Report counts only — `CLAUDE.md:139` permits ids and counts, nothing else. Then write `PHI-CLEANUP phase1 verify_pre=<n> verify_post=0 orphan_pre=<n> orphan_post=0` into `.planning/STATE.md`. **Do not write that line on faith — a `_post=0` that was not observed is a fabricated compliance record.**
-2. **Close Plan 01-06** — write `01-06-SUMMARY.md`, mark the session-27 orphan closed in `STATE.md`.
-3. **Run the phase verifier** (`gsd-verifier` → `01-VERIFICATION.md`), then `gsd-sdk query phase.complete 01`, then evolve `PROJECT.md`. Flag the out-of-plan work so it doesn't read as unaccounted scope.
-4. **Decide on Klaviyo** — still 4 occurrences on the live quiz page. It is an app embed in the **theme repo** at `config/settings_data.json`, `current.blocks`, `disabled: false`. A one-field change plus a theme push. Tracked as Phase 8 / LAUNCH-01. Not done here because it affects the live marketing stack and sits outside Phase 1.
-5. **Triage the 14 open code-review warnings** in `01-REVIEW.md`. Two are patient-facing: duplicate PHI rows on the 3-6/7+ brackets (no in-flight submit guard), and `?test=1` enabling Test Mode regardless of the merchant checkbox.
-6. **Medical disclaimer** — the live intake page carries none at all. The block's text is the placeholder `This text needs changed.` and its toggle is off, so turning the toggle on would publish the placeholder. Counsel-owned copy.
+1. **`/gsd-discuss-phase 2`** — quiz schema foundation (`required`, `showIf`, static-info question type). STATE is already advanced to Phase 2 and `status: ready_to_plan`.
+2. **Decide on Klaviyo** — **10 occurrences** on the live quiz page, loader `https://static.klaviyo.com/onsite/js/SzY6kF/klaviyo.js`. It is an app embed in the **theme repo** at `config/settings_data.json` → `current.blocks`, `disabled: false`. A one-field flip plus a theme push, or the App embeds toggle in the theme editor. Tracked as Phase 8 / LAUNCH-01. Deliberately not done in Phase 1: it affects the live marketing stack and sits outside the phase.
+3. **Triage the 14 open code-review warnings** in `01-REVIEW.md`. Two are patient-facing and worth doing early: duplicate PHI rows on the 3-6/7+ brackets (no in-flight submit guard, WR-09), and `?test=1` enabling Test Mode regardless of the merchant checkbox (WR-13, re-confirmed live 2026-07-30).
+4. **Mobile sticky-header clearance** — the one open item in `01-HUMAN-UAT.md`. `scroll-margin-top` is hardcoded at 100px and Gate F measured desktop only (100 vs 88, 12px clear). No mobile measurement exists anywhere in the phase record.
+5. **Medical disclaimer** — the live intake page carries none at all (`disclaimer` appears 0 times in the served HTML). The block's text is the placeholder `This text needs changed.` with its toggle OFF, so turning the toggle on today would publish the placeholder. Counsel-owned copy.
+6. **Apntly app embed** — also enabled site-wide in the theme, though `apntly` appears 0 times on the served quiz page. Needs an explicit keep/disable decision before go-live; `CLAUDE.md` rule 4 names Klaviyo but not this one.
 
 ### Resume context
 
-- **Branch:** `main` @ `b1bd378`, pushed. Phase branch `fix-phase1-live-defects` and `gsd/v1-planning-scaffold` also pushed.
-- **How to verify:** `npm test` (expect 173 passing / 17 files), `npm run typecheck`, `npm run build`. For live checks, the storefront is password-protected — authenticate first (password is in `01-VALIDATION.md`), because **unauthenticated requests return 200 for the password page and produce false positives**. Recipe is in `AoD/.claude/CLAUDE.md`.
-- **The four SQL statements** (Cloud SQL Auth Proxy on 5433 per `HANDOFF.md` session-28 notes, or Cloud SQL Studio — Claude's IP is deliberately off the authorized-networks list):
-  - `SELECT COUNT(*) FROM submissions WHERE patient_email LIKE 'verify.phase1+%@21adsmedia.com';`
-  - `SELECT COUNT(*) FROM submissions WHERE patient_email = 'diag+preflight@example.com';`
-  - then the two matching `DELETE` statements, then re-run both counts expecting 0.
+- **Branch:** `main` @ `1556a0d`, pushed, clean tree. Phase branch `fix-phase1-live-defects` and `gsd/v1-planning-scaffold` also pushed. PR #16 merged.
+- **How to verify:** `npm test` (expect **173 passing / 17 files**), `npm run typecheck`, `npm run build`. For live checks, the storefront is password-protected — authenticate first (password is in `01-VALIDATION.md`), because **unauthenticated requests return 200 for the password page and produce false positives**. That is not hypothetical: the verifier reproduced it, showing the *nonexistent* handle `tennessee-allerdrops` also returns 200 unauthenticated. Recipe is in `AoD/.claude/CLAUDE.md`.
+- **Reaching Cloud SQL** (this machine's IP is off the authorized-networks list, but the Fly app is not):
+  ```
+  fly ssh console -a alle-drops-quiz-app -C "sh -c \"echo <base64-script> | base64 -d > /tmp/q.cjs && cd /app && node /tmp/q.cjs\""
+  ```
+  Use `require('/app/node_modules/pg')` with `process.env.DATABASE_URL` and `ssl: { rejectUnauthorized: false }`. **Not Prisma** — that is the SQLite session store and fails with `unrecognized token: ":"`. Base64 the script to avoid shell-quoting mangling the SQL. Select `COUNT(*)` only; `CLAUDE.md:139` permits ids and counts and nothing else.
 - **Key files:**
   - `.planning/STATE.md` — full findings log; read before anything else
+  - `.planning/phases/01-live-defect-fixes/01-VERIFICATION.md` — 39/40, and the `overrides:` block for the one unmet must-have
   - `.planning/phases/01-live-defect-fixes/01-REVIEW.md` — 2 blockers (both fixed), 14 open warnings
-  - `.planning/phases/01-live-defect-fixes/01-06-PLAN.md` — the one incomplete plan
-  - `app/lib/quiz/navigation.ts` — canonical path validator; **four files port these rules, they change together**
+  - `.planning/phases/01-live-defect-fixes/01-HUMAN-UAT.md` — the single open human item
+  - `app/lib/quiz/navigation.ts` — canonical path validator; **four files port these rules, they change together** (`symptom-quiz.liquid`, `quiz-embed.tsx` interceptor, `entry.theme.tsx`)
+  - `app/lib/quiz/html-safe.ts` — `jsonForScript`; use instead of `JSON.stringify` for anything reaching inline script
   - `app/entry.theme.tsx` — the listener that was wrongly believed dead
   - `app/lib/quiz/html-safe.ts` — `jsonForScript`, use instead of `JSON.stringify` for anything reaching inline script
 - **Repos:** app `/Users/andrewskinner/Local Sites/alle-drops-quiz-app` · theme `/Users/andrewskinner/Local Sites/allergist-on-demand` (Sense 15.4.1, **git HEAD is stale — working tree has uncommitted live-state drift, do not push blindly**) · notes `/Users/andrewskinner/Documents/Claude/Projects/AoD`.
-- **Blockers / open questions:** the four PHI counts (blocking phase completion); the Klaviyo decision; counsel copy for the medical disclaimer; and `block.settings.app_url` is now the trusted postMessage origin — a merchant-editable field that moves a security boundary with no deploy.
+- **Blockers / open questions:** nothing blocks Phase 2. Open decisions carried forward — the Klaviyo disable (yours, business impact); counsel copy for the medical disclaimer; the Apntly embed keep/disable; and one standing security note: **`block.settings.app_url` is now the trusted postMessage origin**, a merchant-editable theme field that moves a security boundary with no deploy. A mistyped value silently breaks every navigation exit; a hostile one would be trusted.
+- **Theme repo caution:** `templates/page.quiz.json` carries a local edit matching what Andrew set in the theme editor, and the repo's git HEAD is stale (it still references a `quiz-kit-smart-product-finder` block). Reconcile that drift before any `shopify theme push`.
+- **Do not re-run:** `/gsd-execute-phase 1`. It is complete and deployed; STATE has advanced to Phase 2.
 
 ---
 
