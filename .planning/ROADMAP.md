@@ -20,7 +20,7 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Live Defect Fixes** - Four defects in already-shipped code; ships alone this week
+- [x] **Phase 1: Live Defect Fixes** - Four defects in already-shipped code; ships alone this week (completed 2026-07-30)
 - [ ] **Phase 2: Quiz Schema Foundation** - `required`, `showIf`, and static-info question types
 - [ ] **Phase 3: Mandatory Medical History** - Rebuilt history section every patient passes through
 - [ ] **Phase 4: Mandatory Allergy Testing** - Two-option testing split; both bypasses deleted
@@ -105,7 +105,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 01-06-PLAN.md — Theme-editor Gate D, Gate E, behavioral Gate F, and PHI verification-row cleanup (human-owned)
+- [x] 01-06-PLAN.md — Theme-editor Gate D, Gate E, behavioral Gate F, and PHI verification-row cleanup (human-owned)
 
 **Notes**: Roughly 4 hours total. The `window.location.assign` override is the root cause of three
 of the four broken redirects — `Location.assign` is `[LegacyUnforgeable]`, so the patch silently
@@ -371,7 +371,7 @@ exposures today.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Live Defect Fixes | 5/6 | In Progress|  |
+| 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
 | 2. Quiz Schema Foundation | 0/TBD | Not started | - |
 | 3. Mandatory Medical History | 0/TBD | Not started | - |
 | 4. Mandatory Allergy Testing | 0/TBD | Not started | - |

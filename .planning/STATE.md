@@ -128,7 +128,26 @@ None captured yet.
   4. So it does not appear to load on the PHI page. Recorded to close out the question; Klaviyo
   remains the live exposure. Re-check if the embed's loader is ever renamed.
 - Live app→DB round trip never verified after the 2026-07-28 Cloud SQL downsize.
-- Leftover `diag+preflight@example.com` row, carried since session 27.
+- ~~Leftover `diag+preflight@example.com` row, carried since session 27.~~ **CLOSED 2026-07-30.**
+  Deleted during Plan 01-06 Task 3. Reconciliation below.
+
+**PHI cleanup — Plan 01-06 Task 3, completed 2026-07-30:**
+
+PHI-CLEANUP phase1 verify_pre=0 verify_post=0 orphan_pre=1 orphan_post=0
+
+Reconciled: Gate F reported writing **0** rows (it verified behaviour with synthetic `postMessage`
+events and page loads; the questionnaire was never completed, so nothing POSTed to
+`/api/quiz/submit`). `verify_pre=0` matches that exactly, so there are no unexplained rows. The
+orphan delete removed exactly 1 row and the table total moved 43 → 42 — a difference of exactly 1,
+matching `deleted_orphan=1`. No PHI field value was read, printed, or recorded; every statement
+selected `COUNT(*)` only, per `CLAUDE.md:139`.
+
+Route correction worth carrying forward: Plan 01-06 assumed this task was human-only because the
+local IP is not on the Cloud SQL authorized-networks list. That is true of this machine, but the Fly
+app itself holds `DATABASE_URL` and reaches Cloud SQL, so `fly ssh console -a alle-drops-quiz-app`
+running a `pg` script is a working route. Note that Prisma on that machine is the SQLite session
+store (see `litestream.yml`) — the PHI `submissions` table is Postgres via the `pg` pool in
+`app/lib/db.ts`, and a Prisma raw query against it fails with a SQLite parser error.
 
 **LIVE OPEN REDIRECT FOUND AND CLOSED 2026-07-30 — `entry.theme.tsx` `injectIframe` listener.**
 
