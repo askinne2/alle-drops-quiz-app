@@ -70,7 +70,7 @@ Test suite went 51 → **173** across 17 files.
 
 Full checkable list with IDs: `.planning/REQUIREMENTS.md`. Grouped summary:
 
-- [ ] Four live defects in already-shipped work (scroll, iframe navigation, product handles, copy)
+- [x] Four live defects in already-shipped work (scroll, iframe navigation, product handles, copy) — **Phase 1 complete 2026-07-30, deployed and verified**
 - [ ] Quiz schema foundation — `required`, `showIf`, static-info question type
 - [ ] Mandatory medical history for every patient, positioned before the testing split
 - [ ] Allergy-diagnosis question adjacent to the Part 5 medication questions
@@ -114,10 +114,23 @@ Full checkable list with IDs: `.planning/REQUIREMENTS.md`. Grouped summary:
 theme app extensions. Cloud SQL Postgres for PHI. Prisma for Shopify session storage only.
 `extensions/` contains `quiz-block` (theme app block) and `quiz-history` (customer profile).
 
-**Embed path.** The installed path is the Liquid theme app block
+**Embed path.** The installed storefront path is the Liquid theme app block
 (`extensions/quiz-block/blocks/symptom-quiz.liquid`, `target = "section"`), confirmed against the
-live theme editor 2026-07-29. The `quiz-bundle.js` injection path (`app/entry.theme.tsx`
-`injectIframe()`) is **not in play** — parent-side fixes there do not ship.
+live theme editor 2026-07-29.
+
+⚠️ **CORRECTED 2026-07-30 — this section previously read "the `quiz-bundle.js` injection path
+(`app/entry.theme.tsx` `injectIframe()`) is not in play." That claim was wrong and it cost a live
+security hole.** It is true only of the *storefront*. `/quiz-embed` itself renders a
+`data-alledrops-quiz` container **and** loads the bundle, and `initQuiz()` selects `injectIframe`
+whenever `window.self === window.top` — so opening the public `/quiz-embed` URL top-level runs that
+path on a PHI-collecting page. Its handler had no origin check and no path validation, and was
+confirmed exploitable against production during Phase 1 Gate F (fixed in `14e13ff`).
+
+The wrong claim propagated from here into Plan 01-04's "dead code" finding and then into the code
+review, which inherited it and excluded the file from scope. Two independent reviews cleared code
+that was live. **`injectIframe` IS in play whenever the bundle loads on a top-level page; parent-side
+fixes there do ship.** Treat any future "path X is not in play" statement as scoped to the entry
+point actually measured, not to all of them.
 
 **Build.** `public/quiz-bundle.js` is a committed artifact built by `npm run build:theme`, not by
 `npm run build`. A successful `fly deploy` is not proof a front-end fix is live — verify rendered
