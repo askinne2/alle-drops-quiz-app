@@ -20,6 +20,12 @@ import {
 import { type QuizAnswers } from "../../lib/quiz/types";
 import { CONSENT_VERSION } from "../../lib/consent-version";
 import { getProductHandle, type QuizProductConfig } from "../../lib/quiz/product-links";
+import {
+  getRedirectTarget,
+  REDIRECT_FALLBACK,
+  type QuizRedirectConfig,
+  type RedirectKind,
+} from "../../lib/quiz/redirects";
 import { toRelativePath } from "../../lib/quiz/navigation";
 import styles from "../../styles/quiz.module.css";
 
@@ -41,15 +47,18 @@ const isTestModeEnabled = () => {
   return params.get("test") === "1" || (window as unknown as { AlleDropsQuizConfig?: { testMode?: boolean } }).AlleDropsQuizConfig?.testMode === true;
 };
 
-function getRedirectUrl(kind: "consult" | "testOptions"): string {
-  if (typeof window === "undefined") return "";
-  const cfg = (
-    window as unknown as {
-      AlleDropsQuizConfig?: { consultRedirectUrl?: string; testOptionsRedirectUrl?: string };
-    }
-  ).AlleDropsQuizConfig;
-  if (!cfg) return "";
-  return kind === "consult" ? (cfg.consultRedirectUrl || "") : (cfg.testOptionsRedirectUrl || "");
+/**
+ * Where a quiz exit should send the patient: merchant configuration, else the module fallback.
+ *
+ * This is the thin browser-global wrapper over `getRedirectTarget`; the resolution rules and the
+ * fallback values live in `app/lib/quiz/redirects.ts` so they are testable without a DOM. Callers
+ * do not need an `||` fallback of their own — one is always returned.
+ */
+function getRedirectUrl(kind: RedirectKind): string {
+  if (typeof window === "undefined") return REDIRECT_FALLBACK[kind];
+  const cfg = (window as unknown as { AlleDropsQuizConfig?: QuizRedirectConfig })
+    .AlleDropsQuizConfig;
+  return getRedirectTarget(kind, cfg);
 }
 
 /** The product-handle slice of the runtime config, or undefined when unset or server-side. */
@@ -253,7 +262,7 @@ export function QuizContainer() {
         return;
       }
     }
-    navigateParent(getRedirectUrl("consult") || "/pages/consult");
+    navigateParent(getRedirectUrl("consult"));
   }, [submitPayload, patientState, symptomProfileId, score, scoreBracket, savedToServer]);
 
   const handleTestFirst = useCallback(async () => {
@@ -266,7 +275,7 @@ export function QuizContainer() {
       alert(e instanceof Error ? e.message : "Could not save assessment. Please try again.");
       return;
     }
-    navigateParent(getRedirectUrl("testOptions") || "/pages/test-options");
+    navigateParent(getRedirectUrl("testOptions"));
   }, [submitPayload, patientState, symptomProfileId, score, scoreBracket]);
 
   const handleProceedToPurchase = useCallback(() => {
@@ -286,7 +295,7 @@ export function QuizContainer() {
 
   const handleDeclineProceedWithoutTesting = useCallback(() => {
     setShowProceedWarning(false);
-    navigateParent(getRedirectUrl("testOptions") || "/pages/test-options");
+    navigateParent(getRedirectUrl("testOptions"));
   }, []);
 
   const handleConsentSubmit = useCallback(async () => {
