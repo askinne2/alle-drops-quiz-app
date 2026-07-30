@@ -88,7 +88,7 @@ Zero scoring work is needed for medical history, the testing split, or the diagn
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Canonical path validator, corrected product handles, and the Wave 0 contract-test scaffold
+- [x] 01-01-PLAN.md — Canonical path validator, corrected product handles, and the Wave 0 contract-test scaffold
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -371,7 +371,7 @@ exposures today.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Live Defect Fixes | 0/6 | Not started | - |
+| 1. Live Defect Fixes | 1/6 | In Progress|  |
 | 2. Quiz Schema Foundation | 0/TBD | Not started | - |
 | 3. Mandatory Medical History | 0/TBD | Not started | - |
 | 4. Mandatory Allergy Testing | 0/TBD | Not started | - |
