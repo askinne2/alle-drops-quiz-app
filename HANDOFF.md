@@ -1,10 +1,217 @@
-# Handoff — AlleDrops quiz app (2026-07-01 session 28)
+# Handoff — AlleDrops quiz app (2026-07-30 session 31)
 
-### Status: Security branch merged, quiz warranty bugs fixed, and a real storefront deploy-pipeline gap found + fixed. Everything from today is merged to `main` and deployed. William sent a trimmed acknowledgment reply (business/scope-creep side handled in the ads-os vault, not this repo).
+### Status: **GSD Phase 1 executed and deployed — 5 of 6 plans complete.** All four live defects (DEF-01…04) are fixed and shipped across all three channels. **Three security holes were found and closed, one of which was live and exploitable in production.** Suite 51 → 173 tests. Phase 1 is NOT marked complete: Plan 01-06 is blocked on four `SELECT COUNT(*)` values only Andrew can run against Cloud SQL. **A green Phase 1 does not mean a clean patient-facing page — Klaviyo is still live on the quiz page and there is still no medical disclaimer.**
 
 ---
 
-## Session 28 (2026-07-01) — what happened today
+## Session 31 (2026-07-30) — what happened today
+
+### Goal
+Run `/gsd-execute-phase 1` (Live Defect Fixes) end to end: 6 plans across 5 waves, then deploy and verify.
+
+### The findings that mattered
+
+**1. A live, exploitable open redirect that two independent reviews had already cleared.**
+
+`app/entry.theme.tsx`'s `injectIframe` message listener had no origin check and no path validation, and called `window.location.assign(String(e.data.url))` directly. Confirmed against production by navigating the real page to `https://example.com/pwned`.
+
+Plan 01-04 measured that the installed Liquid block loads the bundle on zero storefront pages and renders no `data-alledrops-quiz` container, and concluded the branch was dead. **That is true of the storefront and false of `/quiz-embed` itself**, which renders that container AND loads the bundle — and `initQuiz()` picks `injectIframe` whenever `window.self === window.top`. The code review then inherited 01-04's assessment and excluded the file from scope, so both hardening passes skipped it. A correct measurement of one entry path was generalised into a claim about all of them.
+
+It also survived the `url` → `path` rename **because** it was excluded — it still read the abandoned `url` key, keeping the retired contract alive underneath the hardened one. The storefront fail-closed test passed while this stayed open. No framing needed: an opener can `postMessage` into a window it opened via `window.open`, so an attacker page could open the genuine clinic intake and silently swap it for a phishing clone. Fixed in `14e13ff`, deployed, re-tested with the original payload plus five variants.
+
+**2. Reflected XSS on `/quiz-embed`, already live before this phase (CR-01).** Six `url.searchParams` values were interpolated into an inline `<script>` via `JSON.stringify`, which does not escape `<`. Three of the six sinks predate Phase 1. Only CSP was `frame-ancestors *` — no `script-src`.
+
+**3. `isSafeRelativePath` accepted cross-origin targets (CR-02).** The WHATWG URL parser strips every TAB/LF/CR *before* parsing, shifting the indexes the positional rules inspect: `new URL("/\t/evil.com", app_origin).origin === "https://evil.com"`. Derived by sweeping every char `0x00`–`0x20` in front of an authority-shaped payload — exactly TAB/LF/CR bypassed the checks.
+
+**There were FOUR hand-ported copies of the navigation rules, not the two the review found:** `navigation.ts` (canonical), the Liquid `safeUrl`, the anchor interceptor in `quiz-embed.tsx`, and `entry.theme.tsx`. All four now agree; the last one imports the validator rather than becoming a fifth copy.
+
+**4. D-10 was never implementable.** Shopify rejected the app version: a theme app extension block may declare **at most one** `"type": "product"` setting, and D-10 specified two. No deploy of Plan 01-03's output could ever have succeeded. Converted both to `"type": "text"` holding the handle — which the Liquid already consumed via `.handle`. Net win: text settings *can* declare a `default`, which **restored the D-11 clause** Plan 01-03 had recorded as not implementable, and both handles now flow through the embed src automatically.
+
+**5. Gate D was closed.** `test_options_redirect_url` was passing the same value as `consult`. Root cause found in the theme repo at `templates/page.quiz.json`. Andrew fixed it in the theme editor; verified on served bytes.
+
+**6. `01-VALIDATION.md`'s page-existence checks were false positives.** The storefront 302s to `/password` and returns **200 for the password page**, so every unauthenticated check passed vacuously. Authenticated: `/pages/test-options` exists, but `/pages/consult` and `/pages/testing-options` are both **404**. `/pages/consult` was the documented blank-fallback for the consult redirect, so blanking that theme setting sent a patient who had just completed a clinical intake to a dead page.
+
+### What was done
+
+- **Waves 1–3 via parallel `gsd-executor` subagents in git worktrees** — plans 01-01…01-04. Each merged and gated individually.
+- **Waves 4–5 inline** (both `autonomous: false`) — deploy and verification needed production writes and interactive auth.
+- **PR #16 merged to `main`.** Andrew explicitly instructed the merge, overriding `CLAUDE.md:136`.
+- **Deployed:** Fly `v46` → `v47`; Shopify app version `alledrops-quiz-production-21`.
+- **Out-of-plan work, authorized in session:** `app/lib/quiz/redirects.ts` (consult fallback off the 404 page), `app/lib/quiz/html-safe.ts` (CR-01), the CR-02 fix across four files, the D-10 conversion, and the `entry.theme.tsx` fix.
+- **AoD notes folder wired up** — `/Users/andrewskinner/Documents/Claude/Projects/AoD/.claude/CLAUDE.md` now explains that GSD cannot run from there and maps all three repos.
+
+### Verification status
+
+| Gate | Result |
+|---|---|
+| Gate A — `/quiz-embed` served HTML | ✅ PASS |
+| Gate B — `/quiz-bundle-js` served bytes | ✅ PASS (183691 → 184428, all 5 markers) |
+| Gate C — rendered storefront page | ✅ PASS (control-char check at byte 88767, ahead of positional at 88920) |
+| Gate D — `testOptions` served value | ✅ PASS |
+| Gate E — both handles + products 200 | ✅ PASS (self-closed by the D-10 defaults) |
+| Gate F — behavioral, real DOM | ✅ PASS (see below) |
+| Suite / typecheck / build | ✅ 173 tests, 17 files, exit 0 |
+| Plan 01-06 Task 3 — PHI cleanup | ⬜ **BLOCKED on Andrew** |
+
+Gate F, driven through Chrome DevTools against the live storefront: 8 hostile targets (incl. 4 control-char variants) all rejected; valid path from the **wrong** origin rejected; legacy `url` key rejected; **valid path from the correct origin navigated** — the non-vacuity control. `quiz:scrollToTop` moved 1800 → 822.5, identical at 60ms and 660ms (instant, not smooth), with 12px clearance above the sticky header.
+
+**Gate F wrote ZERO rows.** Verification used synthetic `postMessage` events and page loads; the questionnaire was never completed, so nothing POSTed to `/api/quiz/submit`. `verify_pre` should therefore come back **0** — if it does not, that is a finding to investigate, not round off.
+
+### What worked
+
+- **Asserting on served bytes, never on exit codes.** Fly's deploy printed `The app is not listening on the expected address` and still worked; the extension deploy printed `success` twice while the first attempt had actually failed validation. Both were only resolvable by fetching and counting.
+- **Checking every green result for vacuity.** Several passes were trivially true until probed — the XSS test only meant something once the payload was proven to reach the response, and the Gate F rejects only meant something once a valid path was shown to navigate.
+- **Running content gates as node occurrence counts.** `grep` on this machine is a ugrep wrapper where `$` anchors mid-pattern, and `grep -c` counts *lines* — against a single-line 184KB bundle every count collapses to 1, so `≥1` gates pass vacuously. Three separate executors hit this independently.
+- **The worktree base assertion.** Three of four subagent worktrees spawned at a stale commit that predated the earlier waves. Only `git merge-base` caught it. On Plan 01-04 it would have been silently destructive: `build:theme` would have succeeded from pre-fix source and produced a plausible bundle with a fresh hash that still satisfied "byte count ≠ 183691".
+- **Subagents overriding their own plans when they had measured evidence.** Three plans contained factually wrong specs; each executor disproved its instructions rather than following them.
+
+### What didn't work
+
+- **`shopify app deploy` from inside Claude Code.** The OAuth session lives in the macOS keychain, which a Claude subprocess cannot read, so the CLI falls back to device auth that expires before it can be approved. It works only if Andrew approves the printed code within the TTL, or runs the command in his own terminal. `--force` does not exist in CLI 4.1.0; the correct flag is `--allow-updates`.
+- **Piping a long-running background command to `tail`.** `tail` buffers until EOF, so the log file sits at 0 bytes and there is no progress visibility. Don't do it for `fly deploy`.
+- **Trusting the code review's "do not re-report" note.** It excluded `entry.theme.tsx` on 01-04's dead-code finding, and that is exactly where the live open redirect was.
+- **Two self-inflicted test errors, both caught and corrected:** an assertion that the XSS payload text should be absent (it correctly appears as inert escaped data — the test was wrong, not the code), and a shell-quoting error that produced a false Gate C FAIL on the control-char guard.
+
+### Next steps
+
+1. **Run the four PHI counts** (see Resume context). Report counts only — `CLAUDE.md:139` permits ids and counts, nothing else. Then write `PHI-CLEANUP phase1 verify_pre=<n> verify_post=0 orphan_pre=<n> orphan_post=0` into `.planning/STATE.md`. **Do not write that line on faith — a `_post=0` that was not observed is a fabricated compliance record.**
+2. **Close Plan 01-06** — write `01-06-SUMMARY.md`, mark the session-27 orphan closed in `STATE.md`.
+3. **Run the phase verifier** (`gsd-verifier` → `01-VERIFICATION.md`), then `gsd-sdk query phase.complete 01`, then evolve `PROJECT.md`. Flag the out-of-plan work so it doesn't read as unaccounted scope.
+4. **Decide on Klaviyo** — still 4 occurrences on the live quiz page. It is an app embed in the **theme repo** at `config/settings_data.json`, `current.blocks`, `disabled: false`. A one-field change plus a theme push. Tracked as Phase 8 / LAUNCH-01. Not done here because it affects the live marketing stack and sits outside Phase 1.
+5. **Triage the 14 open code-review warnings** in `01-REVIEW.md`. Two are patient-facing: duplicate PHI rows on the 3-6/7+ brackets (no in-flight submit guard), and `?test=1` enabling Test Mode regardless of the merchant checkbox.
+6. **Medical disclaimer** — the live intake page carries none at all. The block's text is the placeholder `This text needs changed.` and its toggle is off, so turning the toggle on would publish the placeholder. Counsel-owned copy.
+
+### Resume context
+
+- **Branch:** `main` @ `b1bd378`, pushed. Phase branch `fix-phase1-live-defects` and `gsd/v1-planning-scaffold` also pushed.
+- **How to verify:** `npm test` (expect 173 passing / 17 files), `npm run typecheck`, `npm run build`. For live checks, the storefront is password-protected — authenticate first (password is in `01-VALIDATION.md`), because **unauthenticated requests return 200 for the password page and produce false positives**. Recipe is in `AoD/.claude/CLAUDE.md`.
+- **The four SQL statements** (Cloud SQL Auth Proxy on 5433 per `HANDOFF.md` session-28 notes, or Cloud SQL Studio — Claude's IP is deliberately off the authorized-networks list):
+  - `SELECT COUNT(*) FROM submissions WHERE patient_email LIKE 'verify.phase1+%@21adsmedia.com';`
+  - `SELECT COUNT(*) FROM submissions WHERE patient_email = 'diag+preflight@example.com';`
+  - then the two matching `DELETE` statements, then re-run both counts expecting 0.
+- **Key files:**
+  - `.planning/STATE.md` — full findings log; read before anything else
+  - `.planning/phases/01-live-defect-fixes/01-REVIEW.md` — 2 blockers (both fixed), 14 open warnings
+  - `.planning/phases/01-live-defect-fixes/01-06-PLAN.md` — the one incomplete plan
+  - `app/lib/quiz/navigation.ts` — canonical path validator; **four files port these rules, they change together**
+  - `app/entry.theme.tsx` — the listener that was wrongly believed dead
+  - `app/lib/quiz/html-safe.ts` — `jsonForScript`, use instead of `JSON.stringify` for anything reaching inline script
+- **Repos:** app `/Users/andrewskinner/Local Sites/alle-drops-quiz-app` · theme `/Users/andrewskinner/Local Sites/allergist-on-demand` (Sense 15.4.1, **git HEAD is stale — working tree has uncommitted live-state drift, do not push blindly**) · notes `/Users/andrewskinner/Documents/Claude/Projects/AoD`.
+- **Blockers / open questions:** the four PHI counts (blocking phase completion); the Klaviyo decision; counsel copy for the medical disclaimer; and `block.settings.app_url` is now the trusted postMessage origin — a merchant-editable field that moves a security boundary with no deploy.
+
+---
+
+## Session 30 (2026-07-28) — what happened today
+
+### Goal
+Two things: reconstruct project state after a gap, and run down a surprise **$500 Google Cloud invoice**.
+
+### The finding that mattered
+**The Cloud SQL instance had been running at 8 vCPU / 64 GB since the day it was created.**
+
+`alledrops-quiz-data` (created 2026-05-06, PG 18) was provisioned as:
+
+| | Before | After |
+|---|---|---|
+| Edition | `ENTERPRISE_PLUS` | `ENTERPRISE` |
+| Tier | `db-perf-optimized-N-8` (8 vCPU / 64 GB) | `db-custom-1-3840` (1 vCPU / 3.75 GB) |
+| Automated backups | **disabled** | enabled, daily 07:00 UTC, 15 retained |
+| PITR | disabled | enabled |
+| Disk | 100 GB PD_SSD | 100 GB PD_SSD (cannot be shrunk) |
+| Est. run rate | ~$1,150/mo | **~$65/mo** |
+
+**Root cause — not a misconfiguration by hand.** Per Google's Cloud SQL for PostgreSQL release notes (2024-10-23): *when creating an instance via CLI/API, if the database version is PostgreSQL 16 or later, the default edition is Enterprise Plus.* The instance was created on PG 18 via `gcloud` and silently inherited Enterprise Plus. There is no warning at creation time. Enterprise edition supports PostgreSQL 9.6–18, so the PG version was never a reason to be on Plus.
+
+**Why the invoice was $500 and not ~$1,150:** the instance was SUSPENDED 2026-06-06 → 2026-06-24 (the billing lapse from session 27), so only ~11 of 30 days in June were billed. **The $500 was never the steady-state run rate — a full month at the old tier would have been roughly double.**
+
+### What was done
+- **Confirmed the cost was isolated to this one resource.** Checked all five projects on the `Beautiful Rescues` billing account (`eligible-maps`, `beautifulrescues`, `br-staging-mysites-i-7399`, `gen-lang-client-0877130773`, `alledrops-quiz`) — Compute, Cloud Run, and Cloud SQL APIs are not even enabled on the other four. 100% of spend is `alledrops-quiz-data`.
+- **Took an on-demand safety backup first** — backup id `1785246531060`, status SUCCESSFUL. Necessary because automated backups were off, so there was no restore point at all before the change.
+- **Downsized** — `gcloud sql instances patch alledrops-quiz-data --edition=ENTERPRISE --tier=db-custom-1-3840`.
+- **Enabled automated backups + PITR** — `--backup-start-time=07:00 --enable-point-in-time-recovery --retained-backups-count=15`.
+- **Downtime was ~2 minutes**, 09:56–09:58 ET (13:56–13:58 UTC), across the two patch restarts.
+- **Public IP unchanged** (`34.139.97.17`) — no Fly `DATABASE_URL` secret change was needed.
+
+### Verification status — read this before assuming it's fine
+- ✅ Instance `RUNNABLE`, config confirmed via `gcloud sql instances describe`.
+- ✅ Fly health endpoint `https://alle-drops-quiz-app.fly.dev/health` → `200`.
+- ✅ WAL-archive `WARNING`s appeared at 13:56 UTC during the PITR enablement and **stopped by 13:58** — transient, zero warnings since.
+- ⬜ **The full app → DB round trip was NOT verified.** Andrew's local IP is not on the instance's authorized networks (by design), so no query could be run from here, and no test submission was made deliberately — it would write a PHI row. **Someone needs to click through one live quiz submission to close this out.**
+
+### What worked
+- Going straight to `gcloud sql instances list` / `describe` rather than theorizing about the bill. The tier was visible in the first command and the diagnosis took one look.
+- Checking every project on the billing account before blaming AoD — cheap to do, and it turned "probably the database" into "provably only the database."
+- Reading the operations log (`gcloud sql operations list`) to prove the tier was never resized, which ruled out "something changed recently" and pointed at the creation-time default.
+
+### What didn't work
+- `nc -z 34.139.97.17 5432` from local — times out. This is **expected** (authorized networks), not a regression signal. Don't chase it next session.
+- The `/health` route does **not** touch the database (`app/routes/health.tsx` returns a static JSON payload). A 200 there proves the Fly app is up and nothing about Postgres connectivity. Do not use it as a DB check.
+- Firecrawl search on `cloud.google.com` for raw per-vCPU pricing returned nothing usable. Cost figures in this document are **list-price estimates** — the invoice is the authority.
+
+### Billing / business items still open
+- [ ] **The `alledrops-quiz` project bills to the `Beautiful Rescues` billing account** (`01860C-FD5E7A-41B5EC`) — a different client's. This is what caused the June suspension. Move it to `21 ads media` (`01E2C6-27AE09-412270`) or straight to AOD-owned GCP as part of the migration already planned.
+- [ ] Andrew was considering **passing the GCP cost to the client**. Reframe before that conversation: the honest number to hand William is **~$65/mo**, not $500. The $500 was a one-time consequence of a bad default plus a partial billing month.
+- [ ] Automated backups were off for ~3 months on a database holding PHI (2026-05-06 → 2026-07-28). Nothing was lost and the instance was never deleted, but it's worth noting in the compliance record.
+
+### Next steps
+- [ ] **Tomorrow, Wed 2026-07-29, 3:00 PM ET — the William call.** He took the second of the two holds from session 29.
+- [x] **Calendar invite sent** — Andrew sent William a real invite for Wed 3:00 manually on the morning of 7/28. (The session-29 holds carried no attendees, so this was the step that actually put it on his calendar.)
+- [ ] Delete the now-dead Tue 7/28 3:30 PM hold if it's still sitting on the 21ads calendar.
+- [ ] Click through one live quiz submission to confirm the DB round trip survived the downsize (see Verification status above).
+- [ ] Everything from session 29's list still stands: purchase-gating options 1+2 on the call, size the 6/27 list, confirm Workspace/BAA/Shopify status, settle **domain spelling** (`AllerDrops®` is a live Class 044 trademark), then invoice the **$1,800** and write the Phase 2 SOW.
+- [ ] Read William's 6/27 Google Doc comment reply — may already answer the alledrops.com registration question.
+- [ ] Still not confirmed done, carried since session 27: `DELETE FROM submissions WHERE patient_email = 'diag+preflight@example.com';`
+
+### Resume context
+- **Branch:** `main`. No application code changed this session; `HANDOFF.md` modified.
+- **How to verify nothing regressed:** `npm test` (51 pass), `npm run typecheck` (clean).
+- **GCP quick check:** `gcloud sql instances describe alledrops-quiz-data --project=alledrops-quiz --format="yaml(state,settings.tier,settings.edition,settings.backupConfiguration)"`
+- **Key identifiers:** project `alledrops-quiz` · instance `alledrops-quiz-data` (us-east1-b) · public IP `34.139.97.17` · Fly app `alle-drops-quiz-app` (iad) · safety backup `1785246531060`.
+- **Blocker:** none technical. The project is waiting on tomorrow's call, not on code.
+
+---
+
+## Session 29 (2026-07-25) — what happened today
+
+### Goal
+Reconstruct where things actually stood with William (email history + this handoff + ads-os vault), confirm the three sources agreed, then get the long-overdue scoping call scheduled.
+
+### The finding that mattered
+**Andrew had gone silent on William since 7/1.** Both this handoff and the vault said "scoping call not yet scheduled," which read as if we were waiting on the client. We weren't. Gmail history showed three unanswered chases, all still unread:
+
+| Date | William |
+|---|---|
+| 7/7 | "How's your week look? Open pretty much anytime, afternoons better." |
+| 7/12 | "At the beach but want to keep this moving. Any afternoon this week." |
+| 7/24 | "Touching base again. Next week, any day except Monday. Want to get this across the finish line." |
+
+Also unread: a 6/27 Google Doc comment where William replied to Andrew's "Did Jean actually register alledrops.com?" question. **The domain-spelling flag from session 27 may already have an answer sitting in that doc** — nobody has read it.
+
+### What was done
+- **Cross-checked three sources** — this `HANDOFF.md`, Gmail thread "AOD Next Steps," and ads-os vault (`AlleDrops-Shopify-Quiz`, `AOD-Phase2-Scope-Position`, `Current-Priorities`). Repo and vault agreed on every material fact (engineering done, $1,800 of $3,600 paid, 6/27 asks = paid Phase 2, gated-purchase research complete). The only drift in all three was the stale "call not yet scheduled" framing described above.
+- **Scheduling reply sent to William** (Missive, threaded into "Re: AOD Next Steps"). Offered **Tue 7/28 3:30 PM ET** and **Wed 7/29 3:00 PM ET**. Confirmed the two warranty fixes are live and clickable. Set a call agenda: purchase-gating build options, sizing the rest of the 6/27 list, and Workspace/BAA/Shopify admin status.
+- **Two holds placed** on the `andrew@21adsmedia.com` Google Calendar (`HOLD: William Miller (AOD) — option 1 / option 2`), 45 min each, checked against both the 21ads and Hispanic Alliance calendars. **No attendees on either event, so no invite reached William** — they're private blocks until he picks one.
+- **Deliberately kept out of writing**, per the vault position note: the $1,800 balance and any "beyond original scope" framing. Both stay verbal for the call.
+
+### Deltas from the draft Andrew actually sent
+Andrew trimmed two things before sending: the Notion booking link, and the domain-spelling agenda item. **Domain spelling is still unresolved and still needs raising on the call** — `AllerDrops®` is a live Class 044 trademark, so this has to be settled before anyone points DNS at anything.
+
+### Next steps
+- [ ] **When William picks a slot:** delete the other hold and send him a real calendar invite (the holds have no attendees, so he currently has nothing on his calendar).
+- [ ] **On the call:** purchase-gating options 1+2 (Liquid gate + `orders/create` webhook backstop — see the session 28 research below), size the 6/27 list, confirm Workspace/BAA/Shopify status, and settle domain spelling.
+- [ ] **After the call:** invoice the $1,800 and write the Phase 2 SOW. Both have been held since 6/30 pending this conversation.
+- [ ] Read William's 6/27 Google Doc comment reply — it may already answer the alledrops.com registration question.
+- [ ] Everything engineering-side from session 28 below is still open and unchanged.
+
+### Resume context
+- **Branch:** `main`, clean of this session's work (no code changed). `HANDOFF.md` is modified but uncommitted.
+- **How to verify nothing regressed:** `npm test` (51 pass), `npm run typecheck` (clean).
+- **Calendar holds:** Tue 7/28 3:30–4:15 PM ET, Wed 7/29 3:00–3:45 PM ET, both on `andrew@21adsmedia.com`.
+- **Vault cross-refs:** `[[AOD-Phase2-Scope-Position]]`, `[[2026-07-25-aod-scheduling-reply-and-holds]]`.
+
+---
+
+## Session 28 (2026-07-01) — what happened
 
 ### Goal
 Assess feasibility of William's 6/27 feature requests against the original quote/contract (business-side task, see ads-os vault: `[[AOD-Phase2-Scope-Position]]`, `[[2026-07-01-aod-warranty-fixes-and-reply-sent]]`), fix the two "warranty" bugs he reported (Part 1 missing "None of the above", Part 5 dev-string leak), and get those fixes actually live on the storefront.
@@ -33,6 +240,23 @@ Assess feasibility of William's 6/27 feature requests against the original quote
 - [ ] **Flagged, not fixed:** `package-lock.json` is gitignored in this repo — unusual for reproducible builds. Not touched; just noting it in case it's not intentional.
 - [ ] Business/scope side (William's 6/27 feature requests — Part 6/7 additions, score display rework, gated-purchase approval system) — not started. See ads-os vault `[[AOD-Phase2-Scope-Position]]` for the feasibility breakdown and negotiation position; the $1,800 invoice + Phase 2 SOW conversation are both still deliberately held for a scoping call, not yet scheduled as of this session.
 - [ ] Carryover from session 27, still not confirmed done: delete the diagnostic test row — `DELETE FROM submissions WHERE patient_email = 'diag+preflight@example.com';`
+
+### Gated-purchase system — Shopify Plus constraint found (research, pre-scoping-call)
+
+Researched the actual mechanism for William's "gated commerce" ask (item 6 of his 6/27 email — no SLIT purchase without account + quiz + manual clinical approval) before the scoping call happens.
+
+**Core finding:** the textbook tool for this — Shopify's **Cart and Checkout Validation Function API** (its own docs list "require a customer membership at checkout" as a use case, via `customer.hasTags()`) — is **Shopify Plus-only for custom apps**. Per Shopify's docs: *"Only stores on a Shopify Plus plan can use custom apps that contain Shopify Function APIs."* `alle-drops-quiz-app` is a custom/private app, and AOD is provisioning Basic/Grow (~$20/mo) per the session 27 infra-handoff plan, not Plus. Real-time checkout-blocking via a custom Function isn't available on their plan tier without a large cost jump (Plus runs ~$2,300+/mo) that's disproportionate to this project.
+
+**Three ways to still do it without Plus:**
+1. **Liquid-level gate** — hide the SLIT buy button based on `customer.tags`. Free, any plan, but UI-only (bypassable via a direct `/cart/add` call).
+2. **Order webhook backstop** — the Fly app already talks to the Shopify Admin API; add an `orders/create` webhook that auto-cancels/holds SLIT orders from unapproved customers. No added cost, closes the enforcement gap, small window of exposure between order placement and cancellation.
+3. **Existing App Store gating app** (Locksmith-style membership/wholesale apps) — these are *public* apps, which ARE allowed to use Functions on any plan. Sidesteps the Plus requirement for a monthly app fee instead of custom code.
+
+Tagging itself (Admin API `tagsAdd` mutation on Customer) is plan-agnostic regardless of which option is chosen — that's the mechanism for "clinical team manually approves" either way.
+
+**Recommendation for the call:** lead with options 1+2 (no added cost, reuses existing Fly infra), mention option 3 only if William wants tighter real-time UX, don't raise Plus unless he asks.
+
+Full detail + vault cross-reference: vault `[[AOD-Phase2-Scope-Position]]`.
 
 ---
 
@@ -295,7 +519,7 @@ All legacy quiz system artifacts removed from `allergist-on-demand` Shopify them
 | Treatment policy + quiz disclaimer copy | William/counsel | **Starter drafts exist** → `policy-drafts/03`, `04`. Apply to `ConsentStep.tsx` / `symptom-quiz.liquid` / `ResultsDisplay.tsx` once approved (bump `CONSENT_VERSION`) |
 | Privacy/Security Officer designation | William | Before first real patient |
 | HIPAA workforce training | William | Before first real patient |
-| Continue William feasibility/scope-creep thread | Andrew | Trimmed acknowledgment reply sent 7/1; $1,800 invoice + Phase 2 SOW conversation deliberately held for a scoping call (not yet scheduled). See ads-os vault `[[AOD-Phase2-Scope-Position]]` |
+| Continue William feasibility/scope-creep thread | Andrew | **Call being scheduled as of 7/25** — Tue 7/28 3:30 PM or Wed 7/29 3:00 PM ET offered, holds placed, awaiting his pick. $1,800 invoice + Phase 2 SOW still held for that call. See ads-os vault `[[AOD-Phase2-Scope-Position]]` |
 
 ---
 
@@ -316,7 +540,7 @@ All legacy quiz system artifacts removed from `allergist-on-demand` Shopify them
 - **How to verify:** `npm test` (51 pass), `npm run typecheck` (clean). Storefront: `allergist-on-demand.myshopify.com/pages/allergy-quiz` (password `allergy`) → Part 1 should show "None of the above" on all 3 symptom questions. DB live: `curl -s -o /dev/null -w "%{http_code}" -X POST https://alle-drops-quiz-app.fly.dev/api/quiz/submit -H "Content-Type: application/json" -H "Origin: https://allergist-on-demand.myshopify.com" -d '{...}'` → expect `200`.
 - **Immediate leftover (carried over from session 27, still not confirmed done):** delete diagnostic test row → `DELETE FROM submissions WHERE patient_email = 'diag+preflight@example.com';`
 - **Engineering next action:** full manual click-through of the storefront quiz beyond Part 1 (first rebuild of `quiz-bundle.js` in a while); look into the Klaviyo-on-quiz-page compliance flag; consider whether `package-lock.json` should actually be tracked
-- **Client/content next action:** schedule the scoping call with William for the gated-purchase approval system + remaining feature requests before any Phase 2 work starts (see ads-os vault `[[AOD-Phase2-Scope-Position]]`); finalize policy drafts in `~/Documents/Claude/Projects/AoD/policy-drafts/` with counsel
+- **Client/content next action:** scoping call with William is **in flight as of 7/25** — two slots offered (Tue 7/28 3:30 PM / Wed 7/29 3:00 PM ET), holds placed, waiting on his pick. When he answers: drop the unused hold, send a real invite. Nothing on Phase 2 starts before that call (see ads-os vault `[[AOD-Phase2-Scope-Position]]`). Separately: finalize policy drafts in `~/Documents/Claude/Projects/AoD/policy-drafts/` with counsel
 - **Key files:**
   - `app/lib/customer-auth.ts` — Finding 1 fixed (aud always checked)
   - `app/routes/api.me.assessment.$id.pdf.tsx` — Finding 2 fixed (no ?token= fallback)
