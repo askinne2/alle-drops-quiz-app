@@ -11,6 +11,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const testOptionsRedirect = url.searchParams.get('testOptions') ?? ''
   const testMode = url.searchParams.get('test') === '1'
   const shopDomain = url.searchParams.get('shop') ?? ''
+  const tnProductHandle = url.searchParams.get('tnProduct') ?? ''
+  const txProductHandle = url.searchParams.get('txProduct') ?? ''
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -50,25 +52,43 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       testMode: ${JSON.stringify(testMode)},
       consultRedirectUrl: ${JSON.stringify(consultRedirect)},
       testOptionsRedirectUrl: ${JSON.stringify(testOptionsRedirect)},
+      tnProductHandle: ${JSON.stringify(tnProductHandle)},
+      txProductHandle: ${JSON.stringify(txProductHandle)},
     };
 
     if (window.self !== window.top) {
-      // Navigate parent window instead of the iframe
-      window.location.assign = function(url) {
-        window.parent.postMessage({ type: 'quiz:navigate', url: String(url) }, '*');
-      };
-
-      // Intercept anchor clicks so they navigate the parent too
+      // Intercept anchor clicks so the parent performs the navigation.
+      //
+      // There used to be an attempt to reassign the Location object's assign method here so
+      // that in-app navigations would be forwarded automatically. That never worked: the
+      // method is [LegacyUnforgeable], so its property descriptor is non-writable and
+      // non-configurable, and the reassignment failed silently in this sloppy-mode script
+      // rather than throwing. It has been removed rather than reworked — no variant of that
+      // approach can take. Posting a message is the only mechanism available to a
+      // cross-origin child, so every navigation exit posts one explicitly.
       document.addEventListener('click', function(e) {
         var el = e.target && e.target.closest ? e.target.closest('a[href]') : null;
         if (!el) return;
         var href = el.getAttribute('href');
-        if (!href || href.startsWith('#') || el.target === '_blank') return;
+        if (!href) return;
+        // Positional guard, hand-ported from isSafeRelativePath in app/lib/quiz/navigation.ts.
+        // Index 0 must be a slash, which rejects every scheme (javascript:, data:, mailto:)
+        // and every absolute URL. Index 1 must be neither a slash nor a backslash (char code
+        // 92) — the WHATWG URL parser treats both as the start of an authority, so either one
+        // resolves to a foreign origin. Keep this in step with navigation.ts; the inline
+        // script cannot import it, so the rule is duplicated by hand.
+        //
+        // This is stricter than the guard it replaces: fragment links, scheme URLs, and
+        // absolute hrefs now fall through to default browser behavior instead of being
+        // intercepted, which is the correct outcome for all three.
+        if (href.charAt(0) !== '/') return;
+        if (href.charAt(1) === '/' || href.charCodeAt(1) === 92) return;
+        if (el.target === '_blank') return;
         e.preventDefault();
-        window.parent.postMessage({
-          type: 'quiz:navigate',
-          url: new URL(href, window.location.href).href
-        }, '*');
+        // Post the raw relative path and let the parent resolve it against its own origin,
+        // which is inherently the shop origin. Resolving it here instead would produce an
+        // absolute URL on this app's origin and send the storefront off to the wrong domain.
+        window.parent.postMessage({ type: 'quiz:navigate', path: href }, '*');
       });
 
       // Report content height so the parent can size the iframe
