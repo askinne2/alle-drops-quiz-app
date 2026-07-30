@@ -130,6 +130,31 @@ None captured yet.
 - Live app→DB round trip never verified after the 2026-07-28 Cloud SQL downsize.
 - Leftover `diag+preflight@example.com` row, carried since session 27.
 
+**LIVE OPEN REDIRECT FOUND AND CLOSED 2026-07-30 — `entry.theme.tsx` `injectIframe` listener.**
+
+Found during Gate F, after the phase's two hardening passes had both skipped the file. Confirmed
+exploitable against production: a `quiz:navigate` carrying `url: "https://example.com/pwned"`
+navigated the live `/quiz-embed` page off-origin. Fixed in `14e13ff`, deployed, and re-tested with
+the same payload plus five variants — all rejected, with a valid path still navigating (non-vacuous).
+
+**Why two independent reviews both missed it, worth remembering:** Plan 01-04 measured that the
+installed Liquid block loads the bundle on zero storefront pages and renders no
+`data-alledrops-quiz` container, and concluded the branch was unreachable. That is true of the
+storefront. It is not true of `/quiz-embed` itself, which renders that container AND loads the
+bundle — and `initQuiz()` selects `injectIframe` whenever `window.self === window.top`. The code
+review inherited 01-04's "dead code" assessment and excluded the file from scope. A correct
+measurement of one entry path was generalised into a claim about all of them.
+
+It also survived the `url` → `path` rename **because** it was excluded: it still read the abandoned
+`url` key, keeping the retired contract alive beneath the hardened one. The storefront fail-closed
+test passed while this stayed open. No framing was needed to reach it — an opener can `postMessage`
+into a window it opened with `window.open`, so an attacker page could open the genuine clinic intake
+and silently replace it with a phishing clone.
+
+There were **four** hand-ported copies of the navigation rules, not three. This one now imports
+`toRelativePath` rather than adding a fifth. `tests/entry-theme-contract.test.ts` guards all six
+properties and is proven non-vacuous (all 6 assertions fail against the pre-fix file).
+
 **Gate D (`test_options_redirect_url`) — status 2026-07-30, mid-Phase-1:**
 
 Confirmed live on served bytes, not inferred: `/pages/allergy-quiz` served
