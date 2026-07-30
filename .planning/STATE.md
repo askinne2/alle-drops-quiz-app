@@ -117,6 +117,16 @@ None captured yet.
   **Appears already resolved:** the live quiz page served `test=0` on 2026-07-30 and the installed
   block carries `enable_test_mode: false`. Re-confirm during Phase 8 rather than assuming.
 - Placeholder text on two live clinical surfaces.
+  **Measured 2026-07-30 on the served quiz page:** the block's Medical Disclaimer Text is the
+  placeholder `This text needs changed.`, but "Show Medical Disclaimer" is toggled OFF, so it renders
+  0 times — the placeholder is not patient-visible. The consequence is worse than a placeholder
+  though: `disclaimer` appears 0 times in the served HTML, so the live clinical intake page carries
+  **no medical disclaimer at all**. Gated on the counsel-owned clinical copy already tracked above;
+  turning the toggle on before counsel delivers would publish the placeholder instead.
+- **Apntly appointment-booking app embed** is enabled site-wide in the theme's `settings_data.json`
+  (`disabled: false`) but `apntly` appears 0 times in the served quiz-page HTML, versus `klaviyo` at
+  4. So it does not appear to load on the PHI page. Recorded to close out the question; Klaviyo
+  remains the live exposure. Re-check if the embed's loader is ever renamed.
 - Live app→DB round trip never verified after the 2026-07-28 Cloud SQL downsize.
 - Leftover `diag+preflight@example.com` row, carried since session 27.
 
@@ -127,7 +137,15 @@ Confirmed live on served bytes, not inferred: `/pages/allergy-quiz` served
 theme repo at `templates/page.quiz.json` — the app block's `test_options_redirect_url` was set to
 `shopify://products/allergy-consultation`.
 
-- Andrew is applying the fix in the Shopify theme editor (chosen over a `shopify theme push`, because
+**CLOSED 2026-07-30, verified on served bytes.** After Andrew's theme-editor change, the live
+`/pages/allergy-quiz` serves `consult=%2Fproducts%2Fallergy-consultation` and
+`testOptions=%2Fpages%2Ftest-options`. ROADMAP success criterion #2 is no longer config-blocked.
+Confirmed against the served HTML, not the editor UI, per the session-28 lesson that a green
+write-path proves nothing. Theme "Sense" is the Active theme, so this is the live surface.
+
+Historical record of how it was fixed:
+
+- Andrew applied the fix in the Shopify theme editor (chosen over a `shopify theme push`, because
   `templates/page.quiz.json` carries uncommitted drift — its git HEAD still references a
   `quiz-kit-smart-product-finder` block, so a push could apply unrelated changes). Target value:
   `/pages/test-options`.
