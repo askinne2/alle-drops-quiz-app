@@ -820,6 +820,13 @@ Baseline 51 → target ~76. `[VERIFIED: 51 passed / 10 files this session]`
 | `null` / `undefined` / `42` / `{}` | reject | non-string |
 | `"/\\evil.com"` | **decide + test** | some parsers treat `\` as `/`. `new URL("/\\evil.com", origin)` stays same-origin in WHATWG-compliant browsers, but assert it explicitly rather than assuming. |
 
+> **DISPROVEN 2026-07-30 — do not rely on the claim above.** Measured on node v20.19.6 and
+> re-confirmed by the phase verifier: `new URL("/\\evil.com", origin).origin` resolves to a
+> FOREIGN origin. The WHATWG parser treats a backslash as `/` for special schemes, so `/\host`
+> is protocol-relative. The shipped code rejects it; only this document was wrong. The same
+> class extends to TAB/LF/CR, which the parser strips before parsing (finding CR-02).
+
+
 ## Don't Hand-Roll
 
 | Problem | Don't Build | Use Instead | Why |
