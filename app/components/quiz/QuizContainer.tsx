@@ -19,7 +19,8 @@ import {
 } from "../../lib/quiz/scoring";
 import { type QuizAnswers } from "../../lib/quiz/types";
 import { CONSENT_VERSION } from "../../lib/consent-version";
-import { PRODUCT_HANDLE_BY_STATE } from "../../lib/quiz/product-links";
+import { getProductHandle, type QuizProductConfig } from "../../lib/quiz/product-links";
+import { toRelativePath } from "../../lib/quiz/navigation";
 import styles from "../../styles/quiz.module.css";
 
 type FlowStep =
@@ -49,6 +50,46 @@ function getRedirectUrl(kind: "consult" | "testOptions"): string {
   ).AlleDropsQuizConfig;
   if (!cfg) return "";
   return kind === "consult" ? (cfg.consultRedirectUrl || "") : (cfg.testOptionsRedirectUrl || "");
+}
+
+/** The product-handle slice of the runtime config, or undefined when unset or server-side. */
+function getProductConfig(): QuizProductConfig {
+  if (typeof window === "undefined") return undefined;
+  return (
+    window as unknown as {
+      AlleDropsQuizConfig?: { tnProductHandle?: string; txProductHandle?: string };
+    }
+  ).AlleDropsQuizConfig;
+}
+
+/**
+ * Send the storefront to a relative path, whether the quiz is framed or standalone.
+ *
+ * The quiz normally runs in a cross-origin iframe, so it cannot navigate the storefront
+ * itself — it posts the target and the parent page performs the navigation. When it is not
+ * framed (the bundle-injection path, still supported though not installed) it navigates
+ * directly, preserving prior behavior.
+ *
+ * The target is validated here even though the parent validates it again: a merchant-supplied
+ * redirect setting is the one target that never reaches the parent's own guard, because it is
+ * refused on this side first.
+ */
+function navigateParent(path: string): void {
+  if (typeof window === "undefined") return;
+  const safe = toRelativePath(path);
+  if (safe === null) {
+    // Diagnosability, not correctness — both live redirect settings are verified relative.
+    // A merchant pasting an absolute third-party URL into one of them is refused here, before
+    // any message is posted, so without this the rejection would be silent in both windows.
+    // Log the rejected target only. Navigation targets carry no PHI and none may be added.
+    console.warn("[quiz] refused navigation: target is not a same-origin relative path:", path);
+    return;
+  }
+  if (window.self !== window.top) {
+    window.parent.postMessage({ type: "quiz:navigate", path: safe }, "*");
+  } else {
+    window.location.assign(safe);
+  }
 }
 
 async function postQuiz(payload: Record<string, unknown>): Promise<{ success: boolean; error?: string }> {
@@ -212,7 +253,7 @@ export function QuizContainer() {
         return;
       }
     }
-    window.location.assign(getRedirectUrl("consult") || "/pages/consult");
+    navigateParent(getRedirectUrl("consult") || "/pages/consult");
   }, [submitPayload, patientState, symptomProfileId, score, scoreBracket, savedToServer]);
 
   const handleTestFirst = useCallback(async () => {
@@ -225,7 +266,7 @@ export function QuizContainer() {
       alert(e instanceof Error ? e.message : "Could not save assessment. Please try again.");
       return;
     }
-    window.location.assign(getRedirectUrl("testOptions") || "/pages/test-options");
+    navigateParent(getRedirectUrl("testOptions") || "/pages/test-options");
   }, [submitPayload, patientState, symptomProfileId, score, scoreBracket]);
 
   const handleProceedToPurchase = useCallback(() => {
@@ -245,7 +286,7 @@ export function QuizContainer() {
 
   const handleDeclineProceedWithoutTesting = useCallback(() => {
     setShowProceedWarning(false);
-    window.location.assign(getRedirectUrl("testOptions") || "/pages/test-options");
+    navigateParent(getRedirectUrl("testOptions") || "/pages/test-options");
   }, []);
 
   const handleConsentSubmit = useCallback(async () => {
@@ -325,14 +366,14 @@ export function QuizContainer() {
               <button
                 type="button"
                 className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                onClick={() => window.location.assign("/")}
+                onClick={() => navigateParent("/")}
               >
                 Return Home
               </button>
               {patientState && (
                 <a
                   className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
-                  href={`/products/${PRODUCT_HANDLE_BY_STATE[patientState]}`}
+                  href={`/products/${getProductHandle(patientState, getProductConfig())}`}
                 >
                   Go to AlleDrops Product Page
                 </a>
