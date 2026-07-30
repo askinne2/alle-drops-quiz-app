@@ -1,0 +1,26 @@
+{
+  "source_path": "/Users/andrewskinner/Local Sites/alle-drops-quiz-app/docs/app-requirements.md",
+  "type": "PRD",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "AlleDrops Quiz App Requirements",
+  "summary": "Pre-call product requirements for the AlleDrops clinical intake quiz: state gating, patient info, scored questionnaire, bracket-based routing, and dual persistence to Shopify plus Google Sheets.",
+  "scope": [
+    "clinical intake questionnaire (Parts 1-6)",
+    "StateGate (Tennessee / Texas eligibility)",
+    "PatientInfoStep (name, DOB, email, phone, 18+ validation)",
+    "quiz scoring and score brackets (0-2, 3-6, 7+)",
+    "ResultsDisplay branching and next-step routing",
+    "ConsentStep and medical history flow",
+    "POST /api/quiz/submit and QuizSubmissionData payload",
+    "Shopify customer metafields (alledrops namespace)",
+    "Google Sheets full-intake submission",
+    "admin surfaces (/app, /app/quiz, /app/quiz-results)",
+    "theme app block embedding",
+    "legacy severity/region fallback handling"
+  ],
+  "cross_refs": [],
+  "locked": false,
+  "precedence": 3,
+  "notes": "Type and precedence supplied by manifest (PRD, precedence 3); heuristic and content analysis agree - goals, required behavior, and status checklists dominate, with embedded SPEC-flavored detail (payload schema, metafield table) that stays subordinate to the PRD framing. This document describes the PRE-CALL design and contains likely conflicts with the higher-precedence docs/REQUIREMENTS-AND-GAPS-2026-07-29.md (precedence 0), which reverses parts of it per the 2026-07-29 client decision. Flagged conflicts: (1) PROCEEDING WITHOUT ALLERGY TESTING - the Overview routes only the 7+ bracket toward 'allergy testing / medical history / consent flow', while 0-2 and 3-6 brackets are routed to 'consultation guidance' or 'product continuation', and Part 6 medical history plus ConsentStep are described as OPTIONAL and applicable only to the higher-score branch ('Optional Part 6 medical history for higher-score flow', 'Consent step before final submission where required'); this permits lower-bracket patients to continue to product without allergy testing. (2) PURCHASE GATING ARCHITECTURE - the document defines no purchase gate anywhere; 'product continuation' is a terminal ResultsDisplay branch, the Data Flow diagram ends at Shopify metafields plus Google Sheets with no gating step, and the metafield table stores only summary quiz data (symptom_profile_id, quiz_score, state, score_bracket, quiz_date, quiz_history) with no eligibility, testing-status, or purchase-authorization field. (3) Status checklists mark the ungated bracket routing, optional Part 6, and conditional consent step as already complete ([x]), so any as-built claims inherited from this doc should be re-validated against the precedence-0 document before use."
+}

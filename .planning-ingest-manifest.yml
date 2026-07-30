@@ -1,0 +1,44 @@
+# GSD ingest manifest — AlleDrops go-live
+# Precedence: lower number = higher authority.
+# REQUIREMENTS-AND-GAPS is pinned at 0 because it post-dates the 2026-07-29
+# client call and deliberately overrides earlier docs. app-requirements.md and
+# quiz-questions-schema.md describe the pre-call design (including a
+# proceed-without-testing path the client has now forbidden) and must lose
+# any conflict against it.
+
+docs:
+  - path: docs/REQUIREMENTS-AND-GAPS-2026-07-29.md
+    type: SPEC
+    precedence: 0
+
+  - path: docs/HIPAA_COMPLIANCE_ANALYSIS.md
+    type: SPEC
+    precedence: 1
+
+  - path: docs/quiz-questions-schema.md
+    type: SPEC
+    precedence: 2
+
+  - path: docs/app-requirements.md
+    type: PRD
+    precedence: 3
+
+  - path: HANDOFF.md
+    type: DOC
+    precedence: 4
+
+  - path: docs/STOREFRONT_CONTENT_AUDIT.md
+    type: DOC
+    precedence: 5
+
+  - path: docs/UX-AUDIT.md
+    type: DOC
+    precedence: 6
+
+  - path: docs/breach-response-runbook.md
+    type: DOC
+    precedence: 7
+
+  - path: docs/PERFORMANCE_OPTIMIZATION.md
+    type: DOC
+    precedence: 8

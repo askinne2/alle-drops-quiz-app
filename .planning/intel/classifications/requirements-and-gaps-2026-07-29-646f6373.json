@@ -1,0 +1,35 @@
+{
+  "source_path": "/Users/andrewskinner/Local Sites/alle-drops-quiz-app/docs/REQUIREMENTS-AND-GAPS-2026-07-29.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "AlleDrops — Client Requirements vs. Code Reality",
+  "summary": "Post-call audit reconciling client requirements R1-R10 against the shipped AlleDrops quiz code, with call overrides, root-caused defects, and effort ranking.",
+  "scope": [
+    "quiz question schema (required, showIf, static-info types)",
+    "Part 1 symptom sections and None-of-the-Above",
+    "Part 5 medication questions and allergy diagnosis question",
+    "medical history section (R3) content and flow position",
+    "Preliminary Score results page and severity scale/max-score derivation",
+    "allergy testing split (R5) and removal of no-testing paths",
+    "iframe embed navigation (navigateParent, quiz:navigate, quiz:scrollToTop)",
+    "Shopify theme app extension quiz-block (symptom-quiz.liquid)",
+    "customer-account extension quiz-history and assessments ledger API",
+    "customer metafields (alledrops.last_completed_at, quiz_count) and metafield definitions",
+    "returning-patient completion state and resume/draft persistence",
+    "telehealth intake path and dual result copy",
+    "purchase gating honor system (product-page checkboxes, checkout/thank-you/email copy)",
+    "submissions table and migrations",
+    "product-links.ts storefront product handles",
+    "app scopes and webhook subscriptions"
+  ],
+  "cross_refs": [
+    "docs/STOREFRONT_CONTENT_AUDIT.md",
+    "HANDOFF.md",
+    "app-requirements.md",
+    "quiz-questions-schema.md"
+  ],
+  "locked": true,
+  "precedence": 0,
+  "notes": "Type taken from MANIFEST_TYPE (SPEC) per manifest authority; heuristic/content signals independently agree it is closest to SPEC (implementation contracts, per-requirement status against code, file:line references, effort table) with strong ADR-like decision content. locked=true is set on explicit orchestrator instruction: this doc post-dates the 2026-07-29 client call, is the authoritative source at precedence 0, and every 'CALL OVERRIDE' decision supersedes conflicting statements in app-requirements.md and quiz-questions-schema.md. Locked call overrides: R3 medical history moves before the allergy-testing split (all patients supply history); R5 two testing options only, no proceed-without-testing path, file upload dropped in favor of emailing results to testing@alledrops.com; R10 purchase gating is an honor system (no account-flag architecture, Shopify Functions, or real-time blocking), superseding the 6/27 manual-unlock model; R4 email's 'purchase if approved' paragraph must not ship. Sequencing constraint recorded by the doc: R3's reorder must land before R5's deletions or the medical history section becomes dead code. Open items requiring client/tech confirmation: R6 scope, R3's truncated third free-text label, customer metafield Liquid readability, live product handles. Filename hash segment '646f6373' is a deterministic path-derived token (hex of parent directory 'docs'), not a SHA-256 prefix: no shell tooling was available in this agent to compute SHA-256; slug is unique within the repo so no sibling collision risk."
+}

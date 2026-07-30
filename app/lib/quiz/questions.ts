@@ -195,7 +195,7 @@ export const PART5_TREATMENT: QuizQuestion[] = [
     id: "med_list",
     type: "text_input",
     part: 5,
-    text: "Please list your current allergy medications and dosages (required):",
+    text: "Please list your current allergy medications and dosages",
     order: 51,
   },
   {

@@ -1,0 +1,27 @@
+{
+  "source_path": "/Users/andrewskinner/Local Sites/alle-drops-quiz-app/docs/breach-response-runbook.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "Breach Response Runbook — AlleDrops / AOD",
+  "summary": "Operational runbook for detecting, containing, assessing, notifying, and documenting HIPAA PHI breaches in the AlleDrops quiz app.",
+  "scope": [
+    "HIPAA breach response",
+    "PHI handling",
+    "Cloud SQL (alledrops_quiz_dev / prod)",
+    "Fly.io secrets and logs",
+    "Shopify Admin API token",
+    "DATABASE_URL secret rotation",
+    "submissions table",
+    "submission_access_log",
+    "HHS OCR notification",
+    "Business Associate Agreements",
+    "scripts/phi-cleanup-verify.ts"
+  ],
+  "cross_refs": [
+    "scripts/phi-cleanup-verify.ts"
+  ],
+  "locked": false,
+  "precedence": 7,
+  "notes": ""
+}

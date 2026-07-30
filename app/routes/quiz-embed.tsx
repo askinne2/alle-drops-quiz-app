@@ -1,4 +1,5 @@
 import type { LoaderFunctionArgs } from 'react-router'
+import { jsonForScript } from '~/lib/quiz/html-safe'
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url)
@@ -11,6 +12,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const testOptionsRedirect = url.searchParams.get('testOptions') ?? ''
   const testMode = url.searchParams.get('test') === '1'
   const shopDomain = url.searchParams.get('shop') ?? ''
+  const tnProductHandle = url.searchParams.get('tnProduct') ?? ''
+  const txProductHandle = url.searchParams.get('txProduct') ?? ''
+
+  // Per-response nonce for the inline config script. `jsonForScript` is what actually closes
+  // CR-01; this is the second layer, so that a future value interpolated into this script without
+  // escaping cannot execute. Both inline and external script are pinned: with a nonce present,
+  // browsers ignore 'unsafe-inline', so any injected inline script is refused outright.
+  const scriptNonce = crypto.randomUUID().replace(/-/g, '')
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -42,33 +51,61 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 </head>
 <body>
   <div data-alledrops-quiz></div>
-  <script>
+  <script nonce="${scriptNonce}">
     window.AlleDropsQuizConfig = {
-      appUrl: ${JSON.stringify(origin)},
-      shopUrl: ${JSON.stringify(shopDomain)},
-      apiEndpoint: ${JSON.stringify(origin + '/api/quiz/submit')},
-      testMode: ${JSON.stringify(testMode)},
-      consultRedirectUrl: ${JSON.stringify(consultRedirect)},
-      testOptionsRedirectUrl: ${JSON.stringify(testOptionsRedirect)},
+      appUrl: ${jsonForScript(origin)},
+      shopUrl: ${jsonForScript(shopDomain)},
+      apiEndpoint: ${jsonForScript(origin + '/api/quiz/submit')},
+      testMode: ${jsonForScript(testMode)},
+      consultRedirectUrl: ${jsonForScript(consultRedirect)},
+      testOptionsRedirectUrl: ${jsonForScript(testOptionsRedirect)},
+      tnProductHandle: ${jsonForScript(tnProductHandle)},
+      txProductHandle: ${jsonForScript(txProductHandle)},
     };
 
     if (window.self !== window.top) {
-      // Navigate parent window instead of the iframe
-      window.location.assign = function(url) {
-        window.parent.postMessage({ type: 'quiz:navigate', url: String(url) }, '*');
-      };
-
-      // Intercept anchor clicks so they navigate the parent too
+      // Intercept anchor clicks so the parent performs the navigation.
+      //
+      // There used to be an attempt to reassign the Location object's assign method here so
+      // that in-app navigations would be forwarded automatically. That never worked: the
+      // method is [LegacyUnforgeable], so its property descriptor is non-writable and
+      // non-configurable, and the reassignment failed silently in this sloppy-mode script
+      // rather than throwing. It has been removed rather than reworked — no variant of that
+      // approach can take. Posting a message is the only mechanism available to a
+      // cross-origin child, so every navigation exit posts one explicitly.
       document.addEventListener('click', function(e) {
         var el = e.target && e.target.closest ? e.target.closest('a[href]') : null;
         if (!el) return;
         var href = el.getAttribute('href');
-        if (!href || href.startsWith('#') || el.target === '_blank') return;
+        if (!href) return;
+        // Positional guard, hand-ported from isSafeRelativePath in app/lib/quiz/navigation.ts.
+        // Index 0 must be a slash, which rejects every scheme (javascript:, data:, mailto:)
+        // and every absolute URL. Index 1 must be neither a slash nor a backslash (char code
+        // 92) — the WHATWG URL parser treats both as the start of an authority, so either one
+        // resolves to a foreign origin. Keep this in step with navigation.ts; the inline
+        // script cannot import it, so the rule is duplicated by hand.
+        //
+        // This is stricter than the guard it replaces: fragment links, scheme URLs, and
+        // absolute hrefs now fall through to default browser behavior instead of being
+        // intercepted, which is the correct outcome for all three.
+        //
+        // Checked BEFORE the positional rules: the URL parser removes every TAB (9), LF (10) and
+        // CR (13) from its input before parsing, so any occurrence shifts the indexes the rules
+        // below inspect. Without this, a href of slash-then-TAB-then-slash-then-host reaches the
+        // parent as a "relative path" and resolves to a foreign origin. Scoped to the whole
+        // string, not index 1, because stripping is global. Mirrors PARSER_STRIPPED_CHARS in
+        // app/lib/quiz/navigation.ts — all three copies of this rule change together.
+        if (href.indexOf(String.fromCharCode(9)) !== -1) return;
+        if (href.indexOf(String.fromCharCode(10)) !== -1) return;
+        if (href.indexOf(String.fromCharCode(13)) !== -1) return;
+        if (href.charAt(0) !== '/') return;
+        if (href.charAt(1) === '/' || href.charCodeAt(1) === 92) return;
+        if (el.target === '_blank') return;
         e.preventDefault();
-        window.parent.postMessage({
-          type: 'quiz:navigate',
-          url: new URL(href, window.location.href).href
-        }, '*');
+        // Post the raw relative path and let the parent resolve it against its own origin,
+        // which is inherently the shop origin. Resolving it here instead would produce an
+        // absolute URL on this app's origin and send the storefront off to the wrong domain.
+        window.parent.postMessage({ type: 'quiz:navigate', path: href }, '*');
       });
 
       // Report content height so the parent can size the iframe
@@ -88,14 +125,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       setTimeout(_reportHeight, 800);
     }
   </script>
-  <script src="${origin}/quiz-bundle-js"></script>
+  <script nonce="${scriptNonce}" src="${origin}/quiz-bundle-js"></script>
 </body>
 </html>`
 
   return new Response(html, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Content-Security-Policy': "frame-ancestors *",
+      // frame-ancestors stays permissive: the storefront frames this page cross-origin, and
+      // narrowing it is tracked separately (T-1-09). script-src is the CR-01 hardening —
+      // 'self' covers /quiz-bundle-js and the stylesheet's origin, the nonce covers the one
+      // inline block, and nothing else may execute. object-src and base-uri close the two
+      // classic ways to reintroduce execution or rewrite relative URLs on an injected page.
+      'Content-Security-Policy': [
+        'frame-ancestors *',
+        `script-src 'self' 'nonce-${scriptNonce}'`,
+        "object-src 'none'",
+        "base-uri 'none'",
+      ].join('; '),
       'Cache-Control': 'no-store',
     },
   })
