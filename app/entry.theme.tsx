@@ -8,6 +8,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QuizContainer } from "./components/quiz/QuizContainer";
+import { toRelativePath } from "./lib/quiz/navigation";
 import "./styles/quiz-theme.css";
 
 type QuizConfig = {
@@ -58,16 +59,47 @@ function injectIframe(container: Element) {
   container.innerHTML = "";
   container.appendChild(iframe);
 
-  window.addEventListener("message", (e: MessageEvent) => {
-    if (!e.data || typeof e.data !== "object") return;
-    if (e.data.type === "quiz:resize") {
-      iframe.style.height = `${Number(e.data.height) + 24}px`;
+  // The third parent-side message listener in this codebase, and the one that was believed dead.
+  //
+  // Plan 01-04 measured that the installed Liquid block never loads this bundle and renders no
+  // `data-alledrops-quiz` container, and concluded this branch was unreachable. That is true of the
+  // STOREFRONT path. It is not true of `/quiz-embed` itself, which renders that container AND loads
+  // the bundle — so opening `/quiz-embed` top-level runs `injectIframe`, not `mountReact`, and
+  // registers this listener on a PHI-collecting page on the app origin.
+  //
+  // Verified exploitable against production on 2026-07-30 before this fix: a `quiz:navigate`
+  // carrying `url: "https://example.com/pwned"` navigated the real page. An opener can postMessage
+  // into a window it opened via `window.open`, so an attacker page could open the genuine clinic
+  // intake and then silently replace it with a phishing clone.
+  //
+  // It survived the earlier hardening because it reads the ABANDONED `url` key. The `url` -> `path`
+  // rename made the storefront contract fail closed, and this listener quietly kept the old
+  // contract alive underneath it. It now mirrors the Liquid parent exactly: origin first, then
+  // validate through the canonical `toRelativePath`, and scroll instantly per D-06.
+  const appOrigin = (() => {
+    try {
+      return new URL(iframe.src).origin;
+    } catch {
+      return "";
     }
-    if (e.data.type === "quiz:navigate" && e.data.url) {
-      window.location.assign(String(e.data.url));
+  })();
+
+  window.addEventListener("message", (e: MessageEvent) => {
+    if (!appOrigin || e.origin !== appOrigin) return;
+    if (!e.data || typeof e.data !== "object") return;
+
+    if (e.data.type === "quiz:resize") {
+      const h = Number(e.data.height);
+      if (Number.isFinite(h) && h > 0) {
+        iframe.style.height = `${h + 24}px`;
+      }
+    }
+    if (e.data.type === "quiz:navigate") {
+      const target = toRelativePath(e.data.path);
+      if (target) window.location.assign(target);
     }
     if (e.data.type === "quiz:scrollToTop") {
-      container.scrollIntoView({ behavior: "smooth", block: "start" });
+      container.scrollIntoView({ block: "start" });
     }
   });
 }
