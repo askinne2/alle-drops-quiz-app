@@ -25,8 +25,8 @@ decisions expanded it:
 
 **In scope beyond the literal requirements, decided in this discussion:**
 - Multi-file PHI upload with storage, retrieval, and PDF embedding (D-01…D-05)
-- The `quiz-history` Customer Account UI extension refactor, promoted from open-work list to a hard
-  prerequisite (D-05)
+- ~~The `quiz-history` Customer Account UI extension refactor~~ — **RETRACTED, it already shipped;
+  see the D-05 correction. Not in scope, not a blocker.**
 - Reconciling the `allergist-on-demand` theme repo against live (D-14)
 - Placeholder-free interim consent copy (D-11)
 
@@ -119,10 +119,30 @@ LAUNCH-07.
      `submission_access_log`. Cheapest; the detail modal and PDF route already exist.
   2. **Patient ledger** — via `/api/me/*` with JWT Bearer auth and an ownership check, surfaced in
      the `quiz-history` Customer Account UI extension.
-     ⚠️ **That extension is currently broken** — it still reads PHI metafields that were deleted, and
-     renders empty state. Its refactor is on `CLAUDE.md`'s open-work list and is in **no phase
-     today.** Patient-side file access cannot land on a surface that does not work. **The planner
-     must either scope the refactor into Phase 4 or raise it as a fourth blocker.**
+
+     ⚠️ **RETRACTED 2026-08-09 — this entry was wrong when written.** It originally read: *"That
+     extension is currently broken — it still reads PHI metafields that were deleted, and renders
+     empty state. Its refactor is on CLAUDE.md's open-work list and is in no phase today. The planner
+     must either scope the refactor into Phase 4 or raise it as a fourth blocker."* **There is no
+     fourth blocker.**
+
+     Measured, not inferred: `extensions/quiz-history/src/` contains **zero** references to
+     `metafield` or the `alledrops` namespace. Both `QuizHistoryBlock.jsx` and `QuizHistoryBlock.js`
+     `fetch()` `${FLY_BASE}/api/me/assessments` with a Bearer token and link
+     `/api/me/assessment/{id}/pdf`. The refactor landed in `ca3c3f4` and was hardened by `f762aaa`
+     ("quiz-history Preact render + HS256 token verification") — **2026-05-08, three months before
+     this discussion.** `.planning/REQUIREMENTS.md:30` lists it as **DONE-07, "Already Satisfied."**
+
+     The stale claim propagated from `CLAUDE.md` §"Common pitfalls" and `HANDOFF.md` into this
+     document. **All three are wrong and `CLAUDE.md` + `HANDOFF.md` still carry it** — correcting
+     them is tracked separately; this retraction is kept visible per the project's
+     retract-in-place convention (same as the `injectIframe` and Apntly corrections).
+
+     **What IS still unverified:** whether the extension *renders* correctly in a live customer
+     account session. The code calls the right API; nobody has watched it paint. An observed empty
+     state is equally explained by that customer having no submissions, or by the known best-effort
+     email-matching weakness in `customerLinkSkipped`. **Budget a 10-minute live check, not a
+     refactor.**
   3. **Inline in the clinical PDF** — `app/lib/pdf.ts` renders text from `answers_json` only.
      Embedding an image or merging a PDF is **new capability with a new dependency**. `CLAUDE.md`'s
      PHI checklist requires no remote fonts, no remote images, no remote CSS, and no outbound network
@@ -352,7 +372,8 @@ LAUNCH-07.
 - `app/lib/pdf.ts` — text-only today; D-05 adds embedding.
 - `app/routes/api.me.assessments.tsx`, `api.me.assessment.$id.pdf.tsx` — the JWT Bearer + ownership
   pattern D-05's patient endpoints must follow.
-- `extensions/quiz-history/` — the broken extension D-05 depends on.
+- `extensions/quiz-history/` — D-05's patient surface. **Already calls `/api/me/*` correctly** (see
+  the D-05 retraction) — read it as the pattern to extend, not as broken code to fix.
 - `migrations/001_create_submissions.sql`, `003_drop_medical_history_legacy_columns.sql` — the
   migration convention.
 - `tests/quiz-bundle-freshness.test.ts` — `public/quiz-bundle.js` must be rebuilt with
@@ -403,7 +424,7 @@ LAUNCH-07.
 - `ResultsDisplay.tsx` — three props removed, two copy edits, one conditional CTA (D-07, D-10)
 - `app/lib/format.ts` → both PHI renderers — new testing question labels
 - `submissions.ts` + `migrations/` + a new storage module — D-03's one-to-many relation
-- `extensions/quiz-history/` — D-05's patient surface, currently non-functional
+- `extensions/quiz-history/` — D-05's patient surface; functional and API-backed (D-05 retraction)
 
 ### ⚠️ Standing risk the planner must address explicitly
 **Five defects have now shipped past a fully green suite. All five were caught by a human clicking.**
@@ -461,9 +482,10 @@ Run it local, not production — a full run writes a PHI row.
 - **SCORE-01** (retitle to "Preliminary Score" + the 1–2 business day review copy) — ~30 minutes,
   separable, and unblocked. Offered as a pull-forward and declined; **stays in Phase 5.** Phase 5's
   own notes say to ship it early, so it may land before Phase 5 is formally planned.
-- **`quiz-history` extension refactor** — promoted from open-work list to a D-05 dependency, but not
-  yet scoped into any phase. **The planner must scope it into Phase 4 or raise it as a fourth
-  blocker.** Do not let it fall between the two.
+- ~~**`quiz-history` extension refactor**~~ — **RETRACTED 2026-08-09. It already shipped**
+  (`ca3c3f4` → `f762aaa`, 2026-05-08); `REQUIREMENTS.md:30` records it as DONE-07. There is no fourth
+  blocker and no refactor task. See the correction under D-05. What remains is a 10-minute live
+  render check.
 - **Appointly embed keep/disable decision** — third-party JS from `staq-cdn.com` / `staqlab.com`
   loading 15× on the PHI-collecting quiz page, outside the BAA. Left on deliberately because Phase 7
   may depend on it for booking. Phase 8 / needs an explicit decision.
