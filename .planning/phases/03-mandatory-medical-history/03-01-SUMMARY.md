@@ -170,3 +170,11 @@ None - no external service configuration required.
 ---
 *Phase: 03-mandatory-medical-history*
 *Completed: 2026-08-09*
+
+## Self-Check: PASSED
+
+- FOUND: app/lib/quiz/scoring.test.ts
+- FOUND: .planning/phases/03-mandatory-medical-history/03-01-SUMMARY.md
+- FOUND: d6ea976 (Tasks 1+2 commit)
+- FOUND: 8b2777b (Task 3 commit)
+- FOUND: 2887364 (summary commit)
