@@ -133,7 +133,7 @@ declaratively, with no question-ID literals anywhere in the renderer
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Failing literal inventory, the widened schema types, and the D-09 compile-time guarantee
+- [x] 02-01-PLAN.md — Failing literal inventory, the widened schema types, and the D-09 compile-time guarantee
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -389,7 +389,7 @@ exposures today.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
-| 2. Quiz Schema Foundation | 0/4 | Planned | - |
+| 2. Quiz Schema Foundation | 1/4 | In Progress|  |
 | 3. Mandatory Medical History | 0/TBD | Not started | - |
 | 4. Mandatory Allergy Testing | 0/TBD | Not started | - |
 | 5. Preliminary Score Page | 0/TBD | Not started | - |
