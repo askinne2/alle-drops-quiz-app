@@ -15,6 +15,7 @@ import {
   PART3_SEVERITY,
   PART4_IMPACT,
   PART5_TREATMENT,
+  PART6_MEDICAL_HISTORY,
   ALL_SCORED_QUESTIONS,
   ALL_ITEMS,
 } from "./questions";
@@ -47,6 +48,9 @@ const BOTHER_OVERALL = PART4_IMPACT.find((q) => q.id === "bother_overall")!;
 const TAKING_MEDS = PART5_TREATMENT.find((q) => q.id === "taking_meds")!;
 const MED_LIST = PART5_TREATMENT.find((q) => q.id === "med_list")!;
 const MED_CONTROL = PART5_TREATMENT.find((q) => q.id === "med_control")!;
+const HISTORY_COMORBIDITIES = PART6_MEDICAL_HISTORY.find(
+  (item): item is QuizQuestion => item.kind === "question" && item.id === "history_comorbidities"
+)!;
 
 // ─────────────────────────────────────────────
 // isQuestion
@@ -505,29 +509,29 @@ describe("visibleAnswers", () => {
     expect(result.taking_meds).toBe("yes");
   });
 
-  it("keeps history_personal and history_family when the real ALL_ITEMS is passed", () => {
+  it("keeps history_comorbidities and history_surgeries_has when the real ALL_ITEMS is passed", () => {
     const answers: QuizAnswers = {
-      history_personal: ["asthma"],
-      history_family: ["rhinitis"],
+      history_comorbidities: ["asthma"],
+      history_surgeries_has: "yes",
     };
     const result = visibleAnswers(ALL_ITEMS, answers);
-    expect(result.history_personal).toEqual(["asthma"]);
-    expect(result.history_family).toEqual(["rhinitis"]);
+    expect(result.history_comorbidities).toEqual(["asthma"]);
+    expect(result.history_surgeries_has).toBe("yes");
   });
 
   // DIR-02 — the highest-stakes assertion in this file. A keep-known-and-visible whitelist
   // passes the ALL_ITEMS row above and FAILS this one, which is precisely why this row exists:
-  // the failure being guarded is a clinical record silently losing history_personal with no
+  // the failure being guarded is a clinical record silently losing history_comorbidities with no
   // error and no failing test, the moment a caller hands visibleAnswers an item list that
   // happens not to include Part 6.
   it("passes an unknown key through untouched even when the item list omits Part 6", () => {
     const answers: QuizAnswers = {
       taking_meds: "no",
       med_list: "X",
-      history_personal: ["asthma"],
+      history_comorbidities: ["asthma"],
     };
     const result = visibleAnswers(ALL_SCORED_QUESTIONS, answers);
-    expect(result.history_personal).toEqual(["asthma"]);
+    expect(result.history_comorbidities).toEqual(["asthma"]);
     expect(result.med_list).toBeUndefined();
   });
 
@@ -667,6 +671,16 @@ describe("reference integrity (D-04)", () => {
     expect(findDanglingShowIfReferences(ALL_ITEMS)).toEqual([]);
   });
 
+  // Non-vacuity control (Task 3, Phase 3): the assertion above passes trivially against an
+  // empty set. This proves ALL_ITEMS actually carries showIf-bearing items — the five new Part 6
+  // showIf.questionId targets (history_comorbidities x1 for current_medications, plus one gate
+  // each for the three HIST-03 pairs and has_pcp x3 for its two clinic fields + info block) on
+  // top of the pre-existing med_list/med_control pair.
+  it("ALL_ITEMS contains at least six items carrying a showIf, so the zero-dangling-references assertion above is non-vacuous", () => {
+    const withShowIf = ALL_ITEMS.filter((item) => item.showIf !== undefined);
+    expect(withShowIf.length).toBeGreaterThanOrEqual(6);
+  });
+
   // Without this row the assertion above is vacuous — it would pass identically against a
   // checker that always returns []. This proves the checker can actually detect the typo class
   // D-04 exists to prevent, using a test-local fixture rather than editing questions.ts.
@@ -745,5 +759,104 @@ describe("no chained showIf (forward guard)", () => {
       showIf: { questionId: "med_list", isAnswered: true },
     };
     expect(findChainedShowIf([chainedItem])).toEqual([chainedItem]);
+  });
+});
+
+// ─────────────────────────────────────────────
+// Phase 3 (03-01) — HIST-01..HIST-04 visibility, on the real PART6_MEDICAL_HISTORY
+// ─────────────────────────────────────────────
+// Every group below carries BOTH a positive and a negative control, because evaluateShowIf
+// fails open (D-04) — a positive-only assertion passes identically even when the reference is
+// broken or the operator is wrong.
+
+describe("HIST-02: current_medications visibility (isAnswered, not equals)", () => {
+  it("is visible when history_comorbidities has a real selection", () => {
+    expect(evaluateShowIf(getQuestionById("current_medications")!.showIf, { history_comorbidities: ["asthma"] })).toBe(true);
+  });
+
+  it("is visible when history_comorbidities is answered with only the exclusive 'none' option — the exact case 'equals' cannot express", () => {
+    expect(evaluateShowIf(getQuestionById("current_medications")!.showIf, { history_comorbidities: ["none"] })).toBe(true);
+  });
+
+  it("is NOT visible when history_comorbidities is entirely unanswered", () => {
+    expect(evaluateShowIf(getQuestionById("current_medications")!.showIf, {})).toBe(false);
+  });
+
+  it("is NOT visible when history_comorbidities is answered with an empty array", () => {
+    expect(evaluateShowIf(getQuestionById("current_medications")!.showIf, { history_comorbidities: [] })).toBe(false);
+  });
+});
+
+describe("HIST-03: three gate + reveal pairs, each visible on 'yes' and hidden on 'no'/unanswered", () => {
+  const pairs: Array<{ gate: string; reveal: string }> = [
+    { gate: "history_surgeries_has", reveal: "history_surgeries" },
+    { gate: "history_allergies_has", reveal: "history_allergies" },
+    { gate: "history_conditions_has", reveal: "history_conditions" },
+  ];
+
+  for (const { gate, reveal } of pairs) {
+    describe(`${gate} -> ${reveal}`, () => {
+      it("is visible when the gate is 'yes'", () => {
+        const showIf = getQuestionById(reveal)!.showIf;
+        expect(evaluateShowIf(showIf, { [gate]: "yes" })).toBe(true);
+      });
+
+      it("is NOT visible when the gate is 'no'", () => {
+        const showIf = getQuestionById(reveal)!.showIf;
+        expect(evaluateShowIf(showIf, { [gate]: "no" })).toBe(false);
+      });
+
+      it("is NOT visible when the gate is unanswered", () => {
+        const showIf = getQuestionById(reveal)!.showIf;
+        expect(evaluateShowIf(showIf, {})).toBe(false);
+      });
+    });
+  }
+});
+
+describe("HIST-04: PCP branch — info block and clinic fields are mutually exclusive", () => {
+  const noPcpInfoShowIf = PART6_MEDICAL_HISTORY.find((item) => item.id === "no_pcp_recommendation")!.showIf;
+  const clinicNameShowIf = getQuestionById("pcp_clinic_name")!.showIf;
+  const clinicAddressShowIf = getQuestionById("pcp_clinic_address")!.showIf;
+
+  it("no_pcp_recommendation is visible when has_pcp is 'no'", () => {
+    expect(evaluateShowIf(noPcpInfoShowIf, { has_pcp: "no" })).toBe(true);
+  });
+
+  it("no_pcp_recommendation is NOT visible when has_pcp is 'yes'", () => {
+    expect(evaluateShowIf(noPcpInfoShowIf, { has_pcp: "yes" })).toBe(false);
+  });
+
+  it("pcp_clinic_name and pcp_clinic_address are visible when has_pcp is 'yes'", () => {
+    expect(evaluateShowIf(clinicNameShowIf, { has_pcp: "yes" })).toBe(true);
+    expect(evaluateShowIf(clinicAddressShowIf, { has_pcp: "yes" })).toBe(true);
+  });
+
+  it("pcp_clinic_name and pcp_clinic_address are NOT visible when has_pcp is 'no'", () => {
+    expect(evaluateShowIf(clinicNameShowIf, { has_pcp: "no" })).toBe(false);
+    expect(evaluateShowIf(clinicAddressShowIf, { has_pcp: "no" })).toBe(false);
+  });
+
+  it("no answers value makes both the info block and the clinic fields visible simultaneously", () => {
+    for (const has_pcp of ["yes", "no", undefined]) {
+      const answers: QuizAnswers = has_pcp === undefined ? {} : { has_pcp };
+      const infoVisible = evaluateShowIf(noPcpInfoShowIf, answers);
+      const clinicVisible = evaluateShowIf(clinicNameShowIf, answers) && evaluateShowIf(clinicAddressShowIf, answers);
+      expect(infoVisible && clinicVisible).toBe(false);
+    }
+  });
+});
+
+describe("HIST-01 exclusivity via toggleOption, on the real history_comorbidities question", () => {
+  it("clicking a real comorbidity while ['none'] is selected switches in one click to exactly [that value]", () => {
+    expect(toggleOption(HISTORY_COMORBIDITIES, ["none"], "asthma")).toEqual(["asthma"]);
+  });
+
+  it("clicking 'none' while other comorbidities are selected clears them, resulting in exactly ['none']", () => {
+    expect(toggleOption(HISTORY_COMORBIDITIES, ["asthma", "copd"], "none")).toEqual(["none"]);
+  });
+
+  it("clicking 'none' while it is already the only selection deselects it to []", () => {
+    expect(toggleOption(HISTORY_COMORBIDITIES, ["none"], "none")).toEqual([]);
   });
 });

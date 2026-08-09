@@ -51,6 +51,9 @@ describe("med_list — label copy is separate from required-ness (DEF-04 / D-13)
       taking_meds: "yes",
       med_list: "Cetirizine 10mg daily",
       med_control: "well",
+      // diagnosed_allergic_condition (DIAG-01) joined PART5_TREATMENT in Phase 3 and is required
+      // by default (Phase 2 D-05) — an answer is now needed for this part to read as complete.
+      diagnosed_allergic_condition: "yes",
     };
     expect(isPartComplete(PART5_TREATMENT, answers)).toBe(true);
   });
@@ -93,32 +96,78 @@ describe("isPartComplete — an empty array no longer counts as answered (D-06)"
   });
 });
 
-describe("isPartComplete — Part 6 does not become un-completable (D-05 / D-06 interaction)", () => {
-  // This contradicts a supporting claim in D-06 and is deliberately preserved here so a future
-  // reader does not "fix" it away. D-06's rationale claimed all seven checklist questions carry
-  // an explicit "None of the above" — that is FALSE for history_personal and history_family
-  // (questions.ts:222-249 per 02-CONTEXT.md's D-06 correction). QuizContainer's effect seeds
-  // both to [] on entering the medical-history step, so under a naive default-required reading a
-  // patient with no personal or family history could never advance. `required: false` on both
-  // (added in Plan 02-01) reproduces today's behavior exactly; Phase 3 replaces this part
-  // wholesale.
-  it("is complete when both history questions are seeded to an empty array", () => {
+describe("isPartComplete — Part 6 (HIST-01..HIST-04) required-ness (Phase 3, 03-01)", () => {
+  it("is incomplete with no answers at all — HIST-01 blocks (a required checkbox with no entry is not answered)", () => {
+    expect(isPartComplete(PART6_MEDICAL_HISTORY, {})).toBe(false);
+  });
+
+  it("is incomplete when history_comorbidities is an empty array — [] does not satisfy a required checkbox question (D-06)", () => {
+    expect(isPartComplete(PART6_MEDICAL_HISTORY, { history_comorbidities: [] })).toBe(false);
+  });
+
+  it("is incomplete when only 'none' is selected — current_medications is now revealed (isAnswered) and required, and the rest of the part is unanswered", () => {
+    expect(isPartComplete(PART6_MEDICAL_HISTORY, { history_comorbidities: ["none"] })).toBe(false);
+  });
+
+  it("is complete for a fully-answered 'healthy patient' with no history — the reachability proof HIST-01's 'none' option exists for", () => {
     const answers = {
-      history_personal: [],
-      history_family: [],
+      history_comorbidities: ["none"],
+      current_medications: "None",
+      history_surgeries_has: "no",
+      history_allergies_has: "no",
+      history_conditions_has: "no",
+      has_pcp: "no",
     };
     expect(isPartComplete(PART6_MEDICAL_HISTORY, answers)).toBe(true);
+  });
+
+  it("is incomplete when has_pcp is 'yes' with no clinic fields filled in, and complete once both are filled in", () => {
+    const base = {
+      history_comorbidities: ["none"],
+      current_medications: "None",
+      history_surgeries_has: "no",
+      history_allergies_has: "no",
+      history_conditions_has: "no",
+      has_pcp: "yes",
+    };
+    expect(isPartComplete(PART6_MEDICAL_HISTORY, base)).toBe(false);
+
+    const withClinicFields = {
+      ...base,
+      pcp_clinic_name: "Greenville Family Medicine",
+      pcp_clinic_address: "123 Main St, Greenville, SC",
+    };
+    expect(isPartComplete(PART6_MEDICAL_HISTORY, withClinicFields)).toBe(true);
+  });
+
+  it("is incomplete when current_medications is whitespace-only — isAnswered's trim rule", () => {
+    const answers = {
+      history_comorbidities: ["none"],
+      current_medications: "   ",
+      history_surgeries_has: "no",
+      history_allergies_has: "no",
+      history_conditions_has: "no",
+      has_pcp: "no",
+    };
+    expect(isPartComplete(PART6_MEDICAL_HISTORY, answers)).toBe(false);
   });
 });
 
 describe("isPartComplete — showIf replaces the med_list / med_control special case", () => {
   // Pins the SCH-02 substitution behaviorally, not only as a source-text literal count.
+  // diagnosed_allergic_condition (DIAG-01) joined PART5_TREATMENT in Phase 3 and is required by
+  // default (Phase 2 D-05) — both fixtures below now include an answer for it so these
+  // assertions stay scoped to the taking_meds/med_list/med_control interaction they test.
   it("is complete when taking_meds is 'no' — both conditional questions are hidden, so neither is required", () => {
-    expect(isPartComplete(PART5_TREATMENT, { taking_meds: "no" })).toBe(true);
+    expect(
+      isPartComplete(PART5_TREATMENT, { taking_meds: "no", diagnosed_allergic_condition: "no" })
+    ).toBe(true);
   });
 
   it("is incomplete when taking_meds is 'yes' — both conditional questions are now visible and unanswered", () => {
-    expect(isPartComplete(PART5_TREATMENT, { taking_meds: "yes" })).toBe(false);
+    expect(
+      isPartComplete(PART5_TREATMENT, { taking_meds: "yes", diagnosed_allergic_condition: "yes" })
+    ).toBe(false);
   });
 });
 
