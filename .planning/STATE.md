@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 3 planned (7 plans, 5 waves)
-last_updated: "2026-08-09T18:01:57.377Z"
+status: executing
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-08-09T18:32:40.934Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 17
-  completed_plans: 10
+  completed_plans: 11
   percent: 25
 ---
 
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 3 — mandatory medical history
+**Current focus:** Phase 03 — mandatory-medical-history
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
-Status: Ready to plan
+Phase: 03 (mandatory-medical-history) — EXECUTING
+Plan: 2 of 7
+Status: Ready to execute
 Last activity: 2026-08-09
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███████░░░] 65%
 
 Codebase baseline: `main` @ `a8c13d7`, Phase 2 complete and UAT'd, **282 tests / 23 files passing**,
 typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release **v49**, and
@@ -64,6 +64,7 @@ on two data points. There are now three — decide before Phase 3 executes.
 | 2 | 4 | - | - |
 
 **Recent Trend:** No data yet.
+| Phase 03 P01 | 45min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ Affecting current work:
 
 - The "purchase if approved" paragraph must not ship (`DEC-no-approval-promise-copy`)
 - Max score is derived from the question set, never hardcoded (`DEC-derive-max-score-from-question-set`)
+- [Phase 03]: 03-01: Tasks 1+2 combined into one commit — Task 2's getQuestionById fix is a compile-time requirement for Task 1's PART6_MEDICAL_HISTORY type widening (QuizQuestion[] -> QuizItem[]) to typecheck
+- [Phase 03]: 03-01: current_medications kept required (not required:false) — comorbidity checklist is itself required so isAnswered is always true by completion; a required safety field over-collects rather than silently omits
 
 ### Pending Todos
 
@@ -292,6 +295,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-09T18:01:57.371Z
-Stopped at: Phase 3 planned (7 plans, 5 waves)
-Resume file: .planning/phases/03-mandatory-medical-history/03-01-PLAN.md
+Last session: 2026-08-09T18:32:40.929Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: None

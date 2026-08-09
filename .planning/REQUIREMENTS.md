@@ -64,15 +64,15 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 
 ### Medical History (mandatory, before the testing split)
 
-- [ ] **HIST-01**: A multi-select comorbidity checklist offers asthma, eczema, anaphylaxis, heart
+- [x] **HIST-01**: A multi-select comorbidity checklist offers asthma, eczema, anaphylaxis, heart
   disease, COPD, lung disease, cancer, autoimmune conditions, immune system deficiencies
   (acquired / induced), angioedema, and none of the above (`REQ-medical-history-mandatory`)
-- [ ] **HIST-02**: Checking any box — including "none of the above" — reveals a free-text field:
+- [x] **HIST-02**: Checking any box — including "none of the above" — reveals a free-text field:
   "What medications (including dosage) are you currently taking (please list all)"
   (`REQ-medical-history-mandatory`)
-- [ ] **HIST-03**: Three required free-text fields are captured: previous surgeries and dates; known
+- [x] **HIST-03**: Three required free-text fields are captured: previous surgeries and dates; known
   medication/food/environmental allergies; other medical conditions (`REQ-medical-history-mandatory`)
-- [ ] **HIST-04**: "Do you have a Primary Care Physician" Y/N — yes collects clinic name and address;
+- [x] **HIST-04**: "Do you have a Primary Care Physician" Y/N — yes collects clinic name and address;
   no displays "We recommend that you establish with a primary care physician before beginning SLIT"
   (`REQ-medical-history-mandatory`)
 - [ ] **HIST-05**: The section lives in `QUIZ_PARTS` before the allergy-testing split and is reached
@@ -80,7 +80,7 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
   back-button special case are deleted; answers land in `answers_json` and surface in the clinical
   PDF and admin modal with no new plumbing (`REQ-medical-history-mandatory`,
   `DEC-medical-history-before-testing-split`)
-- [ ] **DIAG-01**: A question adjacent to the Part 5 medication questions asks whether the patient
+- [x] **DIAG-01**: A question adjacent to the Part 5 medication questions asks whether the patient
   has been **diagnosed** with an allergic condition — distinct from HIST-01's comorbidity list
   (`REQ-allergy-diagnosis-question`) — ⚠ **confirm scope with William before building**
 
@@ -230,10 +230,10 @@ Acknowledged, not in the v1.0 roadmap.
 | DEF-04 | Phase 1 | Complete (2026-07-30, verified live) |
 | SCH-01 | Phase 2 | Complete |
 | SCH-02 | Phase 2 | Complete |
-| HIST-01 | Phase 3 | Pending |
-| HIST-02 | Phase 3 | Pending |
-| HIST-03 | Phase 3 | Pending |
-| HIST-04 | Phase 3 | Pending |
+| HIST-01 | Phase 3 | Complete |
+| HIST-02 | Phase 3 | Complete |
+| HIST-03 | Phase 3 | Complete |
+| HIST-04 | Phase 3 | Complete |
 | HIST-05 | Phase 3 | Pending |
 | DIAG-01 | Phase 3 | Blocked (William — R6 scope) |
 | TEST-01 | Phase 4 | Pending |
