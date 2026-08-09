@@ -9,6 +9,7 @@ import {
   PART6_MEDICAL_HISTORY,
 } from "../app/lib/quiz/questions";
 import { calculateTotalScore } from "../app/lib/quiz/scoring";
+import { isAnswered } from "../app/lib/quiz/schema";
 
 /**
  * Compile-time proof of D-09: an info block cannot become a question, cannot enter the scored
@@ -82,5 +83,84 @@ describe("quiz schema type guarantees (D-09)", () => {
   it("ALL_ITEMS contains at least one member with kind === 'info'", () => {
     const infoBlocks = ALL_ITEMS.filter((item) => item.kind === "info");
     expect(infoBlocks.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+/**
+ * isAnswered — Phase 4 question types (04-02, TEST-01/TEST-03/TEST-04).
+ *
+ * Synthetic QuizQuestion fixtures built inline, deliberately independent of QUIZ_PARTS /
+ * PART7_TESTING — Part 7 lands in plan 04-05, so this coverage must be green before that plan
+ * runs. Each new type is asserted in both directions (answered / not answered) per T-4-04: an
+ * omission from isAnswered's switch fails CLOSED via `default: return false`, so a type that
+ * never reaches its intended group would show up here as an always-false question, not a crash.
+ */
+function makeQuestion(type: QuizQuestion["type"]): QuizQuestion {
+  return {
+    kind: "question",
+    id: `fixture-${type}`,
+    type,
+    text: "Fixture question text",
+    order: 1,
+    part: 7,
+  };
+}
+
+describe("isAnswered — Phase 4 question types", () => {
+  it("radio_single: a non-empty option value is answered", () => {
+    const q = makeQuestion("radio_single");
+    expect(isAnswered(q, "had_testing")).toBe(true);
+  });
+
+  it("radio_single: an empty string is not answered", () => {
+    const q = makeQuestion("radio_single");
+    expect(isAnswered(q, "")).toBe(false);
+  });
+
+  it("radio_single: undefined is not answered", () => {
+    const q = makeQuestion("radio_single");
+    expect(isAnswered(q, undefined)).toBe(false);
+  });
+
+  it("text_input_short: non-whitespace text is answered", () => {
+    const q = makeQuestion("text_input_short");
+    expect(isAnswered(q, "2019")).toBe(true);
+  });
+
+  it("text_input_short: whitespace-only text is not answered", () => {
+    const q = makeQuestion("text_input_short");
+    expect(isAnswered(q, "   ")).toBe(false);
+  });
+
+  it("text_input_short: undefined is not answered", () => {
+    const q = makeQuestion("text_input_short");
+    expect(isAnswered(q, undefined)).toBe(false);
+  });
+
+  it("file_multi: a non-empty token array is answered", () => {
+    const q = makeQuestion("file_multi");
+    expect(isAnswered(q, ["tok_a"])).toBe(true);
+  });
+
+  it("file_multi: an empty array is not answered (D-06 empty-array rule extends to files)", () => {
+    const q = makeQuestion("file_multi");
+    expect(isAnswered(q, [])).toBe(false);
+  });
+
+  it("file_multi: undefined is not answered", () => {
+    const q = makeQuestion("file_multi");
+    expect(isAnswered(q, undefined)).toBe(false);
+  });
+
+  it("file_multi: a bare string is not a token list and is not answered", () => {
+    const q = makeQuestion("file_multi");
+    expect(isAnswered(q, "tok_a")).toBe(false);
+  });
+
+  // Non-vacuity regression: proves an unchanged existing type still behaves as before this plan's
+  // edit, so a future refactor that collapses the isAnswered groups incorrectly fails here too.
+  it("regression: control_0_3 and text_input are unchanged by this plan's edit", () => {
+    expect(isAnswered(makeQuestion("control_0_3"), "well")).toBe(true);
+    expect(isAnswered(makeQuestion("text_input"), "  ")).toBe(false);
   });
 });
