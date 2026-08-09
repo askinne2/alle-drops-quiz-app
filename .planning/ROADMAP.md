@@ -210,6 +210,16 @@ special case as part of this phase.
 
 **Goal**: No patient — and no storefront page — can reach purchase without allergy testing
 **Depends on**: Phase 3 (hard: deleting the bypasses first would orphan medical history)
+**Blocked on** (client-side, see `.planning/phases/04-mandatory-allergy-testing/04-CONTEXT.md`):
+
+  1. **William agrees to test-result upload, and it is priced** — reverses his own 2026-07-29 LOCKED
+     decision (`DEC-testing-results-by-email-not-upload`, retracted in place by D-01). Blocks all of
+     D-01…D-05. Owner: William / Andrew.
+  2. **Fly.io BAA signed** — patient-uploaded test results are PHI in a file and cannot transit or
+     land on Fly without it. Owner: Andrew.
+  3. **Production cutover to AOD's Google Cloud project** — object storage belongs under AOD's BAA,
+     not Andrew's `alledrops-quiz` dev project. Owner: William / AOD.
+
 **Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05, TEST-06, TEST-07
 **Success Criteria** (what must be TRUE):
 
@@ -219,8 +229,13 @@ special case as part of this phase.
   2. "I need allergy testing" takes the patient to the storefront testing-options page; "I've
      already had allergy testing" collects year, location, and reacted-to allergens
 
-  3. A patient with existing results is told to email them to the testing address using the same
-     email address they used on the quiz — and no file upload exists anywhere
+  3. A patient with existing results must upload them — PDF, JPEG, PNG, or HEIC, multiple files
+     allowed — before they can continue, and those files are retrievable from the embedded admin,
+     the patient ledger, and inline in the clinical PDF, never touching Shopify or leaving the BAA
+     chain. ~~A patient with existing results is told to email them to the testing address using the
+     same email address they used on the quiz — and no file upload exists anywhere~~ **REVERSED
+     2026-08-09 by 04-CONTEXT.md D-01.** Retained struck through so the reversal is visible to
+     anyone who read the original.
 
   4. No surface, in the quiz or on the storefront, offers or implies a path to purchase without
      testing: both code bypasses are gone, `ResultsDisplay` is terminal, and the product-page and
@@ -228,14 +243,74 @@ special case as part of this phase.
 
   5. Every completed submission has passed through consent with a recorded `consent_version`
 
-**Plans**: TBD
+**Plans**: 19 plans in 11 waves
 **UI hint**: yes
-**Notes**: ~1 day for the new step plus 2–3 h for the deletions. Two bypasses must go, not one — the
-`3–6` "Continue to Purchase AlleDrops" route was never mentioned on the call and is the bigger
-problem, since it jumps straight to consent and skips medical history entirely. `ResultsDisplay`
-loses all four callback props. The new branch fields extend `answers`, not the top-level payload
-schema. TEST-04's email address depends on the unresolved domain spelling — use the confirmed
-spelling or hold the copy string.
+**Notes**: **No longer ~1 day.** D-01 put test-result upload back in scope, restoring the 3–4 day
+estimate that decision had removed, and adding the app's first binary PHI handling: a streaming
+size-capped upload endpoint, GCS staging with prefix-scoped lifecycle cleanup, magic-byte content
+validation, HEIC→JPEG conversion, a `submission_files` join table, and PDF embedding. **Half of
+TEST-05 already shipped in Phase 3** (D-11 deleted the `7+` proceed-without-testing chain and the
+`"medical_history"` FlowStep); what remains is the `3–6` "Continue to Purchase AlleDrops" jump and
+making `ResultsDisplay` terminal with zero callback props. D-09 additionally moves consent onto a
+single path for every bracket, closing a live TEST-07 defect where 0–2 patients auto-submit with a
+`consent_version` they never saw. TEST-04's email address no longer appears in any copy, so the
+unresolved domain-spelling decision no longer gates this phase (it still gates LAUNCH-07). Waves 1–5
+(plans 04-01…04-09) are the unblocked set and could ship alone; waves 6–11 (plans 04-10…04-19) are
+gated on the three blockers above. Splitting was offered and declined — the wave structure keeps the
+option open without re-proposing it.
+
+Plans:
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — Retract the email-not-upload decision in place, rewrite TEST-04, add uploaded filenames to CLAUDE.md's PHI list
+- [ ] 04-02-PLAN.md — Three new QuestionTypes (radio_single, text_input_short, file_multi) and their isAnswered groups
+- [ ] 04-03-PLAN.md — Placeholder-free interim consent copy (D-11) and the CONSENT_VERSION bump
+- [ ] 04-04-PLAN.md — Reconcile the theme repo against live, delete the no-testing clauses, draft the replacement (blocking checkpoint)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04-05-PLAN.md — Push the reconciled theme and prove TEST-06 on authenticated cache-busted served bytes
+- [ ] 04-06-PLAN.md — Part 7 question set (testing_status + year/location/allergens) and its clinical labels
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 04-07-PLAN.md — radio_single and text_input_short render branches plus Part 7 DOM coverage
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 04-08-PLAN.md — D-09 flow rewiring: deletion guard proven RED, terminal ResultsDisplay, consent-first QuizContainer
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 04-09-PLAN.md — Rebuild the theme bundle and add measured Phase 4 freshness markers
+
+**Wave 6** *(BLOCKED on William, the Fly BAA, and the GCP cutover)*
+
+- [ ] 04-10-PLAN.md — Blocker clearance, size caps, upload architecture, dev storage target, and the package legitimacy gate
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 04-11-PLAN.md — Migration 004 (own commit, no DDL executed) and the ownership-bounded submission_files data layer
+- [ ] 04-12-PLAN.md — Storage primitives: GCS client, magic-byte validation, HEIC conversion
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [ ] 04-13-PLAN.md — POST /api/quiz/upload: streaming, size-capped, magic-byte-validated staging
+- [ ] 04-14-PLAN.md — Patient and admin file retrieval routes plus the read-only testing-status column
+- [ ] 04-15-PLAN.md — Embed uploaded files inline in the clinical PDF via pdf-lib
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [ ] 04-16-PLAN.md — The file_multi upload widget, its CSS family, and the required-gate DOM coverage
+- [ ] 04-17-PLAN.md — Promotion step, prefix-scoped lifecycle rule, retention doc, and the Fly VM bump
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [ ] 04-18-PLAN.md — Patient ledger file links and the second theme-bundle rebuild
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 04-19-PLAN.md — Human browser pass, migration execution, William message, merge and deploy authorization
 
 ### Phase 5: Preliminary Score Page
 
