@@ -1,5 +1,5 @@
 /**
- * Quiz Container — clinical questionnaire flow (TN/TX gate, parts 1–5, outcomes, optional part 6 + consent).
+ * Quiz Container — clinical questionnaire flow (TN/TX gate, parts 1–6, outcomes, consent).
  */
 
 import { useState, useCallback, useEffect, useRef, type ReactNode } from "react";
@@ -10,7 +10,7 @@ import { PatientInfoStep, validatePatientInfoStep, type PatientInfoValues } from
 import { QuizPartRenderer, isPartComplete } from "./QuizPartRenderer";
 import { ConsentStep } from "./ConsentStep";
 import { ResultsDisplay } from "./ResultsDisplay";
-import { QUIZ_PARTS, PART6_MEDICAL_HISTORY, ALL_SCORED_QUESTIONS, ALL_ITEMS } from "../../lib/quiz/questions";
+import { QUIZ_PARTS, ALL_SCORED_QUESTIONS, ALL_ITEMS } from "../../lib/quiz/questions";
 import {
   calculateTotalScore,
   getScoreBracket,
@@ -35,7 +35,6 @@ type FlowStep =
   | "patient_info"
   | "quiz_parts"
   | "outcome"
-  | "medical_history"
   | "consent"
   | "ineligible"
   | "submitting"
@@ -150,15 +149,6 @@ export function QuizContainer() {
   }, []);
 
   useEffect(() => {
-    if (step !== "medical_history") return;
-    setAnswers((prev) => ({
-      ...prev,
-      history_personal: Array.isArray(prev.history_personal) ? prev.history_personal : [],
-      history_family: Array.isArray(prev.history_family) ? prev.history_family : [],
-    }));
-  }, [step]);
-
-  useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
@@ -180,7 +170,7 @@ export function QuizContainer() {
   }, []);
 
   const buildPayload = useCallback(
-    (extra?: { personal_history?: string[]; family_history?: string[] }) => {
+    () => {
       if (!patientState || !symptomProfileId) throw new Error("Missing patient context");
       const visible = visibleAnswers(ALL_ITEMS, answers);
       const s = score ?? calculateTotalScore(ALL_SCORED_QUESTIONS, visible);
@@ -198,15 +188,14 @@ export function QuizContainer() {
         answers: visible,
         completion_time: Math.round((Date.now() - startTime) / 1000),
         consent_version: CONSENT_VERSION,
-        ...extra,
       };
     },
     [patientState, symptomProfileId, patientInfo, answers, score, scoreBracket, startTime]
   );
 
   const submitPayload = useCallback(
-    async (extra?: { personal_history?: string[]; family_history?: string[] }) => {
-      const payload = buildPayload(extra);
+    async () => {
+      const payload = buildPayload();
       await postQuiz(payload as unknown as Record<string, unknown>);
     },
     [buildPayload]
@@ -287,16 +276,14 @@ export function QuizContainer() {
     setStep("submitting");
     setSubmissionError(null);
     try {
-      const personal = Array.isArray(answers.history_personal) ? (answers.history_personal as string[]) : undefined;
-      const family = Array.isArray(answers.history_family) ? (answers.history_family as string[]) : undefined;
-      await submitPayload({ personal_history: personal, family_history: family });
+      await submitPayload();
       setSavedToServer(true);
       setStep("completed");
     } catch (e) {
       setSubmissionError(e instanceof Error ? e.message : "Submit failed");
       setStep("error");
     }
-  }, [consentChecked, submitPayload, answers]);
+  }, [consentChecked, submitPayload]);
 
   // UAT defect fix: QuizPartRenderer and isPartComplete both already accept the full QuizItem[]
   // union (questions AND info blocks) — a question-only filter here used to strip every info
@@ -502,32 +489,6 @@ export function QuizContainer() {
             />
           )}
 
-        {step === "medical_history" && (
-          <>
-            <h2 className={styles.questionCategory__title}>Medical history</h2>
-            <QuizPartRenderer
-              items={PART6_MEDICAL_HISTORY}
-              answers={answers}
-              onAnswerChange={handleAnswerChange}
-            />
-            {renderNavRow(
-              <>
-                <button type="button" className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`} onClick={() => setStep("outcome")}>
-                  ← Previous
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                  disabled={!isPartComplete(PART6_MEDICAL_HISTORY, answers)}
-                  onClick={() => isPartComplete(PART6_MEDICAL_HISTORY, answers) && setStep("consent")}
-                >
-                  Next →
-                </button>
-              </>
-            )}
-          </>
-        )}
-
         {step === "consent" && (
           <>
             <ConsentStep checked={consentChecked} onCheckedChange={setConsentChecked} />
@@ -536,7 +497,7 @@ export function QuizContainer() {
                 <button
                   type="button"
                   className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
-                  onClick={() => setStep(scoreBracket === "7+" ? "medical_history" : "outcome")}
+                  onClick={() => setStep("outcome")}
                 >
                   ← Previous
                 </button>
