@@ -221,16 +221,13 @@ export function toggleOption(question: QuizQuestion, current: string[], clickedV
 }
 
 /**
- * Whether `option` should render disabled given the currently-selected values (D-13). True only
- * when SOME currently-selected value maps to an option carrying `exclusive === true` AND `option`
- * itself is not that exclusive option — the exclusive option must stay clickable, or D-16's
- * deselect-to-`[]` behavior would be unreachable.
+ * D-13 IS DELIBERATELY GONE. There used to be an `isOptionDisabledByExclusive` helper here that
+ * told the renderer to set `disabled` on every non-exclusive option while an exclusive one was
+ * selected. UAT (session 33) found the patient-facing consequence: click "None of the above" by
+ * mistake and every real answer greys out, with nothing on screen explaining that re-clicking
+ * "None" is the way back. `toggleOption` above already drops the exclusive value when a normal
+ * option is clicked, so the disable bought nothing and cost the patient the switch.
+ *
+ * Do not reintroduce it. If exclusivity needs a visual signal, express it in the option's copy or
+ * styling — never by making the alternative unclickable.
  */
-export function isOptionDisabledByExclusive(
-  question: QuizQuestion,
-  current: string[],
-  option: QuizOption
-): boolean {
-  if (option.exclusive === true) return false;
-  return current.some((v) => (question.options ?? []).find((o) => o.value === v)?.exclusive === true);
-}

@@ -7,7 +7,6 @@ import {
   visibleItems,
   visibleAnswers,
   toggleOption,
-  isOptionDisabledByExclusive,
   itemsForPart,
 } from "./schema";
 import {
@@ -621,31 +620,27 @@ describe("toggleOption", () => {
 });
 
 // ─────────────────────────────────────────────
-// isOptionDisabledByExclusive (D-13)
+// D-13 REVERSED — switching off an exclusive option (UAT defect, session 33)
 // ─────────────────────────────────────────────
 
-describe("isOptionDisabledByExclusive", () => {
-  const noneOption = SYMPTOMS_NASAL.options!.find((o) => o.value === "none")!;
-  const sneezingOption = SYMPTOMS_NASAL.options!.find((o) => o.value === "sneezing")!;
-
-  it("disables a non-exclusive option when an exclusive value is selected", () => {
-    expect(isOptionDisabledByExclusive(SYMPTOMS_NASAL, ["none"], sneezingOption)).toBe(true);
+/**
+ * Selecting "None of the above" used to set the DOM `disabled` attribute on every other checkbox
+ * in the group, so a patient who mis-clicked it could not switch to a real answer — the only
+ * escape was re-clicking "None", which nothing signalled. `toggleOption` always handled the
+ * switch correctly; the `disabled` attribute was the sole reason that click never fired.
+ *
+ * `isOptionDisabledByExclusive` is deleted rather than left unused, so no future renderer can
+ * wire it back in by accident. The renderer half of this fix is guarded by
+ * `tests/quiz-part-renderer-exclusive-clickable.test.ts` (source-text guard — no DOM test infra,
+ * DIR-01). The pure half is below, on the real Part 1 and Part 2 data.
+ */
+describe("switching away from an exclusive option (UAT defect fix)", () => {
+  it("one click moves a Part 1 answer from the exclusive option to a real symptom", () => {
+    expect(toggleOption(SYMPTOMS_NASAL, ["none"], "sneezing")).toEqual(["sneezing"]);
   });
 
-  it("never disables the exclusive option itself, so D-16's deselect stays reachable", () => {
-    expect(isOptionDisabledByExclusive(SYMPTOMS_NASAL, ["none"], noneOption)).toBe(false);
-  });
-
-  it("disables nothing when nothing is selected", () => {
-    expect(isOptionDisabledByExclusive(SYMPTOMS_NASAL, [], sneezingOption)).toBe(false);
-    expect(isOptionDisabledByExclusive(SYMPTOMS_NASAL, [], noneOption)).toBe(false);
-  });
-
-  it("disables nothing for a question with no exclusive option at all", () => {
-    const springOption = TIMING_SEASON.options!.find((o) => o.value === "spring")!;
-    const onlyRarelyOption = TIMING_SEASON.options!.find((o) => o.value === "only_rarely")!;
-    expect(isOptionDisabledByExclusive(TIMING_SEASON, ["spring"], onlyRarelyOption)).toBe(false);
-    expect(isOptionDisabledByExclusive(TIMING_SEASON, ["only_rarely"], springOption)).toBe(false);
+  it("one click moves a Part 2 answer from the exclusive option to a real trigger", () => {
+    expect(toggleOption(TIMING_TRIGGERS, ["none"], "pets")).toEqual(["pets"]);
   });
 });
 

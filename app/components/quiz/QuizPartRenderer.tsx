@@ -1,7 +1,6 @@
 import { type QuizAnswers, type QuizInfoBlock, type QuizItem } from "../../lib/quiz/types";
 import {
   isAnswered,
-  isOptionDisabledByExclusive,
   isQuestion,
   selectedValues,
   toggleOption,
@@ -88,7 +87,7 @@ export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = fa
                         <input
                           type="checkbox"
                           checked={selected}
-                          disabled={disabled || isOptionDisabledByExclusive(question, raw, opt)}
+                          disabled={disabled}
                           onChange={() => onAnswerChange(question.id, toggleOption(question, raw, opt.value))}
                         />
                         <span>{opt.label}</span>
