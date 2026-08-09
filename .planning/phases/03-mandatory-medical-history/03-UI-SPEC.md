@@ -52,10 +52,18 @@ Phase 3 — no new tokens are introduced.
 | `--quiz-spacing-xxl` | 28px | 48px | Major section breaks |
 
 Exceptions for this phase: **none.** Every new class this phase adds must use one of the tokens
-above, not a literal pixel value — this is how the existing file stays consistent (every rule in
-`quiz.module.css` already does this; grep confirms no bare `px` spacing values outside the tokens
-and the fixed 44px touch-target minimums, which are an accessibility floor, not a spacing rhythm
-value).
+above, not a literal pixel value.
+
+Accuracy correction (checker, 2026-08-09 — the original claim here was that the file contains *no*
+bare `px` spacing values, which is false and was verified false against source): `quiz.module.css`
+carries **four pre-existing bare-px spacing declarations** outside the token scale —
+`gap: 4px` (:252), `margin-left: 6px` (:277), `margin-top: 2px` (:1684), `margin-top: 4px` (:1693).
+All four are legacy and none are introduced by this phase. The 44px touch-target minimums are a
+separate case: an accessibility floor, not a spacing-rhythm value.
+
+The rule for Phase 3 stands unchanged — new classes use tokens. The legacy exceptions are recorded
+so nobody later reads "the file has no bare px values," finds four, and concludes the contract is
+untrustworthy.
 
 ---
 
@@ -159,6 +167,23 @@ approved clinical copy.
 No new component files are required beyond what Phase 2 already built. Everything below is either
 a new CSS class in `quiz.module.css` or a data-driven usage of an existing component
 (`QuizPartRenderer`, `InfoBlockCard`).
+
+### Primary focal point (added per checker Dimension 2)
+
+**On the medical-history screen, the eye should land first on whichever question card is currently
+being answered — not on any single fixed element.** This part is a linear form, not a dashboard,
+and every card is equally load-bearing clinically.
+
+The one deliberate exception is the **HIST-04 info block when it is visible.** Its accent left
+border and inline icon are the only non-neutral treatment on the screen, so when the patient
+answers "no" to having a PCP, it becomes the dominant element by design — that is the entire point
+of differentiating it from a question card. It must read as *"this is telling you something"* the
+moment it appears, because a patient who skims past a clinical recommendation has effectively not
+received it.
+
+Nothing else on this screen competes for that role. In particular, the three D-06 gate+reveal
+groups must read as **equal siblings** — no visual hierarchy between surgeries, allergies, and
+other conditions. Any treatment that makes one of the three louder than the other two is wrong.
 
 ### 1. HIST-01 — 11-option comorbidity checklist (mobile layout decision)
 
