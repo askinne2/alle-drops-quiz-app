@@ -141,7 +141,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-03-PLAN.md — Renderer refactor to zero question-ID literals; append-only regression tests
+- [x] 02-03-PLAN.md — Renderer refactor to zero question-ID literals; append-only regression tests
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -389,7 +389,7 @@ exposures today.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
-| 2. Quiz Schema Foundation | 2/4 | In Progress|  |
+| 2. Quiz Schema Foundation | 3/4 | In Progress|  |
 | 3. Mandatory Medical History | 0/TBD | Not started | - |
 | 4. Mandatory Allergy Testing | 0/TBD | Not started | - |
 | 5. Preliminary Score Page | 0/TBD | Not started | - |
