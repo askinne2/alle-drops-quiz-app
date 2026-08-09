@@ -245,7 +245,15 @@ export const PART5_TREATMENT: QuizQuestion[] = [
     part: 5,
     // UNCONFIRMED clinical copy — DIAG-01's scope (whether it duplicates HIST-01's comorbidity
     // checklist) is still open with William; see CONTEXT.md <specifics> #3 and D-10.
-    text: "Has a healthcare provider ever diagnosed you with an allergic condition (for example, allergic rhinitis, asthma, or eczema)?",
+    // UAT (session 33): the original wording carried "(for example, allergic rhinitis, asthma, or
+    // eczema)". Andrew read it back-to-back with HIST-01's comorbidity checklist — which asks the
+    // patient to tick asthma and eczema from a list one part later — and it read as the same
+    // question asked twice. That is the exact redundancy ROADMAP.md flagged for DIAG-01
+    // ("ask once whether the allergy-diagnosis question is distinct from this checklist").
+    // The questions ARE distinct (D-10): diagnosed-by-a-clinician is not the same fact as
+    // has-this-comorbidity. Only the examples collided, so the examples were dropped rather than
+    // the question. Do not reintroduce condition names here that appear in HIST-01's options.
+    text: "Has a healthcare provider ever diagnosed you with an allergic condition?",
     order: 53,
     // scoreQuestion returns 0 for yesno, so this contributes zero to the score even though
     // PART5_TREATMENT is inside ALL_SCORED_QUESTIONS.
