@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: "Phase 3 fully shipped. PR #19 merged to `main` (`ac40f09`), deployed to Fly (release v50,"
-stopped_at: Phase 4 context gathered — BLOCKED on William (upload agreement + pricing), Fly.io BAA, AOD GCP cutover
-last_updated: "2026-08-09T20:56:02.896Z"
+stopped_at: Phase 4 UI-SPEC approved (6/6 dimensions) — phase still BLOCKED on William, Fly BAA, GCP cutover
+last_updated: "2026-08-09T21:22:06.941Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 8
@@ -313,6 +313,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-09T20:56:02.891Z
-Stopped at: Phase 4 context gathered — BLOCKED on William (upload agreement + pricing), Fly.io BAA, AOD GCP cutover
-Resume file: .planning/phases/04-mandatory-allergy-testing/04-CONTEXT.md
+Last session: 2026-08-09T21:22:06.934Z
+Stopped at: Phase 4 UI-SPEC approved (6/6 dimensions) — phase still BLOCKED on William, Fly BAA, GCP cutover
+Resume file: .planning/phases/04-mandatory-allergy-testing/04-UI-SPEC.md
