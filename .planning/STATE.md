@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 01 complete (6/6) — ready to discuss Phase 2
-last_updated: 2026-07-30T17:54:11.385Z
-last_activity: 2026-07-30 -- Phase 01 complete (6/6), deployed and verified
+status: planning
+stopped_at: Phase 2 context gathered
+last_updated: "2026-08-09T12:29:11.883Z"
+last_activity: 2026-07-30
 progress:
   total_phases: 8
   completed_phases: 1
@@ -99,7 +99,8 @@ None captured yet.
 
 **Live exposures to close immediately (Phase 8, do not wait for Phase 7):**
 
-- **Klaviyo still live on `/pages/allergy-quiz`** — **10 occurrences** in HTML fetched 2026-07-30,
+- **[CLOSED 2026-08-09 — see reconciliation below]** ~~Klaviyo still live on
+  `/pages/allergy-quiz`~~ — **10 occurrences** in HTML fetched 2026-07-30,
   loader `https://static.klaviyo.com/onsite/js/SzY6kF/klaviyo.js`. (An earlier entry said "4": that
   was `grep -c`, which counts matching LINES, not occurrences — the exact trap this phase warned
   three executors about, hit by the orchestrator. Occurrence counts must use
@@ -113,16 +114,20 @@ None captured yet.
   with `disabled: false`. App embeds load site-wide, including the quiz page. Fix is a theme change
   (flip `disabled` to `true` and push) or the App embeds toggle in the theme editor — not a
   quiz-app-repo change, which is what "zero repo refs" originally meant.
+
 - **Second undocumented third-party script on PHI pages:** the same `settings_data.json` also enables
   `shopify://apps/apntly-appointment-booking-app/blocks/main-app-embed/…` (`disabled: false`).
   `CLAUDE.md` rule 4 forbids third-party scripts on any page collecting PHI and names Klaviyo but not
   this one. Needs an explicit keep/disable decision before go-live.
+
 - **Phase 1's verification pass does NOT clear LAUNCH-01.** Phase 1 adds zero scripts and zero
   libraries, so nothing in it can close this. A green Phase 1 must not be read as a clean
   patient-facing page — confirmed independently by Plans 01-03 and 01-04.
+
 - Test Mode button rendering on the production page — bypasses all validation.
   **Appears already resolved:** the live quiz page served `test=0` on 2026-07-30 and the installed
   block carries `enable_test_mode: false`. Re-confirm during Phase 8 rather than assuming.
+
 - Placeholder text on two live clinical surfaces.
   **Measured 2026-07-30 on the served quiz page:** the block's Medical Disclaimer Text is the
   placeholder `This text needs changed.`, but "Show Medical Disclaimer" is toggled OFF, so it renders
@@ -130,10 +135,41 @@ None captured yet.
   though: `disclaimer` appears 0 times in the served HTML, so the live clinical intake page carries
   **no medical disclaimer at all**. Gated on the counsel-owned clinical copy already tracked above;
   turning the toggle on before counsel delivers would publish the placeholder instead.
-- **Apntly appointment-booking app embed** is enabled site-wide in the theme's `settings_data.json`
-  (`disabled: false`) but `apntly` appears 0 times in the served quiz-page HTML, versus `klaviyo` at
-  10 occurrences. So it does not appear to load on the PHI page. Recorded to close out the question; Klaviyo
-  remains the live exposure. Re-check if the embed's loader is ever renamed.
+
+- ~~**Apntly appointment-booking app embed** … does not appear to load on the PHI page.~~
+  **RETRACTED 2026-08-09 — this entry was wrong and the script IS live on the PHI page.** The
+  original check counted the needle `apntly`, which is the vendor slug inside the app-block URI
+  (`shopify://apps/apntly-appointment-booking-app/…`). The actual loader spells it **`appointly`**.
+  Measured on authenticated, cache-busted served bytes of `/pages/allergy-quiz` 2026-08-09:
+  `apntly` = 0, **`appointly` = 15**. Same class of error as the `grep -c` line-vs-occurrence trap —
+  a count against the wrong needle was read as absence.
+
+  What actually loads: `cdn.shopify.com/extensions/…/https-appointly-com-69/assets/appointly-embed.js`
+  (defer), plus an inline block that sets
+  `window.appointlyMainJsUrl = "https://s1.staq-cdn.com/appointly/api/js/65752301774/main.js?…"`,
+  injects that script into `<head>`, calls `fetch("https://s1.staq-cdn.com/api/status")`, and on
+  failure rewrites the host to `https://js-server.staqlab.com` and retries. Third-party JS from
+  **staq-cdn.com / staqlab.com** executing on a PHI-collecting page, outside the BAA chain — the same
+  exposure class as Klaviyo, per `CLAUDE.md` rule 4 and `docs/breach-response-runbook.md:16`.
+
+  **Not disabled, deliberately.** Appointly is appointment booking and Phase 7 (Telehealth Intake
+  Path) may depend on it; turning the embed off site-wide could break booking. Needs an explicit
+  keep/disable decision — if kept, it must be scoped off PHI pages or covered by a BAA.
+
+- ~~**Klaviyo still live on `/pages/allergy-quiz`**~~ **CLOSED 2026-08-09.** Andrew disabled the
+  Klaviyo onsite embed in the Sense theme editor's App embeds panel. Verified on authenticated,
+  cache-busted served bytes with occurrence counting (`split(needle).length - 1`), not `grep -c`:
+  `klaviyo` = 0, `static.klaviyo.com` = 0, `_klOnsite` = 0. Also confirmed absent in the same fetch:
+  `gtag`, `googletagmanager`, `google-analytics`, `connect.facebook`, `fbq(`, `hotjar` — all 0.
+  **Caution for future checks:** an earlier fetch the same morning still showed 10 occurrences
+  because it ran ~2 minutes before the theme save. Re-fetch with a cache-buster after any theme
+  change; a single stale fetch is not evidence.
+
+  **Theme repo drift:** this was an admin-side change, so
+  `/Users/andrewskinner/Local Sites/allergist-on-demand/config/settings_data.json` still carries
+  `disabled: false` for the Klaviyo block locally. Do not `shopify theme push` from that repo without
+  reconciling — a push would re-enable Klaviyo on the PHI page.
+
 - Live app→DB round trip never verified after the 2026-07-28 Cloud SQL downsize.
 - ~~Leftover `diag+preflight@example.com` row, carried since session 27.~~ **CLOSED 2026-07-30.**
   Deleted during Plan 01-06 Task 3. Reconciliation below.
@@ -200,8 +236,10 @@ Historical record of how it was fixed:
   `templates/page.quiz.json` carries uncommitted drift — its git HEAD still references a
   `quiz-kit-smart-product-finder` block, so a push could apply unrelated changes). Target value:
   `/pages/test-options`.
+
 - A matching local edit exists in the theme working tree, uncommitted and unpushed, so local tracks
   intended live state. **Do not commit or push the theme repo** without first reconciling that drift.
+
 - Verification owed: re-fetch the live page and assert `testOptions=%2Fpages%2Ftest-options`.
 
 Corrected page inventory, measured while authenticated past the storefront password. Two of these
@@ -244,6 +282,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-07-30T07:58:35.907Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-live-defect-fixes/01-CONTEXT.md
+Last session: 2026-08-09T12:29:11.878Z
+Stopped at: Phase 2 context gathered
+Resume file: .planning/phases/02-quiz-schema-foundation/02-CONTEXT.md
