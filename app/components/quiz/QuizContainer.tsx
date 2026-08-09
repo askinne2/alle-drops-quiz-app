@@ -457,7 +457,7 @@ export function QuizContainer() {
         {step === "quiz_parts" && (
           <>
             <QuizPartRenderer
-              questions={currentPartQuestions}
+              items={currentPartQuestions}
               answers={answers}
               onAnswerChange={handleAnswerChange}
             />
@@ -551,7 +551,7 @@ export function QuizContainer() {
           <>
             <h2 className={styles.questionCategory__title}>Medical history</h2>
             <QuizPartRenderer
-              questions={PART6_MEDICAL_HISTORY}
+              items={PART6_MEDICAL_HISTORY}
               answers={answers}
               onAnswerChange={handleAnswerChange}
             />
