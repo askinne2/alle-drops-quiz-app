@@ -55,10 +55,10 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 
 ### Quiz Schema Foundation
 
-- [ ] **SCH-01**: A quiz question can declare `required: true`, a `showIf` visibility predicate, and
+- [x] **SCH-01**: A quiz question can declare `required: true`, a `showIf` visibility predicate, and
   an info/static content type, all expressible declaratively in `app/lib/quiz/types.ts`
   (`REQ-quiz-schema-foundation`)
-- [ ] **SCH-02**: No question-ID literals remain in `QuizPartRenderer.tsx` — the display hardcode at
+- [x] **SCH-02**: No question-ID literals remain in `QuizPartRenderer.tsx` — the display hardcode at
   `:36-38` and the `isPartComplete` hardcodes at `:276-278,295-299` are expressed through SCH-01
   with identical behavior (`REQ-quiz-schema-foundation`)
 
@@ -228,8 +228,8 @@ Acknowledged, not in the v1.0 roadmap.
 | DEF-02 | Phase 1 | Complete (2026-07-30, verified live) |
 | DEF-03 | Phase 1 | Complete (2026-07-30, verified live) |
 | DEF-04 | Phase 1 | Complete (2026-07-30, verified live) |
-| SCH-01 | Phase 2 | Pending |
-| SCH-02 | Phase 2 | Pending |
+| SCH-01 | Phase 2 | Complete |
+| SCH-02 | Phase 2 | Complete |
 | HIST-01 | Phase 3 | Pending |
 | HIST-02 | Phase 3 | Pending |
 | HIST-03 | Phase 3 | Pending |

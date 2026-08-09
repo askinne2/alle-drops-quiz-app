@@ -1,10 +1,106 @@
-# Handoff — AlleDrops quiz app (2026-07-30 session 31)
+# Handoff — AlleDrops quiz app (2026-08-09 session 32)
 
-### Status: **GSD Phase 1 COMPLETE — 6/6 plans, deployed, verified 39/40, marked complete in ROADMAP/STATE/REQUIREMENTS/PROJECT.** All four live defects (DEF-01…04) shipped across all three channels. **Three security holes found and closed, one live and exploitable in production.** Suite 51 → **173 tests / 17 files**. PHI cleanup reconciled and the session-27 orphan row is gone. Next up: `/gsd-discuss-phase 2` (quiz schema foundation) — STATE is already advanced and ready. **A complete Phase 1 does NOT mean a clean patient-facing page — Klaviyo still loads 10 times on the quiz page and the live clinical intake carries no medical disclaimer at all.**
+### Status: **GSD Phase 2 COMPLETE — 4/4 plans, verified 11/11 `passed`, marked complete in ROADMAP/STATE/REQUIREMENTS.** The quiz schema is now declarative: `required`, `showIf`, and a static info-block type, with **zero question-ID literals** left in the renderer. Suite 173 → **280 tests / 22 files**, typecheck and build clean, tree clean. **Two real defects were found by browser UAT that every automated test passed straight through** — one of them would have made the entire phase invisible on the storefront. **Pushed, [PR #17](https://github.com/askinne2/alle-drops-quiz-app/pull/17) open and `MERGEABLE` — awaiting Andrew's review + merge. NOT deployed.** Next: Andrew's visual UAT, then merge → `fly deploy` → `/gsd:discuss-phase 3`. **Phase 1's live exposures are still open — Klaviyo still loads 10× on the quiz page and the live clinical intake still carries no medical disclaimer.**
 
 ---
 
-## Session 31 (2026-07-30) — what happened today
+## Session 32 (2026-08-09) — what happened today
+
+### Goal
+Run Phase 2 (Quiz Schema Foundation) end to end: `/gsd-discuss-phase 2` → `/gsd-plan-phase 2` → `/gsd-execute-phase 2`, then UAT it in a real browser.
+
+### What shipped
+
+Declarative quiz schema, all mechanism, zero content:
+
+- **`showIf`** — declarative data object (`{ questionId, equals | isAnswered | includes }`), a three-member union so a two-operator condition is unwritable. No function form, deliberately.
+- **`required`** — defaults to `true`. Verified this reproduces prior behavior with **zero** `required: false` declarations, because the only two implicitly-optional questions (`med_list`, `med_control`) are exactly the `showIf`-gated pair. `[]` no longer counts as answered.
+- **`QuizItem = QuizQuestion | QuizInfoBlock`** discriminated union — the compiler, not a reviewer, prevents an info block from carrying `required`, acquiring an `answers` key, or entering `ALL_SCORED_QUESTIONS`.
+- **`app/lib/quiz/schema.ts`** — new pure module: `isQuestion`, `selectedValues`, `isAnswered`, `evaluateShowIf`, `visibleItems`, `visibleAnswers`, `toggleOption`, `isOptionDisabledByExclusive`, `itemsForPart`.
+- **`QuizPartRenderer.tsx` is now near-dumb** — all 4 question-ID literals, all 5 `"none"` string literals, and `isExclusiveNoneQuestion` are gone. Independently verified at 0 occurrences each.
+
+### The two defects UAT caught — read this before trusting a green suite again
+
+**1. `public/quiz-bundle.js` was never rebuilt. Phase 2 would have been invisible on the storefront.**
+
+It is a **committed build artifact** produced only by `npm run build:theme` (separate vite config). `npm run build` does not touch it. It was last built in Phase 1 (`14e13ff`) and still contained `med_list` ×5, `symptoms_nasal` ×3, and zero `isAnswered`. No plan rebuilt it; the planner, plan-checker, and all four executors missed it; typecheck/test/build all passed.
+
+**This is the session-28 incident repeating exactly.** It also poisoned the first UAT pass — the browser was running Phase-1 code and produced a *false* D-06 failure that I nearly reported as a real bug. Caught only because the live React component took a prop named `questions` while current source passes `items`.
+
+Closed: bundle rebuilt + `tests/quiz-bundle-freshness.test.ts` added as a staleness guard.
+
+**2. Info blocks never reached the renderer — failed Success Criterion 3 outright.**
+
+`QuizContainer.tsx` filtered `item.kind === "question"` before passing items to `QuizPartRenderer`, silently dropping every info block. `QuizPartRenderer` was never at fault — it already had `InfoBlockCard` and `isPartComplete` already skipped non-questions. The container filter was the only broken link.
+
+Closed: `itemsForPart(parts, index)` extracted into `schema.ts` (pure, testable — consistent with the no-DOM-test-infra decision), filter removed, plus a pure unit test and a source-text guard. Both tests observed failing against the pre-fix code first.
+
+### UAT results (Chrome, localhost, all four checks)
+
+| Check | Result |
+|---|---|
+| D-06 — `[]` blocks step advance | PASS (with a non-vacuity control: Next genuinely enables when all three answered) |
+| D-16 — exclusive option still deselects | PASS |
+| D-03 — medication list survives a `taking_meds` toggle | PASS — `preserved: true` |
+| D-10 — info block renders, collects nothing, respects `showIf` | FAILED → fixed → **re-run and PASSED** |
+
+**No PHI row was written** — stopped before "See results". Synthetic data only.
+
+### What worked
+
+- **Reading the DOM instead of screenshots.** Every UAT conclusion came from `next.disabled`, React fiber `memoizedProps`, and occurrence counts — not from looking at pixels. The stale-bundle defect was invisible in screenshots and obvious in `memoizedProps`.
+- **Probing pure functions in isolation before blaming the wiring.** When the browser disagreed with expectation, running `isAnswered` / `toggleOption` / `isPartComplete` through a throwaway vitest file proved the logic was correct and localized the bug to the container in minutes.
+- **Non-vacuity discipline, applied throughout.** The literal-inventory test was proven RED against the pre-refactor renderer (9 recorded counts) before being trusted. Every executor ran negative controls and reverted them.
+- **`split(needle).length - 1` for every occurrence count.** Never `grep -c`.
+- **The blocking human checkpoint earned its keep.** Both defects passed 269 green tests. Without the browser pass, a dead phase ships.
+
+### What didn't work
+
+- **`npm run dev` cannot run non-interactively** — it is `shopify app dev` and blocks on a store-selection prompt. Use `SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev` instead (port 3000). Without that env var, `/quiz-embed` 500s with "Detected an empty appUrl configuration".
+- **Coordinate-based browser clicking across tabs** — window sizes differ between sessions, so clicks land wrong. Driving the DOM directly (`el.click()`, native value setters + `input` event) is far more reliable.
+- **Trusting `npm run build` as proof the front end is current.** It is not. The theme bundle is a separate build.
+- **The decision-coverage gate silently skipped** — it reported "no trackable decisions" because CONTEXT.md writes decisions as `**D-01:**` in prose rather than the format the handler scans. It verified nothing; the plan-checker did that work instead.
+- **The post-planning gap analysis is noisy** — it scans all 46 requirements against one phase's plans, so "38 not covered" is meaningless, and 6 of its "covered" hits are false positives from forward-references in plan text.
+
+### Next steps
+
+1. ~~Push the branch and open a PR.~~ **DONE — [PR #17](https://github.com/askinne2/alle-drops-quiz-app/pull/17)**, `main` ← `phase-2-quiz-schema-foundation`, state `MERGEABLE`, GitGuardian passed. **Andrew reviews and merges — do not merge from a session.**
+2. **Andrew's visual UAT (his stated next action, before Phase 3).** Recipe:
+   ```bash
+   SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev
+   # then open http://localhost:3000/quiz-embed
+   ```
+   `npm run dev` will NOT work — it is `shopify app dev` and blocks on an interactive store prompt. Without `SHOPIFY_APP_URL` the route 500s with "Detected an empty appUrl configuration".
+
+   Four things to look at, TN → any patient info → Part 1:
+   - **Empty selection blocks Next.** Tick a nasal symptom, untick it → Next greys out. Tick "None of the above" → Next enables.
+   - **Exclusive option still unchecks.** Tick "None of the above" → other five grey out but "None" stays clickable. Click it again → everything re-enables, Next greys out.
+   - **Medication list survives a toggle.** Part 5, "yes" to medications, type something, switch to "no", switch back to "yes" → the text is still there. On `main` today it is gone.
+   - **Info block** needs a throwaway fixture to see (nothing ships one yet) — Phase 3 is the first phase with real ones. Skippable.
+3. **Deploy is NOT done.** After merge, `fly deploy`, then confirm the **served** `/quiz-bundle-js` bytes actually changed. A successful deploy is not proof — that is the session-28 lesson and it recurred in this phase.
+4. `/gsd:discuss-phase 3` — mandatory medical history. Phase 3 ships the **first real info blocks** (HIST-04's PCP recommendation), so budget a browser check for them.
+5. **Still open from Phase 1, unchanged:** Klaviyo loads 10× on `/pages/allergy-quiz` (theme `config/settings_data.json`, one-field flip); the live intake page carries no medical disclaimer at all; the Apntly embed needs a keep/disable decision.
+
+### Resume context
+
+- **Branch:** `phase-2-quiz-schema-foundation`, pushed and tracking `origin`, clean tree. Forked from `main` @ `7ac835e`. **PR #17 open, do not merge from a session.**
+- **How to verify:** `npm run typecheck && npm test && npm run build` → expect **280 passing / 22 files**, all clean. For the theme bundle: `npm run build:theme` then confirm `public/quiz-bundle.js` is byte-identical to the committed artifact (the build is deterministic — a diff means source drifted).
+- **To UAT locally:** `SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev`, open `http://localhost:3000/quiz-embed`. Note the page nests an iframe (`initQuiz()` picks `injectIframe` when `window.self === window.top`), so query `document.querySelector('iframe').contentDocument`, not the top document.
+- **Key files:**
+  - `app/lib/quiz/schema.ts` — the pure evaluator; all quiz decisions live here now
+  - `app/lib/quiz/types.ts` — `QuizItem` union, `showIf`, `required`, `exclusive`
+  - `app/components/quiz/QuizContainer.tsx` — `visibleAnswers(ALL_ITEMS, …)` at 3 score sites + payload; `itemsForPart` for rendering
+  - `public/quiz-bundle.js` — committed artifact; **rebuild with `npm run build:theme` whenever quiz source changes**
+  - `tests/quiz-bundle-freshness.test.ts` — guards defect 1 from recurring
+  - `.planning/phases/02-quiz-schema-foundation/02-HUMAN-UAT.md` — full UAT record
+  - `.planning/phases/02-quiz-schema-foundation/02-VERIFICATION.md` — 11/11 passed
+- **Blockers / open questions:**
+  - **No test renders `QuizContainer`.** Both defects lived exactly in that blind spot. Two source-text guards now narrow it; they do not close it. Adding DOM test infra was explicitly declined this phase — revisit if a third wiring bug appears.
+  - Phase 3 open questions with William are unchanged: R6 diagnosis-question scope, the third medical-history free-text label, and whether resume/edit was ever expected.
+
+---
+
+## Session 31 (2026-07-30) — what happened previously
 
 ### Goal
 Run `/gsd-execute-phase 1` (Live Defect Fixes) end to end: 6 plans across 5 waves, then deploy and verify.

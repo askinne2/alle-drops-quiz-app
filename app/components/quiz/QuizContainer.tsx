@@ -10,13 +10,14 @@ import { PatientInfoStep, validatePatientInfoStep, type PatientInfoValues } from
 import { QuizPartRenderer, isPartComplete } from "./QuizPartRenderer";
 import { ConsentStep } from "./ConsentStep";
 import { ResultsDisplay } from "./ResultsDisplay";
-import { QUIZ_PARTS, PART6_MEDICAL_HISTORY, ALL_SCORED_QUESTIONS } from "../../lib/quiz/questions";
+import { QUIZ_PARTS, PART6_MEDICAL_HISTORY, ALL_SCORED_QUESTIONS, ALL_ITEMS } from "../../lib/quiz/questions";
 import {
   calculateTotalScore,
   getScoreBracket,
   generateSymptomProfileId,
   type ScoreBracket,
 } from "../../lib/quiz/scoring";
+import { visibleAnswers, itemsForPart } from "../../lib/quiz/schema";
 import { type QuizAnswers } from "../../lib/quiz/types";
 import { CONSENT_VERSION } from "../../lib/consent-version";
 import { getProductHandle, type QuizProductConfig } from "../../lib/quiz/product-links";
@@ -171,21 +172,19 @@ export function QuizContainer() {
     }
   }, [step, currentPartIndex]);
 
+  // No special-case deletion here (D-03). A hidden question's answer stays in React state so a
+  // patient who flips an answer back and forth never loses typed text with no undo; `visibleAnswers`
+  // strips anything hidden at the score/payload boundary instead, so the submitted record and
+  // displayed score can never reflect a value the patient can no longer see.
   const handleAnswerChange = useCallback((questionId: string, value: string | string[] | number) => {
-    setAnswers((prev) => {
-      const next = { ...prev, [questionId]: value };
-      if (questionId === "taking_meds" && value === "no") {
-        delete next.med_list;
-        delete next.med_control;
-      }
-      return next;
-    });
+    setAnswers((prev) => ({ ...prev, [questionId]: value }));
   }, []);
 
   const buildPayload = useCallback(
     (extra?: { personal_history?: string[]; family_history?: string[] }) => {
       if (!patientState || !symptomProfileId) throw new Error("Missing patient context");
-      const s = score ?? calculateTotalScore(ALL_SCORED_QUESTIONS, answers);
+      const visible = visibleAnswers(ALL_ITEMS, answers);
+      const s = score ?? calculateTotalScore(ALL_SCORED_QUESTIONS, visible);
       const b = scoreBracket ?? getScoreBracket(s);
       return {
         state: patientState,
@@ -197,7 +196,7 @@ export function QuizContainer() {
         quiz_score: s,
         score_bracket: b,
         quiz_date: new Date().toISOString(),
-        answers,
+        answers: visible,
         completion_time: Math.round((Date.now() - startTime) / 1000),
         consent_version: CONSENT_VERSION,
         ...extra,
@@ -232,7 +231,8 @@ export function QuizContainer() {
   }, [step, scoreBracket, symptomProfileId, patientState, submitPayload]);
 
   const goToOutcome = useCallback(() => {
-    const s = calculateTotalScore(ALL_SCORED_QUESTIONS, answers);
+    const visible = visibleAnswers(ALL_ITEMS, answers);
+    const s = calculateTotalScore(ALL_SCORED_QUESTIONS, visible);
     const b = getScoreBracket(s);
     setScore(s);
     setScoreBracket(b);
@@ -314,7 +314,11 @@ export function QuizContainer() {
     }
   }, [consentChecked, submitPayload, answers]);
 
-  const currentPartQuestions = QUIZ_PARTS[currentPartIndex] ?? [];
+  // UAT defect fix: QuizPartRenderer and isPartComplete both already accept the full QuizItem[]
+  // union (questions AND info blocks) — a question-only filter here used to strip every info
+  // block before it ever reached the renderer. itemsForPart is the pure, tested selector; no
+  // filtering happens in this component (see app/lib/quiz/schema.ts).
+  const currentPartItems = itemsForPart(QUIZ_PARTS, currentPartIndex);
   const quizPartsTotal = QUIZ_PARTS.length;
 
   // Overall flow: state_gate (1) + patient_info (2) + 5 quiz parts (3-7) = 7 steps
@@ -451,7 +455,7 @@ export function QuizContainer() {
         {step === "quiz_parts" && (
           <>
             <QuizPartRenderer
-              questions={currentPartQuestions}
+              items={currentPartItems}
               answers={answers}
               onAnswerChange={handleAnswerChange}
             />
@@ -478,8 +482,8 @@ export function QuizContainer() {
                   <button
                     type="button"
                     className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                    disabled={!isPartComplete(currentPartQuestions, answers)}
-                    onClick={() => isPartComplete(currentPartQuestions, answers) && setCurrentPartIndex((i) => i + 1)}
+                    disabled={!isPartComplete(currentPartItems, answers)}
+                    onClick={() => isPartComplete(currentPartItems, answers) && setCurrentPartIndex((i) => i + 1)}
                   >
                     Next →
                   </button>
@@ -487,8 +491,8 @@ export function QuizContainer() {
                   <button
                     type="button"
                     className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                    disabled={!isPartComplete(currentPartQuestions, answers)}
-                    onClick={() => isPartComplete(currentPartQuestions, answers) && goToOutcome()}
+                    disabled={!isPartComplete(currentPartItems, answers)}
+                    onClick={() => isPartComplete(currentPartItems, answers) && goToOutcome()}
                   >
                     See results
                   </button>
@@ -545,7 +549,7 @@ export function QuizContainer() {
           <>
             <h2 className={styles.questionCategory__title}>Medical history</h2>
             <QuizPartRenderer
-              questions={PART6_MEDICAL_HISTORY}
+              items={PART6_MEDICAL_HISTORY}
               answers={answers}
               onAnswerChange={handleAnswerChange}
             />
@@ -607,6 +611,10 @@ export function QuizContainer() {
                 phone: "6155551212",
               });
               setSymptomProfileId(generateSymptomProfileId());
+              // symptoms_sinus: [] carries no answer under D-06 (empty selection no longer counts
+              // as answered), but Test Mode bypasses isPartComplete entirely and jumps straight to
+              // outcome, so this is not a behavior change — noted so a future reader comparing this
+              // sample against the required rules is not surprised.
               const sample: QuizAnswers = {
                 symptoms_nasal: ["sneezing", "runny_nose"],
                 symptoms_eye: ["itchy_eyes"],
@@ -626,7 +634,8 @@ export function QuizContainer() {
                 taking_meds: "no",
               };
               setAnswers(sample);
-              const s = calculateTotalScore(ALL_SCORED_QUESTIONS, sample);
+              const visible = visibleAnswers(ALL_ITEMS, sample);
+              const s = calculateTotalScore(ALL_SCORED_QUESTIONS, visible);
               const b = getScoreBracket(s);
               setScore(s);
               setScoreBracket(b);

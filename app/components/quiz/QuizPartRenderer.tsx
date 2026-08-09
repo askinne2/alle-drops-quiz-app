@@ -1,8 +1,16 @@
-import { type QuizAnswers, type QuizQuestion } from "../../lib/quiz/types";
+import { type QuizAnswers, type QuizInfoBlock, type QuizItem } from "../../lib/quiz/types";
+import {
+  isAnswered,
+  isOptionDisabledByExclusive,
+  isQuestion,
+  selectedValues,
+  toggleOption,
+  visibleItems,
+} from "../../lib/quiz/schema";
 import styles from "../../styles/quiz.module.css";
 
 interface QuizPartRendererProps {
-  questions: QuizQuestion[];
+  items: QuizItem[];
   answers: QuizAnswers;
   onAnswerChange: (questionId: string, value: string | string[] | number) => void;
   disabled?: boolean;
@@ -18,33 +26,51 @@ const BOTHER_LABELS = [
   "Extremely bothersome",
 ] as const;
 
-function getMultiAnswer(answer: string | string[] | number | undefined): string[] {
-  if (Array.isArray(answer)) return answer;
-  return [];
+/**
+ * Static content block (D-09 / D-10 / D-11). Renders an optional heading, one `<p>` per
+ * paragraph, and an optional bullet list — all as plain React children, so escaping is
+ * automatic and there is no HTML injection sink here (no raw-HTML-setting React prop, no
+ * markdown, no sanitizer). Phase 1 closed a reflected XSS on this exact page; this component
+ * does not reopen that surface. It never reads `answers` and never calls `onAnswerChange`, so
+ * it has no way to produce an `answers` entry (D-11's "leaves no trace in the submission").
+ */
+function InfoBlockCard({ block }: { block: QuizInfoBlock }) {
+  return (
+    <div className={styles.questionCard}>
+      {block.heading && <label className={styles.questionCard__label}>{block.heading}</label>}
+      {block.paragraphs.map((paragraph, idx) => (
+        <p key={idx} className={styles.questionCard__subtitle}>
+          {paragraph}
+        </p>
+      ))}
+      {block.bullets && block.bullets.length > 0 && (
+        <ul>
+          {block.bullets.map((bullet, idx) => (
+            <li key={idx}>{bullet}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
-function isExclusiveNoneQuestion(q: QuizQuestion): boolean {
-  return ["timing_triggers", "symptoms_nasal", "symptoms_eye", "symptoms_sinus"].includes(q.id);
-}
-
-export function QuizPartRenderer({ questions, answers, onAnswerChange, disabled = false }: QuizPartRendererProps) {
-  const takingMeds = answers.taking_meds;
-
+export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = false }: QuizPartRendererProps) {
   return (
     <div className={styles.questionCategory}>
-      {questions.map((question) => {
-        if (question.part === 5 && (question.id === "med_list" || question.id === "med_control")) {
-          if (takingMeds !== "yes") return null;
+      {visibleItems(items, answers).map((item) => {
+        // Visibility is fully data-driven now — no per-ID part/id guard here. `visibleItems`
+        // filters both hidden questions and hidden info blocks from a single evaluator (D-01/D-07).
+        if (item.kind === "info") {
+          return <InfoBlockCard key={`info-${item.id}`} block={item} />;
         }
 
-        const key = `q-${question.id}`;
+        const key = `q-${item.id}`;
 
-        switch (question.type) {
+        switch (item.type) {
           case "checkbox_multi":
           case "radio_multi": {
-            const raw = getMultiAnswer(answers[question.id]);
-            const exclusiveNone = isExclusiveNoneQuestion(question);
-            const hasNone = exclusiveNone && raw.includes("none");
+            const question = item;
+            const raw = selectedValues(answers[question.id]);
 
             return (
               <div key={question.id} className={styles.questionCard}>
@@ -54,8 +80,6 @@ export function QuizPartRenderer({ questions, answers, onAnswerChange, disabled 
                 <div className={styles.questionCard__optionsVertical} role="group" aria-labelledby={key}>
                   {(question.options || []).map((opt) => {
                     const selected = raw.includes(opt.value);
-                    const isNone = opt.value === "none";
-                    const disableOthers = exclusiveNone && hasNone && !isNone;
                     return (
                       <label
                         key={opt.value}
@@ -64,19 +88,8 @@ export function QuizPartRenderer({ questions, answers, onAnswerChange, disabled 
                         <input
                           type="checkbox"
                           checked={selected}
-                          disabled={disabled || disableOthers}
-                          onChange={() => {
-                            let cur = getMultiAnswer(answers[question.id]);
-                            if (exclusiveNone && isNone) {
-                              onAnswerChange(question.id, selected ? [] : ["none"]);
-                              return;
-                            }
-                            if (exclusiveNone && cur.includes("none")) {
-                              cur = cur.filter((v) => v !== "none");
-                            }
-                            const next = selected ? cur.filter((v) => v !== opt.value) : [...cur, opt.value];
-                            onAnswerChange(question.id, next);
-                          }}
+                          disabled={disabled || isOptionDisabledByExclusive(question, raw, opt)}
+                          onChange={() => onAnswerChange(question.id, toggleOption(question, raw, opt.value))}
                         />
                         <span>{opt.label}</span>
                       </label>
@@ -88,6 +101,7 @@ export function QuizPartRenderer({ questions, answers, onAnswerChange, disabled 
           }
 
           case "severity_0_3": {
+            const question = item;
             const val = typeof answers[question.id] === "number" ? (answers[question.id] as number) : undefined;
             const opts = ["None", "Mild", "Moderate", "Severe"];
             return (
@@ -119,6 +133,7 @@ export function QuizPartRenderer({ questions, answers, onAnswerChange, disabled 
           }
 
           case "frequency_0_4": {
+            const question = item;
             const val = typeof answers[question.id] === "number" ? (answers[question.id] as number) : undefined;
             return (
               <div key={question.id} className={styles.questionCard}>
@@ -148,6 +163,7 @@ export function QuizPartRenderer({ questions, answers, onAnswerChange, disabled 
           }
 
           case "bother_0_4": {
+            const question = item;
             const val = typeof answers[question.id] === "number" ? (answers[question.id] as number) : undefined;
             return (
               <div key={question.id} className={styles.questionCard}>
@@ -177,6 +193,7 @@ export function QuizPartRenderer({ questions, answers, onAnswerChange, disabled 
           }
 
           case "yesno": {
+            const question = item;
             const val = answers[question.id];
             const y = val === "yes";
             const n = val === "no";
@@ -212,6 +229,7 @@ export function QuizPartRenderer({ questions, answers, onAnswerChange, disabled 
           }
 
           case "text_input": {
+            const question = item;
             const val = typeof answers[question.id] === "string" ? answers[question.id] : "";
             return (
               <div key={question.id} className={styles.questionCard}>
@@ -232,6 +250,7 @@ export function QuizPartRenderer({ questions, answers, onAnswerChange, disabled 
           }
 
           case "control_0_3": {
+            const question = item;
             const val = typeof answers[question.id] === "string" ? answers[question.id] : "";
             return (
               <div key={question.id} className={styles.questionCard}>
@@ -268,43 +287,18 @@ export function QuizPartRenderer({ questions, answers, onAnswerChange, disabled 
   );
 }
 
-/** Whether every question in the part that is shown has a valid answer */
-export function isPartComplete(questions: QuizQuestion[], answers: QuizAnswers): boolean {
-  const takingMeds = answers.taking_meds;
-
-  for (const question of questions) {
-    if (question.part === 5 && (question.id === "med_list" || question.id === "med_control")) {
-      if (takingMeds !== "yes") continue;
-    }
-
-    const a = answers[question.id];
-
-    switch (question.type) {
-      case "checkbox_multi":
-      case "radio_multi":
-        if (!Array.isArray(a)) return false;
-        break;
-      case "severity_0_3":
-      case "frequency_0_4":
-      case "bother_0_4":
-        if (typeof a !== "number") return false;
-        break;
-      case "yesno":
-        if (a !== "yes" && a !== "no") return false;
-        break;
-      case "text_input":
-        if (takingMeds === "yes" && question.id === "med_list") {
-          if (typeof a !== "string" || !a.trim()) return false;
-        }
-        break;
-      case "control_0_3":
-        if (takingMeds === "yes" && question.id === "med_control") {
-          if (typeof a !== "string" || !a) return false;
-        }
-        break;
-      default:
-        break;
-    }
+/**
+ * Whether every visible item in the part that is a question has a valid answer. Non-question
+ * items (info blocks) are skipped without a required check — the `isQuestion` narrow is the
+ * first statement in the loop body, before any required logic runs, so an info block can never
+ * acquire required-ness (D-12). Required-ness defaults to true; only an explicit
+ * `required: false` opts a question out (D-05).
+ */
+export function isPartComplete(items: QuizItem[], answers: QuizAnswers): boolean {
+  for (const item of visibleItems(items, answers)) {
+    if (!isQuestion(item)) continue;
+    if (item.required === false) continue;
+    if (!isAnswered(item, answers[item.id])) return false;
   }
   return true;
 }
