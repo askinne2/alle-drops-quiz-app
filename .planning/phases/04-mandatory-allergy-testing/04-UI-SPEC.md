@@ -500,13 +500,19 @@ contract governs, and no token or class here applies to them:
 - **TEST-06's storefront copy deletions** (`allergist-on-demand` theme repo, product pages,
   `/pages/test-options`) — Shopify theme/Liquid content, edited via the theme editor or a
   `shopify theme push` after D-12's reconciliation, not this repo's CSS Module.
-- **The `quiz-history` Customer Account UI extension** (`extensions/quiz-history/`) — CONTEXT.md D-05
-  makes its refactor a Phase 4 dependency (patient-side file access lands there), and it is currently
-  non-functional: it still reads PHI metafields that were deleted and renders empty state. It is a
-  **third rendering surface** — Shopify Customer Account UI components, not this repo's CSS Module
-  and not Polaris — so none of this contract's tokens or classes apply to it. **If the planner scopes
-  it into Phase 4, it needs its own design contract.** Flagged here rather than left silent, per the
-  UI checker's scope note.
+- **The `quiz-history` Customer Account UI extension** (`extensions/quiz-history/`) — patient-side
+  file access (D-05) surfaces here. It is a **third rendering surface** — Shopify Customer Account UI
+  components, not this repo's CSS Module and not Polaris — so none of this contract's tokens or
+  classes apply to it.
+
+  ⚠️ **CORRECTED 2026-08-09.** This entry originally read *"it is currently non-functional: it still
+  reads PHI metafields that were deleted and renders empty state… if the planner scopes it into
+  Phase 4, it needs its own design contract."* **That was wrong.** `extensions/quiz-history/src/`
+  contains zero metafield references and already calls `/api/me/assessments` with a Bearer token; the
+  refactor landed `ca3c3f4` → `f762aaa` (2026-05-08) and `REQUIREMENTS.md:30` records it as DONE-07.
+  **There is no refactor task and no fourth blocker.** Plan 04-18 extends a working component; plan
+  04-19 check 13 is a 10-minute live render check. Retained in place per the project's retract-in-place
+  convention. See `04-CONTEXT.md` D-05 for the full correction.
 
 ---
 

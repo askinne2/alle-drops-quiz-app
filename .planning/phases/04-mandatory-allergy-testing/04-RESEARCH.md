@@ -544,7 +544,20 @@ return new Response(JSON.stringify({ url }), { status: 200, headers: { "Cache-Co
 
 ## Open Questions
 
+> **Status: all four RESOLVED.** Q1 was resolved by independent verification during the plan-phase
+> run (2026-08-09) — the claim was stale, confirmed below. Q2, Q3, and Q4 are routed to plan
+> **04-10 Task 2**'s `gate="blocking-human"` checkpoint, which ratifies concrete answers before any
+> upload code is written. Q3 additionally has a planner-selected default (Fly-proxied, overridable at
+> that checkpoint). Retained in full below because the reasoning is what makes the checkpoint
+> answerable.
+
 1. **Is `extensions/quiz-history` actually broken in production, or was CONTEXT.md's claim stale?**
+   **(RESOLVED 2026-08-09 — the claim was stale. There is no fourth blocker and no refactor task.)**
+   Verified independently by the orchestrator: `extensions/quiz-history/src/` contains **zero**
+   `metafield` or `alledrops.` references; both `QuizHistoryBlock.jsx` and `QuizHistoryBlock.js`
+   `fetch()` `/api/me/assessments` with a Bearer token. `04-CONTEXT.md` D-05 and `04-UI-SPEC.md`
+   are corrected in place. Plan **04-18** extends the working component; plan **04-19 check 13** is
+   the live render check. Original analysis retained below.
    - What we know: the current source (`QuizHistoryBlock.jsx`) correctly calls
      `GET /api/me/assessments` and links to `GET /api/me/assessment/:id/pdf` — not Shopify metafields.
      This refactor (commit `ca3c3f4`, "refactor quiz-history extension to call Fly API") and its
