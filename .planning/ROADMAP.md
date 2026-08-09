@@ -21,7 +21,7 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Live Defect Fixes** - Four defects in already-shipped code; ships alone this week (completed 2026-07-30)
-- [ ] **Phase 2: Quiz Schema Foundation** - `required`, `showIf`, and static-info question types
+- [x] **Phase 2: Quiz Schema Foundation** - `required`, `showIf`, and static-info question types (completed 2026-08-09)
 - [ ] **Phase 3: Mandatory Medical History** - Rebuilt history section every patient passes through
 - [ ] **Phase 4: Mandatory Allergy Testing** - Two-option testing split; both bypasses deleted
 - [ ] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale
@@ -145,7 +145,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 02-04-PLAN.md — D-03 boundary wiring at all three score sites, phase gate, blocking human verification
+- [x] 02-04-PLAN.md — D-03 boundary wiring at all three score sites, phase gate, blocking human verification
 **Notes**: ~1 day. This is the load-bearing phase — `CON-quiz-schema-foundation-is-load-bearing`.
 Ship it before Phases 3 and 4 or accept five more ID-literal special cases across
 `QuizPartRenderer.tsx`.
@@ -389,7 +389,7 @@ exposures today.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
-| 2. Quiz Schema Foundation | 3/4 | In Progress|  |
+| 2. Quiz Schema Foundation | 4/4 | Complete   | 2026-08-09 |
 | 3. Mandatory Medical History | 0/TBD | Not started | - |
 | 4. Mandatory Allergy Testing | 0/TBD | Not started | - |
 | 5. Preliminary Score Page | 0/TBD | Not started | - |
