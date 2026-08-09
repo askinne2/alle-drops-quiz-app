@@ -83,7 +83,17 @@ _No TDD tasks; all three are documentation-only edits with automated string-pres
 
 ## Deviations from Plan
 
-None - plan executed exactly as written. All three tasks' automated verify commands passed on first attempt; no auto-fixes, no blockers, no architectural questions arose.
+None in task execution — all three tasks' automated verify commands passed on first attempt; no auto-fixes, no blockers, no architectural questions arose.
+
+**One process deviation, at the state-update step:** this plan's frontmatter lists `requirements:
+[TEST-04]`, and the standard post-plan step is `requirements mark-complete` on that ID. TEST-04 is
+also claimed by 15 other plans in this phase (`04-02`, `04-10` through `04-18`, and the terminal
+`04-19`), because it covers the full multi-file upload feature, not just this plan's documentation
+rewrite. Running `requirements mark-complete` now would flip TEST-04's checkbox and traceability
+status to "Complete" in `REQUIREMENTS.md` while zero upload code exists yet — a false record in a
+document this HIPAA-adjacent project treats as a compliance trail. Skipped intentionally; TEST-04
+should be marked complete by whichever plan is actually the last to land its upload code (`04-19`
+is the most likely candidate, since it lists all seven `TEST-*` IDs).
 
 ## Issues Encountered
 None.
