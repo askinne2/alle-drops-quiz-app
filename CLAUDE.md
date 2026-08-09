@@ -6,7 +6,7 @@
 > 2. **Never** write PHI to Shopify metafields, customer record fields, or any Shopify Admin API payload. PHI lives in Cloud SQL only.
 > 3. **Never** add Google Sheets, Google Drive, Google Docs, or any Google Workspace product to the PHI path. Workspace BAA does not cover Apps Script-driven Sheets writes.
 > 4. **Never** add analytics, session-replay, chat widgets, or third-party tracking scripts to any page that collects PHI. Specifically: no Google Analytics, GTM, Klaviyo, Meta Pixel, Hotjar, FullStory, Segment, Intercom, etc. on the quiz embed page.
-> 5. PHI fields are: `name`, `dob`, `phone`, `email`, `state` (when tied to identity), `quiz_score`, `score_bracket`, `answers`, `personal_history`, `family_history`. Treat the entire `submissions` table as PHI.
+> 5. PHI fields are: `name`, `dob`, `phone`, `email`, `state` (when tied to identity), `quiz_score`, `score_bracket`, `answers`, `personal_history`, `family_history`, `uploaded_filename`, `submission_files` (the whole join table — a filename can itself carry a patient name, so filenames are PHI even though they are not a database column on `submissions`). Treat the entire `submissions` table as PHI.
 > 6. Non-PHI flags allowed in Shopify metafields: `alledrops.last_completed_at` (date), `alledrops.quiz_count` (int). Nothing else.
 
 ---
@@ -142,19 +142,20 @@ shopify app deploy
 
 Before opening a PR that touches anything in the PHI path, confirm:
 
-- [ ] No `console.log` / `console.error` of name, dob, email, phone, score, bracket, answers, history, or full row objects. Log IDs and counts only.
+- [ ] No `console.log` / `console.error` of name, dob, email, phone, score, bracket, answers, history, uploaded filenames, or full row objects. Log IDs and counts only.
 - [ ] All routes that return PHI verify the requester's identity *before* the database query (auth check, then ownership check via `customer_id_shopify` or `email`).
 - [ ] All database lookups for PHI use `getSubmissionByIdForCustomer` or equivalent ownership-bounded helpers — never raw `WHERE id = $1` without a customer/email constraint.
 - [ ] Error responses do not echo PHI (e.g., don't return "patient John Doe not found" — return "submission not found").
 - [ ] No PHI-shaped values in URL paths, query strings, or referrer headers (use POST bodies or path params with opaque IDs only).
 - [ ] If adding a new external dependency, confirm it doesn't make outbound network calls during PHI processing (no telemetry, no auto-update checks). For PDF generation specifically: no remote fonts, no remote images, no remote CSS.
 - [ ] If touching the iframe embed page or any quiz-collection surface, confirm no third-party scripts were added — see compliance rules at the top of this file.
+- [ ] Uploaded file bytes are read and written only server-side against GCS, never proxied through a browser-facing public URL, and downloads are always `Content-Disposition: attachment`, never inline-rendered.
 
 ## Common pitfalls
 
 - **`shopify app deploy` does not deploy the Fly app.** It only ships extensions and config to Shopify. Two separate deploy systems: Shopify (`shopify app deploy`) and Fly (`fly deploy`).
 - **Customer Account UI extensions only render in Shopify's customer accounts UI** (a different surface than the storefront theme), so they don't pick up theme styles or storefront scripts.
-- **The Customer Account UI extension currently still reads PHI metafields that no longer exist.** It needs refactoring to call the Fly API instead. Until that's done, the dashboard will show empty state in dev.
+- ~~**The Customer Account UI extension currently still reads PHI metafields that no longer exist.** It needs refactoring to call the Fly API instead. Until that's done, the dashboard will show empty state in dev.~~ **RETRACTED 2026-05-08 — this refactor already shipped.** It landed in `ca3c3f4` and was hardened by `f762aaa`. `extensions/quiz-history/src/` contains zero `metafield` references; it calls `GET /api/me/assessments` with a Bearer token. `.planning/REQUIREMENTS.md` records it as DONE-07.
 - **Sessions are stored in SQLite via Prisma + Litestream** (see `fly.toml` mounts). PHI submissions are in Postgres (Cloud SQL). Two distinct stores, do not conflate.
 - **`pg` and `?sslmode=require`:** if the connection string has `?sslmode=require`, Node's `pg` library tries to verify the server cert against the system CA bundle and fails for Cloud SQL. Use `?sslmode=no-verify` for dev, or pin the Cloud SQL server CA for prod.
 - **Never `git reset --hard` to retroactively branch with uncommitted modifications to tracked files.** The modifications get wiped silently. If commits landed on `main` that should have been on a branch: use `git branch <name>` to mark them, then `git reset --keep` (preserves working tree changes) or `git stash` first. Better: always create the branch *before* starting work.
