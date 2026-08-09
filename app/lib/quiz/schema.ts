@@ -163,7 +163,7 @@ export function itemsForPart(parts: QuizItem[][], index: number): QuizItem[] {
  * An answers key that belongs to NO item in `items` at all is passed through UNTOUCHED — this is
  * DIR-02, and it is the single highest-stakes behavior in this module. `visibleAnswers` is
  * sometimes handed an item list that is deliberately Part-6-blind (`ALL_SCORED_QUESTIONS`, used
- * for scoring), and `history_personal` / `history_family` must survive that call unchanged. A
+ * for scoring), and `history_comorbidities` must survive that call unchanged. A
  * keep-known-and-visible whitelist would silently drop them the moment it saw a Part-6-blind
  * list — a clinical record losing data with no error and no failing test. The blacklist form
  * below fails open in the same direction D-04 chose: it can only ever strip something it

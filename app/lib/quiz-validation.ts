@@ -25,8 +25,6 @@ export interface QuizSubmissionData {
   quiz_date?: string;
   answers: Record<string, unknown>;
   completion_time?: number;
-  personal_history?: string[];
-  family_history?: string[];
   consent_version?: string;
 }
 
@@ -112,13 +110,6 @@ export function validateQuizData(data: unknown): ValidationResult {
 
   if (!quizData.answers || typeof quizData.answers !== "object" || Array.isArray(quizData.answers)) {
     return { valid: false, error: "answers must be an object" };
-  }
-
-  if (quizData.personal_history !== undefined && !Array.isArray(quizData.personal_history)) {
-    return { valid: false, error: "personal_history must be an array of strings when provided" };
-  }
-  if (quizData.family_history !== undefined && !Array.isArray(quizData.family_history)) {
-    return { valid: false, error: "family_history must be an array of strings when provided" };
   }
 
   return { valid: true };

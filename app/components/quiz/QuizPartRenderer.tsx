@@ -32,31 +32,82 @@ const BOTHER_LABELS = [
  * markdown, no sanitizer). Phase 1 closed a reflected XSS on this exact page; this component
  * does not reopen that surface. It never reads `answers` and never calls `onAnswerChange`, so
  * it has no way to produce an `answers` entry (D-11's "leaves no trace in the submission").
+ *
+ * Uses its own `.infoBlockCard*` class family — NOT `.questionCard`/`.questionCard__label`/
+ * `.questionCard__subtitle` — so a patient cannot mistake a clinical recommendation for a
+ * question asking for input (the session-32 defect this DOM test infra exists to catch).
+ * The outer div carries the ARIA note role, announcing supplementary information to a screen
+ * reader and giving the DOM test a stable, non-brittle query handle. The card stays fully
+ * inert: no focus stop, no click target, no hover state (`.infoBlockCard` carries no `cursor`
+ * or `:hover` rule).
  */
 function InfoBlockCard({ block }: { block: QuizInfoBlock }) {
   return (
-    <div className={styles.questionCard}>
-      {block.heading && <label className={styles.questionCard__label}>{block.heading}</label>}
-      {block.paragraphs.map((paragraph, idx) => (
-        <p key={idx} className={styles.questionCard__subtitle}>
-          {paragraph}
-        </p>
-      ))}
-      {block.bullets && block.bullets.length > 0 && (
-        <ul>
-          {block.bullets.map((bullet, idx) => (
-            <li key={idx}>{bullet}</li>
-          ))}
-        </ul>
-      )}
+    <div className={styles.infoBlockCard} role="note">
+      <div className={styles.infoBlockCard__icon} aria-hidden="true">
+        {/* fill uses single quotes deliberately — tests/quiz-part-renderer-no-literals.test.ts
+            guards a quoted option-value literal elsewhere in this file, and a double-quoted
+            attribute value here would be an unrelated false-positive match against that needle. */}
+        <svg viewBox="0 0 24 24" fill='none' xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" stroke="rgb(var(--color-button, 0, 123, 255))" strokeWidth="2" />
+          <line
+            x1="12"
+            y1="11"
+            x2="12"
+            y2="16"
+            stroke="rgb(var(--color-button, 0, 123, 255))"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <circle cx="12" cy="7.5" r="1.25" fill="rgb(var(--color-button, 0, 123, 255))" />
+        </svg>
+      </div>
+      <div>
+        {block.heading && <label className={styles.infoBlockCard__heading}>{block.heading}</label>}
+        {block.paragraphs.map((paragraph, idx) => (
+          <p key={idx} className={styles.infoBlockCard__paragraph}>
+            {paragraph}
+          </p>
+        ))}
+        {block.bullets && block.bullets.length > 0 && (
+          <ul className={styles.infoBlockCard__bullets}>
+            {block.bullets.map((bullet, idx) => (
+              <li key={idx}>{bullet}</li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
 
+/**
+ * D-06's exact reveal signature: `showIf` present AND `required` explicitly `false`. True of
+ * only the three HIST-03 reveals today, and no question-ID literal is needed to detect it —
+ * both flags already live on the schema item.
+ */
+function isRevealItem(item: QuizItem): boolean {
+  return isQuestion(item) && Boolean(item.showIf) && item.required === false;
+}
+
+/**
+ * A GATE is any item whose next visible sibling is a reveal (per `isRevealItem`) whose
+ * `showIf.questionId` points back at this item's `id`. Purely data-driven lookahead — no
+ * question-ID literal. When true, the gate gets `styles.questionCard__gateParent` and its
+ * paired reveal gets `styles.questionCard__revealChild`, fusing the pair into one visual card
+ * per UI-SPEC.md's HIST-03 gate+reveal contract.
+ */
+function isGateItem(item: QuizItem, nextItem: QuizItem | undefined): boolean {
+  if (!nextItem || !isRevealItem(nextItem) || !isQuestion(nextItem)) return false;
+  return nextItem.showIf?.questionId === item.id;
+}
+
 export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = false }: QuizPartRendererProps) {
+  const visible = visibleItems(items, answers);
+
   return (
     <div className={styles.questionCategory}>
-      {visibleItems(items, answers).map((item) => {
+      {visible.map((item, idx) => {
         // Visibility is fully data-driven now — no per-ID part/id guard here. `visibleItems`
         // filters both hidden questions and hidden info blocks from a single evaluator (D-01/D-07).
         if (item.kind === "info") {
@@ -65,6 +116,18 @@ export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = fa
 
         const key = `q-${item.id}`;
 
+        // HIST-03 gate+reveal fusion (D-06 / UI-SPEC.md): a gate's card loses its bottom
+        // rounding and margin, its reveal's card loses its top rounding and margin and gains a
+        // dashed top divider — together they read as one continuous two-part card.
+        const nextItem = visible[idx + 1];
+        const cardClassName = [
+          styles.questionCard,
+          isGateItem(item, nextItem) ? styles.questionCard__gateParent : "",
+          isRevealItem(item) ? styles.questionCard__revealChild : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+
         switch (item.type) {
           case "checkbox_multi":
           case "radio_multi": {
@@ -72,7 +135,7 @@ export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = fa
             const raw = selectedValues(answers[question.id]);
 
             return (
-              <div key={question.id} className={styles.questionCard}>
+              <div key={question.id} className={cardClassName}>
                 <label className={styles.questionCard__label} id={key}>
                   {question.text}
                 </label>
@@ -104,7 +167,7 @@ export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = fa
             const val = typeof answers[question.id] === "number" ? (answers[question.id] as number) : undefined;
             const opts = ["None", "Mild", "Moderate", "Severe"];
             return (
-              <div key={question.id} className={styles.questionCard}>
+              <div key={question.id} className={cardClassName}>
                 <label className={styles.questionCard__label} id={key}>
                   {question.text}
                 </label>
@@ -135,7 +198,7 @@ export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = fa
             const question = item;
             const val = typeof answers[question.id] === "number" ? (answers[question.id] as number) : undefined;
             return (
-              <div key={question.id} className={styles.questionCard}>
+              <div key={question.id} className={cardClassName}>
                 <label className={styles.questionCard__label} id={key}>
                   {question.text}
                 </label>
@@ -165,7 +228,7 @@ export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = fa
             const question = item;
             const val = typeof answers[question.id] === "number" ? (answers[question.id] as number) : undefined;
             return (
-              <div key={question.id} className={styles.questionCard}>
+              <div key={question.id} className={cardClassName}>
                 <label className={styles.questionCard__label} id={key}>
                   {question.text}
                 </label>
@@ -197,7 +260,7 @@ export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = fa
             const y = val === "yes";
             const n = val === "no";
             return (
-              <div key={question.id} className={styles.questionCard}>
+              <div key={question.id} className={cardClassName}>
                 <label className={styles.questionCard__label} id={key}>
                   {question.text}
                 </label>
@@ -231,7 +294,7 @@ export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = fa
             const question = item;
             const val = typeof answers[question.id] === "string" ? answers[question.id] : "";
             return (
-              <div key={question.id} className={styles.questionCard}>
+              <div key={question.id} className={cardClassName}>
                 <label className={styles.questionCard__label} htmlFor={question.id}>
                   {question.text}
                 </label>
@@ -252,7 +315,7 @@ export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = fa
             const question = item;
             const val = typeof answers[question.id] === "string" ? answers[question.id] : "";
             return (
-              <div key={question.id} className={styles.questionCard}>
+              <div key={question.id} className={cardClassName}>
                 <label className={styles.questionCard__label} id={key}>
                   {question.text}
                 </label>

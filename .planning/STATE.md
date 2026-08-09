@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 3 planned (7 plans, 5 waves)
-last_updated: "2026-08-09T18:01:57.377Z"
+status: executing
+stopped_at: Completed 03-06-PLAN.md
+last_updated: "2026-08-09T20:15:30.233Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 17
-  completed_plans: 10
+  completed_plans: 16
   percent: 25
 ---
 
@@ -22,16 +22,18 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 3 — mandatory medical history
+**Current focus:** Phase 03 — mandatory-medical-history
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
-Status: Ready to plan
+Phase: 03 (mandatory-medical-history) — EXECUTING
+Plan: 6 of 7 — COMPLETE
+Status: 03-06 complete (pre-migration backup ID 1786306233540 SUCCESSFUL, migration file
+  committed alone, no DDL run). Plan 03-07 next: run the DROP COLUMN DDL, but only after
+  confirming plan 03-02's app code is deployed and live on Fly.
 Last activity: 2026-08-09
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████████░] 94%
 
 Codebase baseline: `main` @ `a8c13d7`, Phase 2 complete and UAT'd, **282 tests / 23 files passing**,
 typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release **v49**, and
@@ -52,7 +54,7 @@ on two data points. There are now three — decide before Phase 3 executes.
 
 **Velocity:**
 
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -64,6 +66,12 @@ on two data points. There are now three — decide before Phase 3 executes.
 | 2 | 4 | - | - |
 
 **Recent Trend:** No data yet.
+| Phase 03 P01 | 45min | 3 tasks | 5 files |
+| Phase 03-mandatory-medical-history P02 | 6min | 3 tasks | 10 files |
+| Phase 03 P03 | 25min | 3 tasks | 4 files |
+| Phase 03 P04 | 55min | 3 tasks | 5 files |
+| Phase 03 P05 (Tasks 1-2 only; Task 3 checkpoint outstanding) | 35min | 2 tasks | 3 files |
+| Phase 03 P06 | 15min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -84,6 +92,16 @@ Affecting current work:
 
 - The "purchase if approved" paragraph must not ship (`DEC-no-approval-promise-copy`)
 - Max score is derived from the question set, never hardcoded (`DEC-derive-max-score-from-question-set`)
+- [Phase 03]: 03-01: Tasks 1+2 combined into one commit — Task 2's getQuestionById fix is a compile-time requirement for Task 1's PART6_MEDICAL_HISTORY type widening (QuizQuestion[] -> QuizItem[]) to typecheck
+- [Phase 03]: 03-01: current_medications kept required (not required:false) — comorbidity checklist is itself required so isAnswered is always true by completion; a required safety field over-collects rather than silently omits
+- [Phase 03-mandatory-medical-history]: 03-02: QuizContainer.tsx left untouched — client-side personal_history/family_history closure is plan 03-03's scope per the plan's own threat model (T-3-01), not this plan's files_modified list
+- [Phase 03]: 03-03: D-11 proceed-without-testing chain and D-12 medical_history FlowStep both deleted from QuizContainer.tsx/ResultsDisplay.tsx; extra payload parameter removed, closing T-3-01's client half
+- [Phase 03]: 03-03: source-text guard tests/quiz-medical-history-deletion.test.ts proven RED (11 QuizContainer.tsx + 1 ResultsDisplay.tsx assertions failed) against pre-change source before going green — guard's own prose contains medical_history 9x, intentionally, per its own acceptance criteria
+- [Phase 03-mandatory-medical-history]: 03-04: Task 1's package-legitimacy checkpoint (jsdom, @testing-library/react) explicitly approved by Andrew in-session; DOM test infra adopted as devDependencies only, closing the QUIZ_PARTS -> itemsForPart -> renderer blind spot behind three prior UAT defects
+- [Phase 03]: 03-04: gate/reveal fusion CSS (.questionCard__gateParent/.revealChild) derived purely from showIf+required, zero question-ID literals; InfoBlockCard given its own .infoBlockCard class family and role=note, no longer sharing classes with a question card
+- [Phase 03]: 03-05 (Tasks 1-2): public/quiz-bundle.js rebuilt (185796 -> 186699 bytes), folding in three commits of deferred quiz-source changes from 03-01/03-03/03-04; freshness guard extended with 5 presence + 2 absence Phase-3 markers, each independently proven 0-before/>=1-after (or 6-before/0-after for the absence pair); phase-wide absence/presence audit all clean in live code (358/27 tests green, typecheck clean, both builds green, theme build proven deterministic). Task 3 (8-check human browser verification) is outstanding — plans 03-06/03-07 remain blocked until Andrew completes it.
+- [Phase 03]: 03-06: Named on-demand Cloud SQL backup taken and verified before any DDL: ID 1786306233540, SUCCESSFUL, read back via `gcloud sql backups list`/`describe` rather than trusted from exit code
+- [Phase 03]: 03-06: migrations/003_drop_medical_history_legacy_columns.sql authored and committed alone (D-01 non-negotiable) — no DDL executed, plan 03-07 runs it after app code is confirmed live on Fly
 
 ### Pending Todos
 
@@ -292,6 +310,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-09T18:01:57.371Z
-Stopped at: Phase 3 planned (7 plans, 5 waves)
-Resume file: .planning/phases/03-mandatory-medical-history/03-01-PLAN.md
+Last session: 2026-08-09T20:15:30.228Z
+Stopped at: Completed 03-06-PLAN.md
+Resume file: None

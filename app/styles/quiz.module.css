@@ -359,6 +359,95 @@
   }
 }
 
+/* ==========================================================================
+   Info Block Card (HIST-04) — a distinct class family, NOT a .questionCard
+   modifier, so .questionCard:hover's box-shadow can never apply here. First
+   production consumer: no_pcp_recommendation (HIST-04's "no" branch).
+   ========================================================================== */
+
+.infoBlockCard {
+  padding: var(--quiz-spacing-md);
+  border-radius: var(--quiz-border-radius);
+  background-color: rgba(var(--color-foreground, 32, 34, 35), 0.02);
+  border-left: 3px solid rgb(var(--color-button, 0, 123, 255));
+  display: flex;
+  gap: var(--quiz-spacing-sm);
+  align-items: flex-start;
+}
+
+@media (min-width: 750px) {
+  .infoBlockCard {
+    padding: var(--quiz-spacing-lg);
+    border-left-width: 4px;
+  }
+}
+
+.infoBlockCard__icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  stroke: rgb(var(--color-button, 0, 123, 255));
+}
+
+@media (min-width: 750px) {
+  .infoBlockCard__icon {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.infoBlockCard__heading {
+  display: block;
+  font-size: var(--font-body-size, 1.4rem);
+  font-weight: 600;
+  margin-bottom: var(--quiz-spacing-sm);
+  color: rgb(var(--color-foreground, 32, 34, 35));
+}
+
+@media (min-width: 750px) {
+  .infoBlockCard__heading {
+    font-size: var(--font-body-size, 1.6rem);
+    margin-bottom: var(--quiz-spacing-md);
+  }
+}
+
+.infoBlockCard__paragraph {
+  font-size: var(--font-body-size, 1.4rem);
+  color: rgba(var(--color-foreground, 32, 34, 35), 0.85);
+  margin: 0 0 var(--quiz-spacing-sm);
+}
+
+@media (min-width: 750px) {
+  .infoBlockCard__paragraph {
+    font-size: var(--font-body-size, 1.6rem);
+  }
+}
+
+.infoBlockCard__bullets {
+  margin: 0;
+  padding-left: var(--quiz-spacing-lg);
+}
+
+/* ==========================================================================
+   Gate + Reveal fusion (HIST-03 / D-06) — a gate question and its revealed
+   text_input read as one continuous two-part card. Additive modifiers on top
+   of .questionCard, applied via data-derived booleans (showIf + required),
+   never a question-ID literal (see QuizPartRenderer.tsx).
+   ========================================================================== */
+
+.questionCard__gateParent {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-bottom: 0;
+}
+
+.questionCard__revealChild {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  margin-top: 0;
+  border-top: 1px dashed rgba(var(--color-foreground, 32, 34, 35), 0.15);
+}
+
 .questionCard__options {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
@@ -587,36 +676,6 @@
   flex: 1;
   height: 1px;
   background: rgba(var(--color-foreground, 32, 34, 35), 0.15);
-}
-
-.proceedWarning {
-  background-color: rgb(var(--color-background, 255, 255, 255));
-  border: 2px solid rgb(var(--color-button, 0, 123, 255));
-  border-radius: var(--quiz-border-radius);
-  padding: var(--quiz-spacing-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--quiz-spacing-md);
-}
-
-.proceedWarning__heading {
-  font-size: var(--font-body-size, 1.4rem);
-  font-weight: 700;
-  color: rgb(var(--color-foreground, 32, 34, 35));
-  margin: 0;
-}
-
-.proceedWarning__body {
-  font-size: var(--font-body-size, 1.4rem);
-  color: rgb(var(--color-foreground, 32, 34, 35));
-  line-height: 1.5;
-  margin: 0;
-}
-
-.proceedWarning__actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--quiz-spacing-sm);
 }
 
 /* ==========================================================================

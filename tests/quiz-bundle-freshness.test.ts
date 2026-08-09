@@ -64,3 +64,59 @@ describe("public/quiz-bundle.js is fresh relative to app/lib/quiz source (bundle
     expect(count(needle)).toBeGreaterThanOrEqual(1);
   });
 });
+
+describe("public/quiz-bundle.js carries Phase 3 (mandatory-medical-history) content — the Phase 2 markers above CANNOT detect Phase 3 staleness, since all three were already true of the Phase-3-stale bundle measured during plan 03-05 planning", () => {
+  it('contains the "has_pcp" question ID at least once — proves the PCP branch (HIST-04) is compiled in', () => {
+    // Measured against the pre-03-05-rebuild committed bundle (still carrying Phase-2-era
+    // content, 185796 bytes): 0 occurrences. Measured against the bundle freshly rebuilt in
+    // this plan (186699 bytes): 4 occurrences. A bundle missing this entirely means the PCP
+    // yes/no gate and its two branches (clinic fields / no_pcp_recommendation info block) never
+    // made it into the theme bundle.
+    const needle = "has_pcp";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "history_comorbidities" question ID at least once — proves the eleven-option comorbidity checklist (HIST-01) is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 2 occurrences.
+    const needle = "history_comorbidities";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "pcp_clinic_address" question ID at least once — proves the PCP "yes" branch\'s two clinic fields are compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "pcp_clinic_address";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "infoBlockCard" CSS class family at least once — proves InfoBlockCard\'s Phase-3 visual identity (plan 03-04) is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 15 occurrences (the class family applied across the component plus its
+    // CSS Modules-generated selector names).
+    const needle = "infoBlockCard";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the locked no_pcp_recommendation copy fragment "before beginning SLIT" at least once — proves the exact clinical copy shipped, not a placeholder', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence. esbuild does not mangle string literals, so this locked
+    // sentence fragment survives minification verbatim.
+    const needle = "before beginning SLIT";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('has zero occurrences of the deleted "history_personal" question ID — the old Part 6 must not survive the rebuild', () => {
+    // Measured against the pre-rebuild committed bundle (which still carried the OLD Part 6):
+    // 6 occurrences. Measured against the fresh rebuild: 0 occurrences.
+    const needle = "history_personal";
+    expect(count(needle)).toBe(0);
+  });
+
+  it('has zero occurrences of the deleted "history_family" question ID — the old Part 6 must not survive the rebuild', () => {
+    // Measured against the pre-rebuild committed bundle: 6 occurrences. Measured against the
+    // fresh rebuild: 0 occurrences.
+    const needle = "history_family";
+    expect(count(needle)).toBe(0);
+  });
+});

@@ -102,9 +102,6 @@ export interface QuizSubmission {
   quiz_date: string;
   answers: QuizAnswers; // Full answers stored in Google Sheets
   completion_time?: number;
-  // Medical history (Part 6) — stored in Google Sheets only
-  personal_history?: string[];
-  family_history?: string[];
 }
 
 export interface QuizConfig {

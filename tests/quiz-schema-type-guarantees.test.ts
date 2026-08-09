@@ -29,8 +29,9 @@ import { calculateTotalScore } from "../app/lib/quiz/scoring";
  * discriminant to "question").
  */
 
-// Test-local fixture only — this phase ships no info-block content, so `questions.ts` must never
-// gain a `kind: "info"` entry.
+// Test-local fixture, kept independent of questions.ts's own info-block content (HIST-04's
+// no_pcp_recommendation, added in Phase 3) so these compile-time invariants are proven against a
+// fixture the test fully controls, not against production data that could itself drift.
 const INFO_FIXTURE: QuizInfoBlock = {
   kind: "info",
   id: "test-fixture-info-block",
@@ -73,5 +74,13 @@ describe("quiz schema type guarantees (D-09)", () => {
       expect(question.kind).toBe("question");
     }
     expect(ALL_ITEMS.length).toBe(ALL_SCORED_QUESTIONS.length + PART6_MEDICAL_HISTORY.length);
+  });
+
+  // Non-vacuous positive control (Phase 3, Task 3): the old Part 6 content had zero info blocks,
+  // so this guarantee is new with HIST-04's no_pcp_recommendation and must be asserted, not
+  // assumed.
+  it("ALL_ITEMS contains at least one member with kind === 'info'", () => {
+    const infoBlocks = ALL_ITEMS.filter((item) => item.kind === "info");
+    expect(infoBlocks.length).toBeGreaterThanOrEqual(1);
   });
 });

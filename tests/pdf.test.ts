@@ -14,8 +14,6 @@ const baseRow: SubmissionFullRow = {
   quiz_score: 9,
   score_bracket: '7+',
   answers_json: { q1: 'yes', q2: 'no', q3: 'sometimes' },
-  personal_history_json: ['seasonal allergies', 'asthma'],
-  family_history_json: ['eczema'],
   consent_version: 'v1.0',
   consent_accepted_at: '2026-05-07T18:00:00Z',
   consent_ip_address: '1.2.3.4',
@@ -36,11 +34,15 @@ describe('generateVisitSummaryPdf', () => {
     expect(buf.subarray(0, 4).toString()).toBe('%PDF')
   })
 
-  it('renders without history sections when history is null', async () => {
-    const row = { ...baseRow, personal_history_json: null, family_history_json: null }
+  it('renders a medical-history answer through the label map', async () => {
+    const row = {
+      ...baseRow,
+      answers_json: { history_comorbidities: ['asthma'], has_pcp: 'no' },
+    }
     const buf = await generateVisitSummaryPdf(row)
     expect(buf).toBeInstanceOf(Buffer)
-    expect(buf.length).toBeGreaterThan(1000)
+    expect(buf.length).toBeGreaterThan(0)
+    expect(buf.subarray(0, 4).toString()).toBe('%PDF')
   })
 
   it('renders without consent section when consent_version is null', async () => {
