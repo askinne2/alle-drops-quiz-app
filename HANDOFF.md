@@ -2,6 +2,15 @@
 
 ### Status: **GSD Phase 2 COMPLETE — 4/4 plans, verified 11/11 `passed`, marked complete in ROADMAP/STATE/REQUIREMENTS.** The quiz schema is now declarative: `required`, `showIf`, and a static info-block type, with **zero question-ID literals** left in the renderer. Suite 173 → **280 tests / 22 files**, typecheck and build clean, tree clean. **Two real defects were found by browser UAT that every automated test passed straight through** — one of them would have made the entire phase invisible on the storefront. **MERGED ([PR #17](https://github.com/askinne2/alle-drops-quiz-app/pull/17)) and DEPLOYED — Fly `v48`.** Verified on served bytes: production went 184542 → 185951 bytes and now serves an artifact byte-for-byte identical to the committed bundle. D-06 and D-16 re-confirmed live against production DOM. Next: Andrew's own visual pass, then `/gsd:discuss-phase 3`. **Phase 1's live exposures are still open — Klaviyo still loads 10× on the quiz page and the live clinical intake still carries no medical disclaimer.**
 
+### Start here (fresh session)
+
+Phase 2 is **done, merged, and deployed** — nothing is half-finished and nothing is waiting on a build.
+
+1. Andrew's own visual pass on the quiz (his stated gate before Phase 3) — see "To UAT" in Resume context. The one to actually look at is **Part 5**: answer "yes" to medications, type something, toggle to "no" and back — the text must still be there.
+2. Then `/gsd:discuss-phase 3` (mandatory medical history).
+
+Do **not** re-run `/gsd:execute-phase 2` — it is complete, verified 11/11, and shipped as Fly v48.
+
 ---
 
 ## Session 32 (2026-08-09) — what happened today
@@ -96,9 +105,9 @@ Closed: `itemsForPart(parts, index)` extracted into `schema.ts` (pure, testable 
 
 ### Resume context
 
-- **Branch:** `main` @ `0a35d6b` (merge of PR #17), in sync with `origin`, clean tree. `phase-2-quiz-schema-foundation` still exists locally and on origin — safe to delete. Fly release **v48**.
+- **Branch:** `main` @ `12cf89d`, in sync with `origin`, clean tree. Merge of PR #17 is `0a35d6b`. `phase-2-quiz-schema-foundation` still exists locally and on origin — merged, safe to delete (as is the older `feature/phase-2-admin-view`). Fly release **v48**.
 - **How to verify:** `npm run typecheck && npm test && npm run build` → expect **280 passing / 22 files**, all clean. For the theme bundle: `npm run build:theme` then confirm `public/quiz-bundle.js` is byte-identical to the committed artifact (the build is deterministic — a diff means source drifted).
-- **To UAT locally:** `SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev`, open `http://localhost:3000/quiz-embed`. Note the page nests an iframe (`initQuiz()` picks `injectIframe` when `window.self === window.top`), so query `document.querySelector('iframe').contentDocument`, not the top document.
+- **To UAT:** production is live at `https://alle-drops-quiz-app.fly.dev/quiz-embed` (v48, already carries Phase 2). For local: `SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev`, open `http://localhost:3000/quiz-embed`. **`npm run dev` will not work** — it is `shopify app dev` and blocks on an interactive store prompt. Note the page nests an iframe (`initQuiz()` picks `injectIframe` when `window.self === window.top`), so query `document.querySelector('iframe').contentDocument`, not the top document.
 - **Key files:**
   - `app/lib/quiz/schema.ts` — the pure evaluator; all quiz decisions live here now
   - `app/lib/quiz/types.ts` — `QuizItem` union, `showIf`, `required`, `exclusive`
