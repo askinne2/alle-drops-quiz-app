@@ -61,8 +61,10 @@ export function isAnswered(
   switch (question.type) {
     case "checkbox_multi":
     case "radio_multi":
+    case "file_multi":
       return Array.isArray(value) && value.length > 0;
     case "text_input":
+    case "text_input_short":
       return typeof value === "string" && value.trim().length > 0;
     case "severity_0_3":
     case "frequency_0_4":
@@ -71,6 +73,7 @@ export function isAnswered(
     case "yesno":
       return value === "yes" || value === "no";
     case "control_0_3":
+    case "radio_single":
       return typeof value === "string" && value.length > 0;
     default:
       return false;
