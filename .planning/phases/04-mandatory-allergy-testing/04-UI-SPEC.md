@@ -120,7 +120,7 @@ deletions of committed data.
 | Error state — per-file size exceeded | **"⚠ {filename} is over the {N} MB limit. Try a smaller photo or a lower-resolution scan."** |
 | Error state — total size exceeded | **"⚠ Adding this file would put you over the {M} MB total limit. Remove a file first."** |
 | Error state — upload failed (network) | **"⚠ {filename} didn't upload. Check your connection and tap Retry."** with a **"Retry"** action on the row |
-| Error state — required-but-empty on Next attempt | See ⚠️ deviation note below — this is the one field in the whole quiz that gets inline copy |
+| Error state — required-but-empty on Next attempt | **"⚠ Add at least one file to continue."** — see the ⚠️ deviation note below for why this is the one field in the whole quiz that gets inline copy rather than a silent disabled Next |
 | Destructive confirmation | **None.** Removing a picked-but-not-yet-submitted file is reversible (re-pick it) and nothing has been permanently recorded under the patient's identity until the terminal POST succeeds — same standing rule Phase 3 used for why HIST-01's "none of the above" toggle needs no confirmation |
 
 ### ⚠️ Required copy fix, not a style choice: "See results" is now false
@@ -500,6 +500,13 @@ contract governs, and no token or class here applies to them:
 - **TEST-06's storefront copy deletions** (`allergist-on-demand` theme repo, product pages,
   `/pages/test-options`) — Shopify theme/Liquid content, edited via the theme editor or a
   `shopify theme push` after D-12's reconciliation, not this repo's CSS Module.
+- **The `quiz-history` Customer Account UI extension** (`extensions/quiz-history/`) — CONTEXT.md D-05
+  makes its refactor a Phase 4 dependency (patient-side file access lands there), and it is currently
+  non-functional: it still reads PHI metafields that were deleted and renders empty state. It is a
+  **third rendering surface** — Shopify Customer Account UI components, not this repo's CSS Module
+  and not Polaris — so none of this contract's tokens or classes apply to it. **If the planner scopes
+  it into Phase 4, it needs its own design contract.** Flagged here rather than left silent, per the
+  UI checker's scope note.
 
 ---
 
@@ -517,6 +524,7 @@ contract governs, and no token or class here applies to them:
 | Exclusive option handling | Not applicable to Part 7 — `testing_status` is single-select by construction (`radio_single`/native radios), not a checkbox list with an exclusive flag; the D-13 reversal's "never disable a sibling" rule is inherited automatically because true radio inputs never disable siblings in the first place |
 | Keyboard reachability | The file `<input>` sits inside its `<label>` using the visually-hidden (not `display:none`) technique, so Tab reaches it and Enter/Space triggers the native picker; the dropzone shows a visible focus ring via `:has()` exactly as `quiz.module.css:1763` already does for a radio input |
 | Screen-reader labeling | Input: `aria-label="Upload allergy test results"`. File-list container: `aria-live="polite"` (add/remove announced). Error line: `role="alert"` (announced immediately, distinct from the polite list region) |
+| Per-file status icon has a text equivalent | The row-level status indicator (spinner / checkmark / error triangle) is `aria-hidden="true"` and carries a visually-hidden text sibling — **"Uploading"**, **"Uploaded"**, or **"Upload failed"** — so the icon is never the sole carrier of per-file state. Without this, a screen-reader user hears the filename announced by the `aria-live` region but not whether that file actually succeeded, which is exactly the state the required-gate depends on |
 | Error signaling is never color-only | Every error state pairs `var(--quiz-color-error)` text with a `⚠` glyph prefix — never color alone, satisfying the accessibility hard constraint directly |
 | Consent step Previous target | Changes from `setStep("outcome")` to re-entering `quiz_parts` at the last part index — see Flow Contract |
 | Part 7 terminal button copy | `"Continue"`, not `"See results"` — see Copywriting Contract's required fix |
