@@ -1,14 +1,123 @@
 # Handoff — AlleDrops quiz app (2026-08-09 session 33)
 
-### Status: **Phase 2 shipped and UAT'd by Andrew. One UAT defect found, fixed, merged ([PR #18](https://github.com/askinne2/alle-drops-quiz-app/pull/18)) and deployed as Fly `v49`.** Andrew ran the 8-check manual UAT script — all pass. Suite is **282 tests / 23 files**, typecheck clean, `main` clean. Next: `/gsd:discuss-phase 3` (mandatory medical history). **Phase 1's live exposures are still open — Klaviyo still loads 10× on the quiz page and the live clinical intake still carries no medical disclaimer.**
+### Status: **GSD Phase 3 (Mandatory Medical History) COMPLETE — 7/7 plans, merged ([PR #19](https://github.com/askinne2/alle-drops-quiz-app/pull/19)), deployed Fly `v50`, DDL applied.** Suite **282 → 361 tests / 27 files**, typecheck clean, both builds clean, `main` clean. Phase 2's UAT defect was also fixed and shipped earlier the same session (PR #18, v49). **Phase 4 is BLOCKED on William** — Andrew reversed a LOCKED client decision and now wants test-result upload, which needs his sign-off and pricing before Phase 4 can be planned. **Phase 1's live exposures are still open — Klaviyo loads 10× on the quiz page and the live clinical intake carries no medical disclaimer.**
 
 ### Start here (fresh session)
 
-Nothing is half-finished and nothing is waiting on a build. Go straight to `/gsd:discuss-phase 3`.
+Nothing is half-finished and nothing is waiting on a build. Two things, in order:
+
+1. **Draft the William message.** It is the actual blocker on Phase 4 and now carries five items — see "The William message" below. Andrew already said yes to drafting it.
+2. Then `/gsd:discuss-phase 4` — but **do not plan Phase 4 until William answers on upload**, because TEST-04 has to be rewritten first and Phase 4's estimate changes with it.
+
+Optional cleanup: `/gsd:verify-work 3` was never run — Phase 3 was closed by plan 03-07's own verification rather than the verifier agent.
 
 ---
 
-## Session 33 (2026-08-09) — what happened today
+## Session 33 (2026-08-09) — Phase 3 end to end
+
+Long session. Ran `/gsd-discuss-phase 3` → `/gsd-ui-phase 3` → `/gsd-plan-phase 3` → `/gsd-execute-phase 3` to completion, plus a Phase 2 UAT defect fix at the start (that part is preserved further down).
+
+### What shipped
+
+Every patient — including a telehealth-only patient and the 0–2 bracket that used to auto-submit straight out of Part 5 — now passes through medical history on the way to results.
+
+- **Part 6 is real content now.** Eleven-option comorbidity checklist with an exclusive "None of the above"; a medications gate + list; three surgery / allergy / other-conditions gate+reveal pairs; the PCP branch; and DIAG-01 adjacent to the Part 5 medication questions.
+- **First production info block in this codebase.** HIST-04's "no PCP" recommendation. `QuizInfoBlock` / `InfoBlockCard` were built in Phase 2 and had never rendered in production. It got its own `.infoBlockCard` class family — previously it was pixel-identical to a question card, which was a real bug for something that collects nothing.
+- **`personal_history_json` and `family_history_json` are DROPPED.** Migration `003_drop_medical_history_legacy_columns.sql`, committed alone, run after deploy. All medical history now lives in `answers_json`.
+- **One shared `getAnswerLabel()` map** in `app/lib/format.ts`, consumed by both PHI renderers (`pdf.ts`, `app.quiz-results.tsx`) — they previously used a byte-identical `capitalize(key.replace(/_/g,' '))` idiom in two places.
+- **`medical_history` FlowStep, the 7+ proceed-without-testing chain, and the dead `extra` payload parameter are gone.** `ResultsDisplay` is down to three callbacks. The 3–6 purchase jump deliberately survives for Phase 4.
+- **First DOM-rendering tests in the repo** — `jsdom` + `@testing-library/react` as devDependencies only.
+
+### Verification — all measured, none taken on trust
+
+| | before | after |
+|---|---|---|
+| Fly release | v49 | **v50** |
+| served bundle | — | 186,738 B, **byte-identical** to the committed artifact |
+| `history_medications_has` / `has_pcp` / `infoBlockCard` | 0 / 0 / 0 | 2 / 4 / 15 |
+| `history_personal` / `history_family` / `medical_history` | 6 / 6 / 4 | **0 / 0 / 0** |
+| `submissions` legacy columns | 2 | **0** (17 columns total) |
+| `submissions` rows | 42 | **42** |
+
+Pre-migration backup: **`1786306233540`**, `SUCCESSFUL`, `ON_DEMAND`, description `pre-phase3-drop-medical-history-legacy-columns`. Read back from GCP, not trusted from an exit code.
+
+Write path proven working **after** the DDL with a synthetic POST returning `200 {"success":true}`, then deleted — count back to 42. That is the check that would have caught a wrong-order deploy.
+
+### The ordering that mattered most
+
+`insertSubmission` now names 15 explicit columns. **Running the DDL before the app code was live would have hard-failed every `/api/quiz/submit` INSERT.** Enforced three ways, not one: a hard wave chain (03-02 → 03-05 → 03-06 → 03-07), an explicit four-item precondition list in 03-07, and a post-DDL synthetic POST that would fail loudly with `column does not exist`. All four preconditions were re-verified independently before the DDL ran.
+
+### UAT found two defects the whole suite passed through
+
+The fourth and fifth on this project. Both caught by a human looking, not by CI.
+
+1. **DIAG-01 read as the same question twice.** Its examples ("allergic rhinitis, asthma, or eczema") collided with HIST-01's checklist, which asks the patient to tick asthma and eczema one part later. Exactly the redundancy `ROADMAP.md` flagged for DIAG-01. The questions ARE distinct (D-10); only the examples collided, so the examples were dropped. Commit `bfa0431`.
+2. **HIST-02's medications field was required with no escape.** A healthy patient ticking "None of the above" still had to type into a medications box. Isolated in the live DOM: filling only that field enabled Next while all three HIST-03 reveals sat empty; clearing it disabled Next again. Fixed with the same "none" gate the HIST-03 fields already had. Commit `1da8c3d`.
+
+**The DOM tests did not catch either.** They are structural — they cannot tell you a question reads as redundant or that a required field is user-hostile. Worth stating plainly for the next session: DOM infra closed the *wiring* blind spot, not the judgment one.
+
+### Two consequences from the HIST-02 fix that will otherwise look like drift
+
+- **The `no chained showIf` forward guard rejected the first fix attempt, correctly.** Gating the new question on `history_comorbidities` — which preserves HIST-02's literal wording — built a two-level chain, and `evaluateShowIf` is **non-transitive by design**. A patient who answered the gate "yes" then cleared their comorbidity list would hide the gate while the medications field kept rendering underneath it. The gate is therefore **unconditional**, like the three HIST-03 gates. **Known deviation from HIST-02's literal wording:** the medications QUESTION is always present in Part 6; the LIST is still progressively revealed.
+- **`isAnswered` now has zero production consumers.** Phase 2 D-02 justified that operator by naming HIST-02 as exactly its consumer. It still exists and is unit-tested; no real question uses it. Phase 4's TEST-03 may pick it back up.
+
+### The William message — draft this first
+
+Five items, all his to answer, all blocking something:
+
+1. **Test-result upload** — reverses `DEC-testing-results-by-email-not-upload` (`PROJECT.md:229`, **LOCKED**, from his own 2026-07-29 call, where he said *"it's fine if they just want to email it directly to us"*). Dropping upload is what took that item from **3–4 days to ~1 day**. Re-adding it needs his agreement **and pricing** — there is already $1,800 unbilled and a Phase 2 SOW unwritten since 6/30. **Blocks Phase 4.**
+2. **Domain spelling** — unresolved since session 27; blocks the `testing@` address and DNS.
+3. **DIAG-01 scope** — built as distinct from HIST-01 per D-10; this confirms rather than blocks.
+4. **HIST-03's third label** — built on the probable wording "Please list any other medical conditions that you have." Marked unconfirmed in code.
+5. **New:** the HIST-02 medications gate copy — "Are you currently taking any medications of any kind, including ones unrelated to allergies?" Deliberately worded to distinguish it from Part 5's allergy-medications question.
+
+### UAT results — 7 pass, 1 deferred
+
+Full record in `.planning/phases/03-mandatory-medical-history/03-05-SUMMARY.md`. Andrew did checks 1, 2, 4 by hand; Chrome automation did 3, 5, 6, 7, 8.
+
+**Check 6 (mobile sticky-header clearance) is DEFERRED, not passed.** `/quiz-embed` has **no sticky element anywhere** — verified by testing computed `position` on every node. The sticky header lives in the Shopify theme repo, so any clearance measured locally would be a vacuous pass. Still the open item carried from Phase 1's `01-HUMAN-UAT.md`. What *was* verified at 373px: no horizontal overflow, 46px minimum option height (above the 44px floor), longest label wrapping cleanly — the evidence behind UI-SPEC rejecting a grid for HIST-01's eleven options.
+
+### What worked
+
+- **Driving the DOM directly instead of clicking coordinates.** Window sizes differ between sessions and coordinate clicks land wrong (session-32 lesson). Every UAT conclusion came from `next.disabled`, occurrence counts, and a patched `window.fetch`.
+- **Isolating a defect by bisecting state, not reading code.** The HIST-02 finding was proven by filling only that field (Next enabled) and clearing it (Next disabled) while the other three sat empty. That is what turned "feels wrong" into a specific, fixable claim.
+- **Suppressing the schema-push gate on evidence.** The orchestrator's detector matched `prisma/schema.prisma` and would have injected `npx prisma db push`. That file is `provider = "sqlite"` with one `Session` model — the session store, not the PHI database. Pushing it would have targeted the wrong database entirely.
+- **The plan-checker earning its cost.** It found that 03-02 declared `wave: 1, depends_on: []` while its own Task 1 tested twelve question IDs that only exist after 03-01 runs — in parallel-worktree mode it would have failed its own gate. Fixed to wave 2; wave-2 `files_modified` re-checked for collisions afterward (none).
+- **Running wave 2 sequentially instead of in worktrees.** `node_modules` **and** `package-lock.json` are both gitignored, so every fresh worktree agent would have had to run an unpinned `npm install` before it could run the suite that every task's verify depends on — and 03-04 mutates `package.json`, which would have conflicted on merge.
+
+### What didn't work
+
+- **Long `await` loops inside one `javascript_tool` call** — exceeded the 45s CDP budget twice and returned a timeout while the page was fine. One part per call.
+- **`resize_window` to 375px** did not produce a 375px iframe viewport (got 477). Setting the iframe's own `style.width` did.
+- **`slopcheck install <pkgs>` actually runs `npm install`** — it is not a dry run. It briefly modified `package.json` during research; caught via `git status` and reverted. `slopcheck scan` is the dry-run-safe alternative.
+- **The local `DATABASE_URL` password is stale** — a local submit fails with Postgres `28P01`. Environmental, not a Phase 3 defect; a broken INSERT from this phase's column changes would surface as `42703`. Fly's credential is fine.
+- **`.env` still carries `GOOGLE_SHEETS_WEB_APP_URL`** — the code is dead (`google-sheets.ts` throws) but it is a `CLAUDE.md` rule 3 surface sitting in a config file. Worth deleting the line.
+
+### Next steps
+
+1. **Draft the William message** (five items above). Blocks Phase 4.
+2. **Before planning Phase 4:** rewrite TEST-04 from email-only to upload, retract `DEC-testing-results-by-email-not-upload` **in place** in `PROJECT.md` so the retraction is visible to anyone who read the original, and update the Phase 4 ROADMAP block — new dependencies (**Fly.io BAA**, **AOD GCP cutover**), revised estimate, and a note that **half of TEST-05 already landed in Phase 3**. Use `/gsd:phase`, do not hand-edit.
+3. Optional: `/gsd:verify-work 3` to close Phase 3 through the verifier agent.
+4. **Still open from Phase 1, unchanged:** Klaviyo 10× on `/pages/allergy-quiz`; no medical disclaimer on the live intake; the Apntly/`appointly` embed (measured at **15** occurrences on the served quiz page) needs a keep/disable decision.
+
+### Resume context
+
+- **Branch:** `main` @ `b7eece9`, in sync with `origin`, clean tree. `phase-3-mandatory-medical-history` merged as PR #19 and still exists on both sides — safe to delete. Fly release **v50**.
+- **How to verify:** `npm run typecheck && npm test && npm run build` → expect **361 passing / 27 files**. For the theme bundle: `npm run build:theme`, then confirm `public/quiz-bundle.js` is byte-identical to the committed artifact.
+- **`npm run dev` does not work** — it is `shopify app dev` and blocks on an interactive store prompt. Use `SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev` (port 3000, **no path** on that env var). The page nests an iframe — query `document.querySelector('iframe').contentDocument`, not the top document.
+- **Reaching Cloud SQL:** this machine's IP is not on the authorized-networks list; the Fly app is. Use `fly ssh console -a alle-drops-quiz-app -C "sh -c \"echo <base64> | base64 -d > /tmp/q.cjs && cd /app && node /tmp/q.cjs\""` with `require('/app/node_modules/pg')` and `ssl: { rejectUnauthorized: false }`. **Not Prisma** — that is the SQLite session store. `gcloud` needs `--project=alledrops-quiz` explicitly; Andrew's active project is `smart-rope-305817`.
+- **Key files:**
+  - `app/lib/quiz/questions.ts` — Part 6 content; the HIST-02 gate comment explains the chain that was rejected
+  - `app/lib/quiz/schema.ts` — the pure evaluator; `evaluateShowIf` is non-transitive **by design**
+  - `app/lib/format.ts` — `getAnswerLabel` map, consumed by both PHI renderers
+  - `tests/quiz-part-renderer-dom.test.ts` — the first DOM tests; `.test.ts` + `React.createElement`, **not `.tsx`** (vitest's `include` glob does not match `.tsx`)
+  - `migrations/003_drop_medical_history_legacy_columns.sql` — applied 2026-08-09
+  - `.planning/phases/03-mandatory-medical-history/` — CONTEXT (14 decisions), UI-SPEC, RESEARCH, VALIDATION, PATTERNS, 7 plans, 7 summaries
+- **Blockers / open questions:** Phase 4 blocked on William (upload + pricing). No code blockers.
+
+---
+
+## Session 33, earlier — the Phase 2 UAT defect
 
 ### Goal
 Andrew's visual UAT pass on Phase 2 (his stated gate before Phase 3). He hit a defect within a minute of starting.
@@ -27,17 +136,19 @@ Affects the 4 questions carrying an exclusive option: `symptoms_nasal`, `symptom
 
 Fix: removed the binding and **deleted** `isOptionDisabledByExclusive` rather than leaving it unused, so a future renderer cannot wire it back in. D-13 is reversed; `schema.ts` carries a doc comment saying so and why. D-16 (clicking an already-selected exclusive option deselects to `[]`) is unchanged and still tested.
 
-### The lesson that matters — this is the third defect of its exact shape
+### The lesson that matters — the running tally
 
-Three real defects have now shipped past a fully green suite, all in the same blind spot: **`QuizPartRenderer` and `QuizContainer` have no rendering test.**
+Defects that shipped past a fully green suite, all found by a human clicking:
 
 | Session | Defect | Suite at the time |
 |---|---|---|
 | 32 | `public/quiz-bundle.js` never rebuilt — phase invisible on storefront | 269 green |
 | 32 | Container filtered info blocks out before the renderer saw them | 269 green |
 | 33 | Exclusive option disabled every sibling, unreachable switch | 280 green |
+| 33 | DIAG-01's examples duplicated HIST-01's checklist | 358 green |
+| 33 | HIST-02's medications field required with no escape | 358 green |
 
-Each was caught by a human clicking, never by CI. `schema.ts` is thoroughly tested and was **correct in all three cases** — the bugs live in the wiring between the pure module and the DOM. Adding DOM test infra was explicitly declined in Phase 2. **This is now the third data point. Revisit it before Phase 3 execution, not after.**
+The first three drove the Phase 3 decision to adopt DOM test infra (`jsdom` + `@testing-library/react`, devDependencies only). **It worked for what it covers and did not catch defects 4 and 5** — those are judgment failures, not wiring failures. A structural test cannot tell you a question reads as redundant or that a required field traps a healthy patient. **Keep the human browser pass. It is not redundant with the DOM tests.**
 
 ### The UAT script Andrew asked for — run this on every quiz-touching change
 
@@ -84,19 +195,16 @@ New guard: `tests/quiz-part-renderer-exclusive-clickable.test.ts`, **proven RED 
 
 `.planning/STATE.md` still said `completed_phases: 1` and `last_activity: Phase 2 execution started` while `ROADMAP.md` had Phase 2 marked `[x] (completed 2026-08-09)`, and the codebase baseline line still quoted Phase 1's 173 tests. Counters realigned to 2 completed phases and 282 tests. Nothing was mid-execution, so this was safe to hand-edit.
 
-### Next steps
+### ~~Next steps~~ / ~~Resume context~~ — SUPERSEDED
 
-1. **`/gsd:discuss-phase 3`** — mandatory medical history. Phase 3 ships the **first real info blocks** (HIST-04's PCP recommendation), so budget a browser check for them.
-2. **Decide on DOM test infra before Phase 3 executes** — see the three-defect table above.
-3. **Still open from Phase 1, unchanged:** Klaviyo loads 10× on `/pages/allergy-quiz` (theme `config/settings_data.json`, one-field flip); the live intake page carries no medical disclaimer at all; the Apntly embed needs a keep/disable decision.
+All of this sub-section's next steps and resume context were consumed later in the same session:
+Phase 3 was discussed, UI-specced, planned, executed, merged and deployed, and the DOM-test-infra
+decision was made (adopted, narrowly). **Use the Phase 3 section at the top of this file instead.**
+Fly release moved v49 → **v50**; suite moved 282 → **361 tests / 27 files**.
 
-### Resume context
-
-- **Branch:** `main` @ `a8c13d7` (merge of PR #18), in sync with `origin`, clean tree. `fix-exclusive-option-disable` deleted on both sides. Fly release **v49**.
-- **How to verify:** `npm run typecheck && npm test && npm run build` → expect **282 passing / 23 files**. For the theme bundle: `npm run build:theme`, then confirm `public/quiz-bundle.js` is byte-identical to the committed artifact.
-- **`npm run dev` does not work** — it is `shopify app dev` and blocks on an interactive store prompt. Use `SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev` (port 3000). Without that env var `/quiz-embed` 500s with "Detected an empty appUrl configuration". The page nests an iframe, so query `document.querySelector('iframe').contentDocument`, not the top document.
-- **Key files:** `app/lib/quiz/schema.ts` (the pure evaluator — and the comment recording why D-13 is gone) · `app/components/quiz/QuizPartRenderer.tsx` · `tests/quiz-part-renderer-exclusive-clickable.test.ts` · `public/quiz-bundle.js` (**rebuild with `npm run build:theme` whenever quiz source changes**).
-- **Blockers / open questions:** no code blockers. Phase 3 open questions with William are unchanged — R6 diagnosis-question scope, the third medical-history free-text label, and whether resume/edit was ever expected.
+Kept here only because the D-13 reversal it describes is still load-bearing: exclusive options must
+never render a sibling `disabled`, and `tests/quiz-part-renderer-exclusive-clickable.test.ts` guards
+it. A planner reading Phase 2's `02-CONTEXT.md` alone will get this wrong.
 
 ---
 
