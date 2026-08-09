@@ -128,6 +128,23 @@ export function visibleItems(items: QuizItem[], answers: QuizAnswers): QuizItem[
 }
 
 /**
+ * Selects the full, unfiltered item list — questions AND info blocks — for the part at `index`.
+ *
+ * UAT defect fix: `QuizContainer.tsx` used to narrow `QUIZ_PARTS[currentPartIndex]` down to
+ * `QuizQuestion[]` with a `item.kind === "question"` filter before handing the result to
+ * `QuizPartRenderer`. That stripped every `QuizInfoBlock` before it ever reached the renderer —
+ * `QuizPartRenderer` and `isPartComplete` both already accept `QuizItem[]` and already branch
+ * correctly on `item.kind === "info"` (see `QuizPartRenderer.tsx`'s `InfoBlockCard`), so the
+ * question-only filter was the single broken link, not a missing feature downstream.
+ *
+ * `index` out of range (including a negative index or one past the end) returns `[]` rather than
+ * throwing, matching this module's fail-safe convention (nothing in `app/lib/quiz/` throws).
+ */
+export function itemsForPart(parts: QuizItem[][], index: number): QuizItem[] {
+  return parts[index] ?? [];
+}
+
+/**
  * The D-03 boundary filter. Returns a NEW `QuizAnswers` containing only the entries that are
  * licensed to leave the browser toward Cloud SQL and the clinical PDF. Call this at exactly the
  * two D-03 sites in `QuizContainer.tsx` — immediately before `calculateTotalScore` and
