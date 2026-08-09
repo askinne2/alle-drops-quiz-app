@@ -17,7 +17,7 @@ import {
   generateSymptomProfileId,
   type ScoreBracket,
 } from "../../lib/quiz/scoring";
-import { type QuizAnswers } from "../../lib/quiz/types";
+import { type QuizAnswers, type QuizQuestion } from "../../lib/quiz/types";
 import { CONSENT_VERSION } from "../../lib/consent-version";
 import { getProductHandle, type QuizProductConfig } from "../../lib/quiz/product-links";
 import {
@@ -314,7 +314,13 @@ export function QuizContainer() {
     }
   }, [consentChecked, submitPayload, answers]);
 
-  const currentPartQuestions = QUIZ_PARTS[currentPartIndex] ?? [];
+  // QUIZ_PARTS widened to QuizItem[][] in Plan 02-01 so Phase 3 can place an info block inside a
+  // part without a further type change. QuizPartRenderer and isPartComplete still take
+  // QuizQuestion[] this phase (that signature widening is later plan work), so narrow here. This
+  // filter is a no-op today — no info block exists in QUIZ_PARTS' actual content yet.
+  const currentPartQuestions = (QUIZ_PARTS[currentPartIndex] ?? []).filter(
+    (item): item is QuizQuestion => item.kind === "question",
+  );
   const quizPartsTotal = QUIZ_PARTS.length;
 
   // Overall flow: state_gate (1) + patient_info (2) + 5 quiz parts (3-7) = 7 steps
