@@ -226,15 +226,24 @@ proceed-without-testing flow. The reorder must land BEFORE the no-testing deleti
 history becomes dead code.
 </decision>
 
-<decision id="DEC-testing-results-by-email-not-upload" status="LOCKED" date="2026-07-29" source="docs/REQUIREMENTS-AND-GAPS-2026-07-29.md (R5)">
-File upload for allergy test results is dropped. Patients email results to
+<decision id="DEC-testing-results-by-email-not-upload" status="RETRACTED" date="2026-07-29" retracted="2026-08-09" retracted_by="04-CONTEXT.md D-01" source="docs/REQUIREMENTS-AND-GAPS-2026-07-29.md (R5)">
+~~File upload for allergy test results is dropped. Patients email results to
 `testing@alledrops.com` using the same email address they used on the quiz. William: "it's fine if
 they just want to email it directly to us."
 Consequence: no new PHI file-handling infrastructure — no file input, no multipart parsing, no
 object storage, no upload column, no PHI storage decision. Removes the single most expensive item
 on the 6/27 list (3–4 days → ~1 day of static copy and three text fields).
 Note: the email address itself is baked into locked copy and therefore depends on the unresolved
-domain-spelling question.
+domain-spelling question.~~
+
+**RETRACTED 2026-08-09.** Andrew reversed this decision in the Phase 4 discussion. Test-result
+upload is now IN Phase 4 and required on the `had_testing` branch, per D-01 and D-02. This reversal
+re-adds the 3–4 day estimate this decision had removed. It also introduces three client-side
+blockers: **William** needs to agree to upload and price it, the **Fly.io BAA** needs to be signed,
+and the **AOD GCP** cutover needs to land before object storage can move out of Andrew's dev
+project. The `testing@alledrops.com` email address disappears from the copy entirely, so the
+unresolved domain-spelling question no longer gates Phase 4 (it still gates LAUNCH-07). Source:
+`.planning/phases/04-mandatory-allergy-testing/04-CONTEXT.md` §`<decisions>` D-01.
 </decision>
 
 <decision id="DEC-no-approval-promise-copy" status="LOCKED" date="2026-07-29" source="docs/REQUIREMENTS-AND-GAPS-2026-07-29.md (R4, CONFLICT — email copy that is now wrong)">
