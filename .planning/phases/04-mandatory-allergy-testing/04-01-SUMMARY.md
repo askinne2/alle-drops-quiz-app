@@ -103,3 +103,9 @@ None - no external service configuration required. This plan touched only docume
 ---
 *Phase: 04-mandatory-allergy-testing*
 *Completed: 2026-08-09*
+
+## Self-Check: PASSED
+
+All claimed files found on disk (`.planning/PROJECT.md`, `.planning/REQUIREMENTS.md`, `CLAUDE.md`,
+`.planning/phases/04-mandatory-allergy-testing/04-01-SUMMARY.md`). All claimed commit hashes found
+in `git log` (`dd37513`, `3eb8b1f`, `794bd1f`, `c39c14a`).
