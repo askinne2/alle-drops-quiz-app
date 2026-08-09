@@ -115,7 +115,16 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 - [ ] **TEST-06**: No storefront surface offers or implies a no-testing path — remove the "no longer
   a need for needles or allergy tests" clause from both product pages and the
   proceed-without-testing content from `/pages/test-options`
-  (`REQ-testing-claims-content-remediation`)
+  (`REQ-testing-claims-content-remediation`) — ⚠ **REASSIGNED to Phase 8, 2026-08-09.** Plan 04-05
+  measured both target surfaces on authenticated, cache-busted live served bytes, pre- and post- a
+  `shopify theme push`: the clause is present (`no longer a need` = 5, `needles` = 5) on both
+  `/products/tennessee-alledrops` and `/products/texas-alledrops`, unchanged by the push. Confirmed via
+  repo-wide grep in plan 04-04 and via `sections/main-product.liquid:197` / `sections/main-page.liquid:22`:
+  both surfaces render Shopify Admin content (`{{ product.description }}` / `{{ page.content }}`), not
+  theme-repo source. **No theme push or theme-repo edit can close this requirement.** Replacement copy
+  is drafted and held, UNCONFIRMED, at `04-STOREFRONT-COPY-DRAFT.md`, awaiting William/counsel approval
+  before an Admin-side edit ships it. Joins LAUNCH-01/LAUNCH-02 as Andrew-owned Phase 8 launch
+  readiness.
 - [ ] **TEST-07**: The consent step is reachable on every completion path and every submission
   records a `consent_version` (`REQ-consent-step`)
 
@@ -253,7 +262,7 @@ Acknowledged, not in the v1.0 roadmap.
 | TEST-03 | Phase 4 | Pending |
 | TEST-04 | Phase 4 | Pending |
 | TEST-05 | Phase 4 | Pending |
-| TEST-06 | Phase 4 | Pending |
+| TEST-06 | Phase 8 (reassigned 2026-08-09 from Phase 4 — content is Shopify Admin-managed, not in either repo; see requirement note) | Pending |
 | TEST-07 | Phase 4 | Pending |
 | SCORE-01 | Phase 5 | Pending |
 | SCORE-02 | Phase 5 | Blocked (William — score scale) |
