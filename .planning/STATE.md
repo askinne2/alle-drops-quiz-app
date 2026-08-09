@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 03-07-PLAN.md — Phase 3 (mandatory-medical-history) complete
-last_updated: "2026-08-09T20:27:03.343Z"
+status: "Phase 3 fully shipped. PR #19 merged to `main` (`ac40f09`), deployed to Fly (release v50,"
+stopped_at: Phase 4 context gathered — BLOCKED on William (upload agreement + pricing), Fly.io BAA, AOD GCP cutover
+last_updated: "2026-08-09T20:56:02.896Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 8
@@ -313,6 +313,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-09T20:27:03.337Z
-Stopped at: Completed 03-07-PLAN.md — Phase 3 (mandatory-medical-history) complete
-Resume file: None
+Last session: 2026-08-09T20:56:02.891Z
+Stopped at: Phase 4 context gathered — BLOCKED on William (upload agreement + pricing), Fly.io BAA, AOD GCP cutover
+Resume file: .planning/phases/04-mandatory-allergy-testing/04-CONTEXT.md
