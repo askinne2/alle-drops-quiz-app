@@ -22,7 +22,7 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 
 - [x] **Phase 1: Live Defect Fixes** - Four defects in already-shipped code; ships alone this week (completed 2026-07-30)
 - [x] **Phase 2: Quiz Schema Foundation** - `required`, `showIf`, and static-info question types (completed 2026-08-09)
-- [ ] **Phase 3: Mandatory Medical History** - Rebuilt history section every patient passes through
+- [x] **Phase 3: Mandatory Medical History** - Rebuilt history section every patient passes through (completed 2026-08-09)
 - [ ] **Phase 4: Mandatory Allergy Testing** - Two-option testing split; both bypasses deleted
 - [ ] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale
 - [ ] **Phase 6: Purchase Prerequisites** - Honor-system checkboxes and returning-patient state
@@ -195,7 +195,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 03-07-PLAN.md — Merge, deploy, prove the release live on served bytes, then execute the DROP COLUMN and verify by query results
+- [x] 03-07-PLAN.md — Merge, deploy, prove the release live on served bytes, then execute the DROP COLUMN and verify by query results
 **UI hint**: yes
 **Notes**: ~1.5–2 days — content is trivial, the schema is the work, and Phase 2 does that work.
 The old `PART6_MEDICAL_HISTORY` (`questions.ts:222-249`) is fully replaced, not extended;
@@ -413,7 +413,7 @@ exposures today.
 |-------|----------------|--------|-----------|
 | 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
 | 2. Quiz Schema Foundation | 4/4 | Complete    | 2026-08-09 |
-| 3. Mandatory Medical History | 6/7 | In Progress|  |
+| 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
 | 4. Mandatory Allergy Testing | 0/TBD | Not started | - |
 | 5. Preliminary Score Page | 0/TBD | Not started | - |
 | 6. Purchase Prerequisites | 0/TBD | Not started | - |

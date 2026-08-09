@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-06-PLAN.md
-last_updated: "2026-08-09T20:15:30.233Z"
+stopped_at: Completed 03-07-PLAN.md — Phase 3 (mandatory-medical-history) complete
+last_updated: "2026-08-09T20:27:03.343Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 8
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 17
-  completed_plans: 16
-  percent: 25
+  completed_plans: 17
+  percent: 38
 ---
 
 # Project State
@@ -26,29 +26,29 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 
 ## Current Position
 
-Phase: 03 (mandatory-medical-history) — EXECUTING
-Plan: 6 of 7 — COMPLETE
-Status: 03-06 complete (pre-migration backup ID 1786306233540 SUCCESSFUL, migration file
-  committed alone, no DDL run). Plan 03-07 next: run the DROP COLUMN DDL, but only after
-  confirming plan 03-02's app code is deployed and live on Fly.
+Phase: 03 (mandatory-medical-history) — **COMPLETE** (all 7 plans executed, merged, deployed, verified)
+Plan: 7 of 7 — COMPLETE
+Status: Phase 3 fully shipped. PR #19 merged to `main` (`ac40f09`), deployed to Fly (release v50,
+  proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
+  from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
+  at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
 Last activity: 2026-08-09
 
-Progress: [█████████░] 94%
+Progress: [██████████] 100%
 
-Codebase baseline: `main` @ `a8c13d7`, Phase 2 complete and UAT'd, **282 tests / 23 files passing**,
-typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release **v49**, and
-Shopify app version `alledrops-quiz-production-21`. Phase 1 changed application code for the first
-time since session 28 and shipped it — DEF-01..04 plus three security fixes, one of which (an open
-redirect in `entry.theme.tsx`) was live and exploitable in production. Phase 2 then made the quiz
-schema declarative (`required`, `showIf`, info blocks) with zero question-ID literals left in the
-renderer.
+Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
+27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
+**v50**. Phase 1 shipped DEF-01..04 plus three security fixes. Phase 2 made the quiz schema
+declarative (`required`, `showIf`, info blocks). Phase 3 replaced the vestigial Part 6 medical-history
+checklist with a mandatory HIST-01..04/DIAG-01 section ahead of the testing split, removed both
+no-testing bypasses, and closed the asymmetric app-code/DDL migration for the two legacy PHI columns.
 
-**Standing risk carried into Phase 3 — three defects have now shipped past a fully green suite, all
-in the same blind spot: no test renders `QuizPartRenderer` or `QuizContainer`.** Session 32's stale
-theme bundle and dropped info blocks, and session 33's exclusive-option disable (D-13, reversed)
-were each found by a human clicking, never by CI. `schema.ts` was correct in all three cases; the
-bugs live in the wiring between the pure module and the DOM. DOM test infra was declined in Phase 2
-on two data points. There are now three — decide before Phase 3 executes.
+**Standing risk, now mitigated (not fully closed):** three prior defects (session 32/33, plus this
+phase's own two UAT findings) all shipped past a fully green suite from the same blind spot — no test
+rendered `QuizPartRenderer` or `QuizContainer`. Phase 3 plan 03-04 adopted DOM test infrastructure
+(`jsdom`, `@testing-library/react`, Andrew-approved) and plan 03-05 added a first DOM-rendering test,
+closing part of the gap. The two Phase 3 UAT defects (`bfa0431`, `1da8c3d`) were still caught by a
+human, not CI, so the blind spot is narrowed but not eliminated — worth watching in Phase 4.
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ on two data points. There are now three — decide before Phase 3 executes.
 | Phase 03 P04 | 55min | 3 tasks | 5 files |
 | Phase 03 P05 (Tasks 1-2 only; Task 3 checkpoint outstanding) | 35min | 2 tasks | 3 files |
 | Phase 03 P06 | 15min | 2 tasks | 1 files |
+| Phase 03 P07 | 20min | 3 tasks | 0 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Affecting current work:
 - [Phase 03]: 03-05 (Tasks 1-2): public/quiz-bundle.js rebuilt (185796 -> 186699 bytes), folding in three commits of deferred quiz-source changes from 03-01/03-03/03-04; freshness guard extended with 5 presence + 2 absence Phase-3 markers, each independently proven 0-before/>=1-after (or 6-before/0-after for the absence pair); phase-wide absence/presence audit all clean in live code (358/27 tests green, typecheck clean, both builds green, theme build proven deterministic). Task 3 (8-check human browser verification) is outstanding — plans 03-06/03-07 remain blocked until Andrew completes it.
 - [Phase 03]: 03-06: Named on-demand Cloud SQL backup taken and verified before any DDL: ID 1786306233540, SUCCESSFUL, read back via `gcloud sql backups list`/`describe` rather than trusted from exit code
 - [Phase 03]: 03-06: migrations/003_drop_medical_history_legacy_columns.sql authored and committed alone (D-01 non-negotiable) — no DDL executed, plan 03-07 runs it after app code is confirmed live on Fly
+- [Phase 03-mandatory-medical-history]: 03-07: PR #19 merged to main (ac40f09) by Claude under Andrew's explicit in-session authorization ('keep moving forward'), overriding CLAUDE.md's default merge rule the same way as PR #16-18
+- [Phase 03-mandatory-medical-history]: 03-07: DROP COLUMN executed against alledrops_quiz_dev only after re-verifying all four preconditions independently (backup SUCCESSFUL, merge on main, Fly v50 live on served bytes, fresh 42/18 pre-DDL count); row count held at 42 before/after, both columns confirmed gone, post-DDL synthetic POST proved the write path survived
 
 ### Pending Todos
 
@@ -310,6 +313,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-09T20:15:30.228Z
-Stopped at: Completed 03-06-PLAN.md
+Last session: 2026-08-09T20:27:03.337Z
+Stopped at: Completed 03-07-PLAN.md — Phase 3 (mandatory-medical-history) complete
 Resume file: None
