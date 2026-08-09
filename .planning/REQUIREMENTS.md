@@ -92,14 +92,26 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
   (`REQ-mandatory-allergy-testing-split`)
 - [ ] **TEST-03**: "I've already had allergy testing" collects Year, Location, and "What Allergens
   Did You React To?", persisted into `answers_json` (`REQ-mandatory-allergy-testing-split`)
-- [ ] **TEST-04**: The results branch instructs the patient to email results to
-  `testing@alledrops.com` using the same email address they used on the quiz — with no file input,
-  multipart parsing, object storage, or upload column introduced
-  (`REQ-testing-results-by-email`) — ⚠ email address depends on the domain-spelling decision
+- [ ] **TEST-04**: The `had_testing` branch requires the patient to upload at least one copy of
+  their allergy test results before they can continue — no optional-with-email-fallback (D-02). The
+  upload allowlist is PDF, JPEG, PNG, and HEIC, with multiple files per submission supported (D-03).
+  Uploaded files never touch Shopify and never leave the BAA chain (D-04). Files must be retrievable
+  from three surfaces: the embedded admin at `/app/quiz-results`, the patient ledger via
+  `/api/me/*`, and inline in the clinical PDF (D-05)
+  (`REQ-testing-results-upload`)
+
+  ~~The results branch instructs the patient to email results to `testing@alledrops.com` using the
+  same email address they used on the quiz — with no file input, multipart parsing, object storage,
+  or upload column introduced (`REQ-testing-results-by-email`) — ⚠ email address depends on the
+  domain-spelling decision~~ — **reversed by `04-CONTEXT.md` D-01 on 2026-08-09.** Original traced
+  to `docs/REQUIREMENTS-AND-GAPS-2026-07-29.md` R5.
 - [ ] **TEST-05**: Both no-testing bypasses are gone — the `7+` "Proceed Without Testing" chain and
   the `3–6` "Continue to Purchase AlleDrops" jump — and `ResultsDisplay` is a terminal display
   component with none of its four callback props (`REQ-remove-no-testing-paths`) — **must land AFTER
-  HIST-05**
+  HIST-05**. Phase 3's D-11 already deleted the `7+` proceed-without-testing chain and the
+  `"medical_history"` FlowStep. The remaining Phase 4 work under this requirement is the `3–6`
+  "Continue to Purchase AlleDrops" jump and making `ResultsDisplay` terminal with zero callback
+  props.
 - [ ] **TEST-06**: No storefront surface offers or implies a no-testing path — remove the "no longer
   a need for needles or allergy tests" clause from both product pages and the
   proceed-without-testing content from `/pages/test-options`
