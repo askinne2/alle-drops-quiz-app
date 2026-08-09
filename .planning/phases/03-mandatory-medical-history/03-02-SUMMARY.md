@@ -132,3 +132,21 @@ None - no external service configuration required.
 ---
 *Phase: 03-mandatory-medical-history*
 *Completed: 2026-08-09*
+
+## Self-Check: PASSED
+
+- FOUND: app/lib/format.ts
+- FOUND: tests/answer-labels.test.ts
+- FOUND: app/lib/pdf.ts
+- FOUND: app/routes/app.quiz-results.tsx
+- FOUND: app/lib/submissions.ts
+- FOUND: app/lib/quiz-validation.ts
+- FOUND: app/lib/quiz/types.ts
+- FOUND: scripts/e2e-test.ts
+- FOUND: tests/pdf.test.ts
+- FOUND: tests/api-admin-submission-detail.test.ts
+- FOUND: tests/api-admin-assessment-pdf.test.ts
+- FOUND: 81ad1ef (Task 1 commit)
+- FOUND: a30f978 (Task 2 commit)
+- FOUND: 8908a0f (Task 3 commit)
+- FOUND: c74d5cc (summary commit)
