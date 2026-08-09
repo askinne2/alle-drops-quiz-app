@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: "Phase 3 fully shipped. PR #19 merged to `main` (`ac40f09`), deployed to Fly (release v50,"
-stopped_at: Phase 4 planned — 19 plans / 11 waves, verification PASSED (0 blockers). Waves 1-5 unblocked; waves 6-11 BLOCKED on William + Fly BAA + GCP cutover
-last_updated: "2026-08-09T22:31:23.900Z"
+status: executing
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-08-09T23:23:32.828Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 36
-  completed_plans: 17
+  completed_plans: 18
   percent: 38
 ---
 
@@ -22,19 +22,19 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 03 — mandatory-medical-history
+**Current focus:** Phase 04 — mandatory-allergy-testing
 
 ## Current Position
 
-Phase: 03 (mandatory-medical-history) — **COMPLETE** (all 7 plans executed, merged, deployed, verified)
-Plan: 7 of 7 — COMPLETE
-Status: Phase 3 fully shipped. PR #19 merged to `main` (`ac40f09`), deployed to Fly (release v50,
+Phase: 04 (mandatory-allergy-testing) — EXECUTING
+Plan: 2 of 19
+Status: Ready to execute
   proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
   from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
   at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
 Last activity: 2026-08-09
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50%
 
 Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
 27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
@@ -73,6 +73,7 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 03 P05 (Tasks 1-2 only; Task 3 checkpoint outstanding) | 35min | 2 tasks | 3 files |
 | Phase 03 P06 | 15min | 2 tasks | 1 files |
 | Phase 03 P07 | 20min | 3 tasks | 0 files |
+| Phase 04 P01 | 5min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,7 @@ Affecting current work:
 - [Phase 03]: 03-06: migrations/003_drop_medical_history_legacy_columns.sql authored and committed alone (D-01 non-negotiable) — no DDL executed, plan 03-07 runs it after app code is confirmed live on Fly
 - [Phase 03-mandatory-medical-history]: 03-07: PR #19 merged to main (ac40f09) by Claude under Andrew's explicit in-session authorization ('keep moving forward'), overriding CLAUDE.md's default merge rule the same way as PR #16-18
 - [Phase 03-mandatory-medical-history]: 03-07: DROP COLUMN executed against alledrops_quiz_dev only after re-verifying all four preconditions independently (backup SUCCESSFUL, merge on main, Fly v50 live on served bytes, fresh 42/18 pre-DDL count); row count held at 42 before/after, both columns confirmed gone, post-DDL synthetic POST proved the write path survived
+- [Phase 04]: Retracted DEC-testing-results-by-email-not-upload in place in PROJECT.md, REQUIREMENTS.md TEST-04, and CLAUDE.md per 04-CONTEXT.md D-01 — upload is now required, not email-only
 
 ### Pending Todos
 
@@ -313,6 +315,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-09T22:31:23.895Z
-Stopped at: Phase 4 planned — 19 plans / 11 waves, verification PASSED (0 blockers). Waves 1-5 unblocked; waves 6-11 BLOCKED on William + Fly BAA + GCP cutover
-Resume file: .planning/phases/04-mandatory-allergy-testing/04-01-PLAN.md
+Last session: 2026-08-09T23:23:32.822Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None
