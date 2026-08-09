@@ -81,10 +81,26 @@ Blast radius measured during scout: exactly six files reference `QuizQuestion`, 
   question.** This is a deliberate behavior change beyond the `med_list` / `med_control` pair, and
   it is in scope because it defines what `required` means. Today `isPartComplete` only checks
   `Array.isArray(a)`, so a patient can tick a symptom box, untick it, and advance with nothing
-  recorded — and the submission cannot distinguish "no symptoms" from "did not engage," even
-  though all seven checklist questions carry an explicit "None of the above." **Both existing
-  checklist tests stay green unchanged** — verified: they use `{}` and `["none"]`, never `[]`.
-  No question in the set wants the lenient behavior, so no per-question `allowEmpty` flag.
+  recorded — and the submission cannot distinguish "no symptoms" from "did not engage."
+  **Both existing checklist tests stay green unchanged** — verified: they use `{}` and `["none"]`,
+  never `[]`. No question wants a lenient `allowEmpty` flag; the two exceptions below use
+  `required: false` instead.
+
+  ⚠️ **CORRECTED 2026-08-09 — this decision originally claimed "all seven checklist questions carry
+  an explicit 'None of the above'." That is FALSE and the error was load-bearing.** Only **four**
+  of the seven do: `symptoms_nasal`, `symptoms_eye`, `symptoms_sinus`, and `timing_triggers`.
+  `timing_season` offers `only_rarely` (not a none-option), and `history_personal` /
+  `history_family` (`questions.ts:222-249`) offer **no** none-option at all.
+
+  Consequence, caught by the planner before execution: `QuizContainer` seeds both history
+  questions to `[]`, so applying D-06 uniformly would have made it **impossible for a patient with
+  no personal or family history to advance past medical history** — no option to select, and `[]`
+  no longer accepted. `history_personal` and `history_family` therefore carry `required: false`,
+  which reproduces today's behavior exactly and is covered by a positively-asserting test.
+
+  General lesson, consistent with the `injectIframe` correction in `PROJECT.md`: a property
+  verified on the questions actually inspected was generalized into a claim about all of them.
+  D-06's *decision* survives unchanged; only its supporting rationale was wrong.
 
 - **D-07: One shared `isAnswered(item, value)` predicate, consumed by both the required check and
   the `showIf` `isAnswered` operator.** They agree by construction. This matters concretely for
