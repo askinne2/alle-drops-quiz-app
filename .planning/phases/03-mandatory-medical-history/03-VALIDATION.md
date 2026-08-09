@@ -1,10 +1,11 @@
 ---
 phase: 3
 slug: mandatory-medical-history
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-08-09
+approved: 2026-08-09
 ---
 
 # Phase 3 — Validation Strategy
@@ -137,14 +138,24 @@ separate agents on this project have hit this exact trap.
 
 ## Validation Sign-Off
 
-- [ ] All tasks have an automated verify or a Wave 0 dependency
-- [ ] Sampling continuity: no 3 consecutive tasks without an automated verify
-- [ ] Wave 0 covers all ❌ MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 5s
-- [ ] Every new guard proven RED against pre-change source, with the failing count recorded
-- [ ] Both manual verifications completed and recorded
-- [ ] Backup ID recorded before any DDL
-- [ ] `nyquist_compliant: true` set in frontmatter
+Checked by `gsd-plan-checker` against the 7 plans on 2026-08-09 (Dimension 8: PASS).
 
-**Approval:** pending
+**Contract satisfied by the plans — verified at planning time:**
+
+- [x] All tasks have an automated verify or a Wave 0 dependency
+- [x] Sampling continuity: no 3 consecutive tasks without an automated verify
+- [x] Wave 0 covers all ❌ MISSING references — items are embedded in plans 03-01 and 03-02
+- [x] No watch-mode flags
+- [x] Feedback latency < 5s
+- [x] Every new guard proven RED against pre-change source, with the failing count recorded —
+      required and method-specified in 03-01 Task 3, 03-03 Task 3, 03-04 Task 3, 03-05 Task 1
+- [x] `nyquist_compliant: true` set in frontmatter
+
+**Discharged during execution, not at planning time — these stay open until the phase runs:**
+
+- [ ] `wave_0_complete` — flips when 03-01 and 03-02 land
+- [ ] Both manual verifications completed and recorded (HIST-04 info-block browser check; full
+      six-part click-through)
+- [ ] Backup ID recorded before any DDL (03-06 Task 1, `autonomous: false`)
+
+**Approval:** approved 2026-08-09 (planning contract). Execution items above remain outstanding.

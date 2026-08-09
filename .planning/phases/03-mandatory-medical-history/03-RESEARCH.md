@@ -715,10 +715,14 @@ codebase:
 | A1 | Package identity/existence of `jsdom`, `happy-dom`, `@testing-library/react` on npm | Standard Stack (Supporting), Package Legitimacy Audit | Low — all three independently confirmed via live `npm view` (versions, creation dates, repository URLs) and `slopcheck [OK]` in this session; only the *name-discovery provenance* is training-data-sourced per the strict tagging rule, not the existence claim itself |
 | A2 | The "test data only, no real patient has completed the quiz" premise licensing D-01 | User Constraints (D-01) | High if wrong — this is a locked CONTEXT.md decision, not something this research re-verified independently (this research verified the *row count and shape* of the data, 42 rows / 18 with history data, but has no way to determine from the database alone whether any of those 42 rows represents a real patient rather than test data — that determination rests on CONTEXT.md's stated premise from the discussion, not on anything queryable) |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> Both resolved during planning, 2026-08-09. Recorded here so nobody reads this section as an open
+> decision blocking execution.
 
 1. **Does the new medical-history content keep the `PART6_MEDICAL_HISTORY` export name, or is it
-   renamed?**
+   renamed?** — **RESOLVED: keep the name.** Adopted explicitly in `03-01-PLAN.md` Task 1, matching
+   the recommendation below. All three importing files need edits either way.
    - What we know: CONTEXT.md leaves the exact export name to Claude's discretion; the wholesale
      replacement changes every field inside it.
    - What's unclear: whether keeping the same name (with entirely new content) versus renaming
@@ -730,6 +734,8 @@ codebase:
      either way, all three files need edits regardless of the name chosen.
 
 2. **Is the pending `npm audit` finding (39 vulnerabilities, 2 critical) in scope for this phase?**
+   — **RESOLVED: out of scope.** Correctly excluded from all seven plans. Surfaced to Andrew as a
+   standing finding instead; it predates Phase 3, which adds zero runtime dependencies.
    - What we know: `npm install` reported this count during this research session's package
      revert/reinstall cycle, unrelated to any Phase 3 change — it reflects the pre-existing
      dependency tree.
