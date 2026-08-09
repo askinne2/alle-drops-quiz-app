@@ -769,7 +769,21 @@ D-04 exists to prevent, not merely that the current (correct) data happens to pa
 | A3 | The chained-conditional transitive-visibility rule (Pitfall 4 — should C's showIf require B to be BOTH answered-as-specified AND currently visible?) has no correct answer derivable from this phase's own question set, since no chain exists in Parts 1–5 today | Common Pitfalls (Pitfall 4) | Medium for Phase 3/4, zero for Phase 2 itself — recommend deciding and testing the rule now while it's cheap, even though nothing in this phase's scope exercises it, rather than letting Phase 3 discover the ambiguity under schedule pressure |
 | A4 | Branch naming `phase-2-quiz-schema-foundation` (extrapolated from CLAUDE.md's stated `phase-2-<description>` convention for "post-MVP work") is the right pattern for this phase, even though Phase 2 here is itself part of the v1.0 milestone rather than post-MVP | Project Constraints | Very low — cosmetic; any branch name works as long as it's not `main` and is reviewed via PR per CLAUDE.md |
 
-## Open Questions
+## Open Questions (ALL RESOLVED — see resolutions below, 2026-08-09)
+
+> **Status:** All three questions were resolved during planning and are binding in the PLAN files.
+> They are retained here with their original analysis because the reasoning is still the record of
+> *why* each choice was made — but none of them is open.
+>
+> | # | Question | Resolution | Where |
+> |---|----------|------------|-------|
+> | 1 | `ShowIfCondition` dispatch shape | **Three-member union.** Keeps D-01's terse literal shape while making a two-operator condition unwritable at the type level. | `02-01-PLAN.md` Task 2 |
+> | 2 | Does `visibleAnswers()` need Part 6? | **Yes — Recommendation (a) adopted.** `ALL_ITEMS` is exported and spans every part including Part 6, so `history_personal` / `history_family` pass through untouched. `PART6_MEDICAL_HISTORY` keeps its current content for Phase 3 to replace, but IS covered by the filter. | `02-01-PLAN.md` Task 2; guarded by a dedicated non-vacuous test + negative control in `02-02-PLAN.md` Tasks 1–2 |
+> | 3 | Is `id` required on `QuizInfoBlock`? | **Yes — `id: string`, not optional.** | `02-01-PLAN.md` Task 2 |
+>
+> Question 2 was the consequential one: left unresolved it would have silently stripped two medical
+> history answers from the submission payload — a clinical record losing data with no error. It is
+> tracked as orchestrator directive DIR-02.
 
 1. **Should `ShowIfCondition` use presence-based operator dispatch or an explicit `op` field?**
    - What we know: D-01/D-02 lock the *shape family* (`{ questionId, equals: "yes" }`) and the
