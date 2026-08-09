@@ -24,6 +24,7 @@ export function formatAnswerValue(val: unknown): string {
 const ANSWER_LABELS: Record<string, string> = {
   // Phase 3 medical history (HIST-01..HIST-04, DIAG-01) — the reason this map exists.
   history_comorbidities: 'Personal history of medical conditions',
+  history_medications_has: 'Currently taking medications (any kind)',
   current_medications: 'Current medications (all)',
   history_surgeries_has: 'Has had previous surgeries',
   history_surgeries: 'Previous surgeries and dates',

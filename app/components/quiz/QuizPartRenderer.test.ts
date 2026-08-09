@@ -109,22 +109,32 @@ describe("isPartComplete — Part 6 (HIST-01..HIST-04) required-ness (Phase 3, 0
     expect(isPartComplete(PART6_MEDICAL_HISTORY, { history_comorbidities: ["none"] })).toBe(false);
   });
 
-  it("is complete for a fully-answered 'healthy patient' with no history — the reachability proof HIST-01's 'none' option exists for", () => {
+  it("is complete for a 'healthy patient' who types NOTHING — the whole point of the session-33 UAT fix", () => {
+    // Before the fix this fixture needed `current_medications: "None"` to pass: the medications
+    // field was revealed by any comorbidity answer (including "none of the above") and was
+    // REQUIRED, so a patient with no conditions and no medications still had to type something.
+    // Now `history_medications_has: "no"` hides the list entirely and satisfies the part.
+    // Every value below is a click. There is not a single typed character in this fixture, and
+    // that is the assertion.
     const answers = {
       history_comorbidities: ["none"],
-      current_medications: "None",
+      history_medications_has: "no",
       history_surgeries_has: "no",
       history_allergies_has: "no",
       history_conditions_has: "no",
       has_pcp: "no",
     };
     expect(isPartComplete(PART6_MEDICAL_HISTORY, answers)).toBe(true);
+    // Non-vacuity control: drop the one new gate and the part must go incomplete again, proving
+    // the assertion above is carried by the gate and not by the other five answers.
+    const { history_medications_has: _omitted, ...withoutGate } = answers;
+    expect(isPartComplete(PART6_MEDICAL_HISTORY, withoutGate)).toBe(false);
   });
 
   it("is incomplete when has_pcp is 'yes' with no clinic fields filled in, and complete once both are filled in", () => {
     const base = {
       history_comorbidities: ["none"],
-      current_medications: "None",
+      history_medications_has: "no",
       history_surgeries_has: "no",
       history_allergies_has: "no",
       history_conditions_has: "no",
@@ -140,16 +150,27 @@ describe("isPartComplete — Part 6 (HIST-01..HIST-04) required-ness (Phase 3, 0
     expect(isPartComplete(PART6_MEDICAL_HISTORY, withClinicFields)).toBe(true);
   });
 
-  it("is incomplete when current_medications is whitespace-only — isAnswered's trim rule", () => {
+  it("does NOT block on a whitespace-only medications list once the gate is 'yes' — the list is optional now", () => {
+    // This assertion inverted with the session-33 fix and the inversion is intentional.
+    //
+    // It previously read "is incomplete when current_medications is whitespace-only — isAnswered's
+    // trim rule" and asserted `false`. After the fix that phrasing would have passed VACUOUSLY:
+    // `current_medications` is `required: false`, so its content cannot block anything — the part
+    // was only incomplete because the new `history_medications_has` gate was unanswered. A test
+    // that passes for a reason unrelated to its own name is worse than no test.
+    //
+    // The trim rule itself is not lost. It still governs every REQUIRED text field, and is pinned
+    // on Part 5's `med_list` in the "med_list — label copy is separate from required-ness" block.
     const answers = {
       history_comorbidities: ["none"],
+      history_medications_has: "yes",
       current_medications: "   ",
       history_surgeries_has: "no",
       history_allergies_has: "no",
       history_conditions_has: "no",
       has_pcp: "no",
     };
-    expect(isPartComplete(PART6_MEDICAL_HISTORY, answers)).toBe(false);
+    expect(isPartComplete(PART6_MEDICAL_HISTORY, answers)).toBe(true);
   });
 });
 

@@ -162,29 +162,48 @@ describe("HIST-01 exclusivity — the session-33 failure shape, at the DOM level
   });
 });
 
-describe("HIST-02 reveal — the case `equals` cannot express (D-08 / isAnswered)", () => {
-  it("is absent with no answers, present after a comorbidity selection, and present for 'none of the above'", () => {
+/**
+ * HIST-02 became a gate + reveal pair during browser UAT (session 33) — see the long note in
+ * `app/lib/quiz/schema.test.ts`. This block previously asserted the `isAnswered` reveal directly
+ * on the medications field; that operator now lives nowhere in the production question set, so
+ * asserting it here would be asserting a contract the data no longer has.
+ *
+ * What replaces it is the thing that actually matters to a patient: a healthy person must be able
+ * to get through Part 6 without typing.
+ */
+describe("HIST-02 gate + reveal — the session-33 friction fix, at the DOM level", () => {
+  it("shows no medications field until the gate is 'yes', and shows it once it is", () => {
     const { rerender } = renderPart6({});
+    // The gate itself is unconditional, so it renders immediately — no chain to evaluate.
     expect(screen.queryByText(MEDICATIONS_LABEL)).toBeNull();
 
     rerender(
       React.createElement(QuizPartRenderer, {
         items: PART_6_ITEMS,
-        answers: { history_comorbidities: ["asthma"] },
+        answers: { history_medications_has: "no" },
         onAnswerChange: vi.fn(),
       })
     );
-    expect(screen.getByText(MEDICATIONS_LABEL)).toBeTruthy();
+    // "No" is the escape a healthy patient now has — nothing to type.
+    expect(screen.queryByText(MEDICATIONS_LABEL)).toBeNull();
 
-    // The case `equals` cannot express — isAnswered fires on ["none"] too.
     rerender(
       React.createElement(QuizPartRenderer, {
         items: PART_6_ITEMS,
-        answers: { history_comorbidities: ["none"] },
+        answers: { history_medications_has: "yes" },
         onAnswerChange: vi.fn(),
       })
     );
+    // Non-vacuity control: the label IS reachable, so the two nulls above mean something.
     expect(screen.getByText(MEDICATIONS_LABEL)).toBeTruthy();
+  });
+
+  it("never renders the medications field off a comorbidity answer alone — the chain the forward guard rejects", () => {
+    // Regression guard for the first attempt at this fix, which gated the new question on
+    // `history_comorbidities` and built a two-level chain. `evaluateShowIf` is non-transitive, so
+    // that let a stale gate answer leave this field rendering with its gate hidden.
+    renderPart6({ history_comorbidities: ["asthma"] });
+    expect(screen.queryByText(MEDICATIONS_LABEL)).toBeNull();
   });
 });
 

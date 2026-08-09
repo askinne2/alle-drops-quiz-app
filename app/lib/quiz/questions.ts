@@ -298,19 +298,59 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
     // question — Phase 2 D-06).
   },
   {
+    // UAT-added gate (session 33). Browser UAT found `current_medications` was required with no
+    // escape: a healthy patient ticks "None of the above" on the comorbidity list, the medications
+    // box appears, and they must type something to advance. Isolated in the DOM — filling only this
+    // field enabled Next while all three HIST-03 reveals sat empty; clearing it disabled Next again.
+    //
+    // That is the exact friction D-06 removed for the three HIST-03 free-text fields. HIST-02 never
+    // got a gate because REQUIREMENTS.md never states its required-ness, so it silently inherited
+    // Phase 2 D-05's default of `true`. Andrew's call: give it the same "none" gate as HIST-03.
+    //
+    // Copy is deliberately worded to distinguish it from Part 5's `taking_meds`, which asks only
+    // about ALLERGY medications. Naming the difference explicitly avoids the read-as-duplicate
+    // problem that DIAG-01's example text hit earlier in this same UAT pass.
+    kind: "question",
+    id: "history_medications_has",
+    type: "yesno",
+    part: 6,
+    // UNCONFIRMED proposed copy — confirm with William alongside the HIST-03 third label.
+    text: "Are you currently taking any medications of any kind, including ones unrelated to allergies?",
+    order: 61,
+    // DELIBERATELY UNCONDITIONAL — no `showIf`, exactly like the three HIST-03 gates below.
+    //
+    // The first attempt gated this on `history_comorbidities` isAnswered, to preserve HIST-02's
+    // literal "checking any box reveals the field" wording. The `no chained showIf (forward guard)`
+    // test in schema.test.ts caught it, correctly: that created a two-level chain
+    // (current_medications -> history_medications_has -> history_comorbidities), and Phase 2's
+    // `evaluateShowIf` is NON-TRANSITIVE by design — it reads raw answers, not whether the
+    // referenced question is itself visible. A patient who answered this gate "yes" and then
+    // cleared their comorbidity list would hide the gate while `current_medications` kept
+    // rendering underneath it. Orphan field, silent, no error.
+    //
+    // KNOWN DEVIATION from HIST-02's literal wording: the medications QUESTION is now always
+    // present in Part 6 rather than revealed by a comorbidity selection. The medications LIST is
+    // still progressively revealed, one level down. This is the same shape as HIST-03 and it is
+    // what removes the chain. Flag to William with the other Part 6 copy items.
+    //
+    // required omitted — defaults to true (Phase 2 D-05). The gate is what every patient must
+    // answer; the list below is only required of patients who say yes.
+  },
+  {
     kind: "question",
     id: "current_medications",
     type: "text_input",
     part: 6,
     // LOCKED copy, verbatim — 03-UI-SPEC.md Copywriting Contract / REQUIREMENTS.md HIST-02.
     text: "What medications (including dosage) are you currently taking (please list all)",
-    // UNCONFIRMED proposed subtitle — see <required_ness_decision> in 03-01-PLAN.md.
-    subtitle: "If you are not currently taking any medications, enter None.",
-    order: 61,
-    // MUST be isAnswered, not equals — "including none of the above" is precisely the case
-    // equals cannot express (D-08). required omitted (defaults to true) — see plan's
-    // required_ness_decision for why this field stays required unlike the HIST-03 reveals below.
-    showIf: { questionId: "history_comorbidities", isAnswered: true },
+    order: 62,
+    // Now a D-06 gate+reveal pair, identical in shape to the three HIST-03 pairs below. The
+    // `showIf` + `required: false` combination is also what `isRevealItem` detects, so this pair
+    // picks up the same visual fusion treatment automatically — no question-ID literal involved.
+    // The old "if you are not taking any medications, enter None." subtitle is gone: the gate now
+    // carries that meaning, and the record distinguishes "said no" from "typed None".
+    showIf: { questionId: "history_medications_has", equals: "yes" },
+    required: false,
   },
   {
     kind: "question",
@@ -318,7 +358,7 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
     type: "yesno",
     part: 6,
     text: "Have you had any previous surgeries?",
-    order: 62,
+    order: 63,
   },
   {
     kind: "question",
@@ -326,7 +366,7 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
     type: "text_input",
     part: 6,
     text: "Please list your previous surgeries and the approximate dates.",
-    order: 63,
+    order: 64,
     showIf: { questionId: "history_surgeries_has", equals: "yes" },
     required: false,
   },
@@ -336,7 +376,7 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
     type: "yesno",
     part: 6,
     text: "Do you have any known medication, food, or environmental allergies?",
-    order: 64,
+    order: 65,
   },
   {
     kind: "question",
@@ -344,7 +384,7 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
     type: "text_input",
     part: 6,
     text: "Please list your known allergies (medication, food, or environmental).",
-    order: 65,
+    order: 66,
     showIf: { questionId: "history_allergies_has", equals: "yes" },
     required: false,
   },
@@ -354,7 +394,7 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
     type: "yesno",
     part: 6,
     text: "Do you have any other medical conditions not already listed?",
-    order: 66,
+    order: 67,
   },
   {
     kind: "question",
@@ -364,7 +404,7 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
     // UNCONFIRMED clinical copy — this is the truncated third label from William's 6/27 email.
     // Probable wording pending confirmation; see CONTEXT.md <specifics> #4 and 03-UI-SPEC.md.
     text: "Please list any other medical conditions that you have.",
-    order: 67,
+    order: 68,
     showIf: { questionId: "history_conditions_has", equals: "yes" },
     required: false,
   },
@@ -374,7 +414,7 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
     type: "yesno",
     part: 6,
     text: "Do you have a Primary Care Physician (PCP)?",
-    order: 68,
+    order: 69,
   },
   {
     kind: "question",
@@ -382,7 +422,7 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
     type: "text_input",
     part: 6,
     text: "What is the name of your PCP's clinic?",
-    order: 69,
+    order: 70,
     // required omitted — defaults to true. D-09: both clinic fields are required when visible.
     showIf: { questionId: "has_pcp", equals: "yes" },
   },
@@ -392,7 +432,7 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
     type: "text_input",
     part: 6,
     text: "What is the address of your PCP's clinic?",
-    order: 70,
+    order: 71,
     // required omitted — defaults to true. D-09: both clinic fields are required when visible.
     showIf: { questionId: "has_pcp", equals: "yes" },
   },
@@ -405,7 +445,7 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
     paragraphs: [
       "We recommend that you establish with a primary care physician before beginning SLIT.",
     ],
-    order: 71,
+    order: 72,
     part: 6,
     showIf: { questionId: "has_pcp", equals: "no" },
   },

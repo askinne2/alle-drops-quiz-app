@@ -769,21 +769,52 @@ describe("no chained showIf (forward guard)", () => {
 // fails open (D-04) — a positive-only assertion passes identically even when the reference is
 // broken or the operator is wrong.
 
-describe("HIST-02: current_medications visibility (isAnswered, not equals)", () => {
-  it("is visible when history_comorbidities has a real selection", () => {
-    expect(evaluateShowIf(getQuestionById("current_medications")!.showIf, { history_comorbidities: ["asthma"] })).toBe(true);
+/**
+ * HIST-02 became a gate + reveal pair during browser UAT (session 33).
+ *
+ * It used to be a single `text_input` gated directly on
+ * `{ questionId: "history_comorbidities", isAnswered: true }`, and it was REQUIRED — so a healthy
+ * patient who ticked "None of the above" still had to type something into a medications box before
+ * Next would enable. Isolated in the live DOM: filling only that field enabled Next while all three
+ * HIST-03 reveals sat empty; clearing it disabled Next again.
+ *
+ * The fix gives it the same "none" gate the three HIST-03 fields already had (Andrew's call).
+ *
+ * The gate is DELIBERATELY UNCONDITIONAL. Gating it on `history_comorbidities` — which is what
+ * preserves HIST-02's literal wording — builds a two-level chain, and the `no chained showIf`
+ * forward guard below rejects that for good reason: `evaluateShowIf` is non-transitive, so a
+ * patient who answered the gate "yes" and then cleared their comorbidity list would hide the gate
+ * while the medications field kept rendering underneath it.
+ *
+ * Consequence worth knowing: this removed the last production consumer of the `isAnswered`
+ * operator. Phase 2 D-02 named HIST-02 as exactly that consumer. The operator still exists and is
+ * exercised by the unit tests above — no real question uses it today.
+ */
+describe("HIST-02: current_medications is a gate + reveal pair (UAT session 33)", () => {
+  it("the gate itself is unconditional — no showIf, so no chain can form", () => {
+    expect(getQuestionById("history_medications_has")!.showIf).toBeUndefined();
   });
 
-  it("is visible when history_comorbidities is answered with only the exclusive 'none' option — the exact case 'equals' cannot express", () => {
-    expect(evaluateShowIf(getQuestionById("current_medications")!.showIf, { history_comorbidities: ["none"] })).toBe(true);
+  it("the medications list is visible when the gate is 'yes'", () => {
+    expect(evaluateShowIf(getQuestionById("current_medications")!.showIf, { history_medications_has: "yes" })).toBe(true);
   });
 
-  it("is NOT visible when history_comorbidities is entirely unanswered", () => {
+  it("is NOT visible when the gate is 'no' — the escape a healthy patient now has", () => {
+    expect(evaluateShowIf(getQuestionById("current_medications")!.showIf, { history_medications_has: "no" })).toBe(false);
+  });
+
+  it("is NOT visible when the gate is entirely unanswered", () => {
     expect(evaluateShowIf(getQuestionById("current_medications")!.showIf, {})).toBe(false);
   });
 
-  it("is NOT visible when history_comorbidities is answered with an empty array", () => {
-    expect(evaluateShowIf(getQuestionById("current_medications")!.showIf, { history_comorbidities: [] })).toBe(false);
+  it("the list is optional once revealed, so answering 'yes' and typing nothing cannot trap the patient", () => {
+    expect(getQuestionById("current_medications")!.required).toBe(false);
+  });
+
+  it("the gate is required, so the medications question cannot be skipped entirely", () => {
+    // required is omitted on the gate and defaults to true (Phase 2 D-05) — assert the effective
+    // behavior rather than the literal field, so an explicit `required: true` would also pass.
+    expect(getQuestionById("history_medications_has")!.required).not.toBe(false);
   });
 });
 
