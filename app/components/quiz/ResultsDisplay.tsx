@@ -10,7 +10,6 @@ export interface ResultsDisplayProps {
   onScheduleConsult: () => void;
   onProceedToPurchase: () => void;
   onTestFirst: () => void;
-  onProceedWithoutTesting: () => void;
 }
 
 export function ResultsDisplay({
@@ -21,7 +20,6 @@ export function ResultsDisplay({
   onScheduleConsult,
   onProceedToPurchase,
   onTestFirst,
-  onProceedWithoutTesting,
 }: ResultsDisplayProps) {
   const [copied, setCopied] = useState(false);
 
@@ -128,13 +126,6 @@ export function ResultsDisplay({
                   onClick={onTestFirst}
                 >
                   I&apos;d Like Allergy Testing First
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
-                  onClick={onProceedWithoutTesting}
-                >
-                  Proceed Without Testing
                 </button>
               </div>
             </div>

@@ -141,7 +141,6 @@ export function QuizContainer() {
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [showTestMode, setShowTestMode] = useState(false);
   const [savedToServer, setSavedToServer] = useState(false);
-  const [showProceedWarning, setShowProceedWarning] = useState(false);
 
   const autoSubmit0to2Attempted = useRef(false);
   const isFirstRender = useRef(true);
@@ -281,21 +280,6 @@ export function QuizContainer() {
   const handleProceedToPurchase = useCallback(() => {
     setConsentChecked(false);
     setStep("consent");
-  }, []);
-
-  const handleProceedWithoutTesting = useCallback(() => {
-    setShowProceedWarning(true);
-  }, []);
-
-  const handleConfirmProceedWithoutTesting = useCallback(() => {
-    setShowProceedWarning(false);
-    setConsentChecked(false);
-    setStep("medical_history");
-  }, []);
-
-  const handleDeclineProceedWithoutTesting = useCallback(() => {
-    setShowProceedWarning(false);
-    navigateParent(getRedirectUrl("testOptions"));
   }, []);
 
   const handleConsentSubmit = useCallback(async () => {
@@ -506,33 +490,7 @@ export function QuizContainer() {
           patientState &&
           symptomProfileId &&
           score !== null &&
-          scoreBracket !== null &&
-          (showProceedWarning ? (
-            <div className={styles.proceedWarning}>
-              <h3 className={styles.proceedWarning__heading}>Testing is recommended for your score</h3>
-              <p className={styles.proceedWarning__body}>
-                Based on your symptom severity, allergy testing helps confirm which allergens to target and improves
-                treatment outcomes. You may still choose to proceed with sublingual immunotherapy, and your provider
-                will review your medical history before finalizing your plan.
-              </p>
-              <div className={styles.proceedWarning__actions}>
-                <button
-                  type="button"
-                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                  onClick={handleConfirmProceedWithoutTesting}
-                >
-                  Continue without testing
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
-                  onClick={handleDeclineProceedWithoutTesting}
-                >
-                  I&apos;d like allergy testing first
-                </button>
-              </div>
-            </div>
-          ) : (
+          scoreBracket !== null && (
             <ResultsDisplay
               score={score}
               scoreBracket={scoreBracket}
@@ -541,9 +499,8 @@ export function QuizContainer() {
               onScheduleConsult={handleScheduleConsult}
               onProceedToPurchase={handleProceedToPurchase}
               onTestFirst={handleTestFirst}
-              onProceedWithoutTesting={handleProceedWithoutTesting}
             />
-          ))}
+          )}
 
         {step === "medical_history" && (
           <>
