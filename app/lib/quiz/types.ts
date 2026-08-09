@@ -11,7 +11,16 @@ export type QuestionType =
   | "bother_0_4" // Not bothersome(0) through Extremely bothersome(4)
   | "yesno" // Yes / No — used for medication question, no score
   | "text_input" // Free text — used for medication list, no score
-  | "control_0_3"; // Medication control: Completely(0)/Well(0)/Somewhat(1)/Poorly(2)/Not at all(3)
+  | "control_0_3" // Medication control: Completely(0)/Well(0)/Somewhat(1)/Poorly(2)/Not at all(3)
+  | "radio_single" // Single required choice from custom-labeled options, no score. Renders
+  // identically to control_0_3 but is named separately so app/lib/format.ts's ANSWER_LABELS, the
+  // clinical PDF, and the admin modal read correctly — the same granular-naming precedent
+  // severity_0_3 / frequency_0_4 / bother_0_4 already follow.
+  | "text_input_short" // Single-line <input type="text"> variant of text_input, no score.
+  | "file_multi"; // Answer shape string[] of opaque upload-reference tokens returned by
+  // POST /api/quiz/upload, never raw file blobs, no score. Part 7 is structurally outside
+  // ALL_SCORED_QUESTIONS; its only consumer (testing_files) arrives in the blocker-gated upload
+  // wave.
 
 export interface QuizQuestion {
   kind: "question"; // Discriminant for the QuizItem union (D-09). Required, not optional — an
