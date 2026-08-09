@@ -1,5 +1,5 @@
 ---
-status: partial
+status: complete
 phase: 02-quiz-schema-foundation
 source: [02-04-PLAN.md Task 3 checkpoint:human-verify]
 performed_by: Claude (Chrome automation, localhost dev server), at Andrew's explicit request
@@ -95,12 +95,18 @@ produced a false D-06 failure. Caught only because the live React component took
 
 total: 4
 passed: 3
-issues: 1 (fixed, pending browser re-check)
+issues: 1 (fixed and re-verified in browser 2026-08-09)
 pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- Browser re-verification of Check 4 (info block render) after the fix — carried to Phase 3, which
-  is the first phase to place real info blocks (HIST-04's PCP recommendation).
+None open. Check 4 was re-run in a live browser on 2026-08-09 after the `itemsForPart` fix and
+**PASSED** on all four assertions (both blocks reach the renderer; heading/paragraphs/bullets
+render; zero inputs inside the info card; `showIf` toggles the conditional block). Fixture reverted
+and confirmed absent. Full detail in `02-VERIFICATION.md` under "Human verification closed".
+
+Carried forward, not a gap in this phase: no test renders `QuizContainer`, so wiring bugs of this
+class remain invisible to the suite. Phase 3 ships the first real info blocks (HIST-04) and should
+budget a browser check.
