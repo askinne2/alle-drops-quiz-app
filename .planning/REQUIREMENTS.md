@@ -75,7 +75,7 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 - [x] **HIST-04**: "Do you have a Primary Care Physician" Y/N — yes collects clinic name and address;
   no displays "We recommend that you establish with a primary care physician before beginning SLIT"
   (`REQ-medical-history-mandatory`)
-- [ ] **HIST-05**: The section lives in `QUIZ_PARTS` before the allergy-testing split and is reached
+- [x] **HIST-05**: The section lives in `QUIZ_PARTS` before the allergy-testing split and is reached
   by 100% of patients; the `"medical_history"` `FlowStep`, its seeding effect, and the consent
   back-button special case are deleted; answers land in `answers_json` and surface in the clinical
   PDF and admin modal with no new plumbing (`REQ-medical-history-mandatory`,
@@ -234,7 +234,7 @@ Acknowledged, not in the v1.0 roadmap.
 | HIST-02 | Phase 3 | Complete |
 | HIST-03 | Phase 3 | Complete |
 | HIST-04 | Phase 3 | Complete |
-| HIST-05 | Phase 3 | Pending |
+| HIST-05 | Phase 3 | Complete |
 | DIAG-01 | Phase 3 | Blocked (William — R6 scope) |
 | TEST-01 | Phase 4 | Pending |
 | TEST-02 | Phase 4 | Pending |

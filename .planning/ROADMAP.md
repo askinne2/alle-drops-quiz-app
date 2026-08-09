@@ -178,7 +178,7 @@ Plans:
 **Wave 1**
 
 - [x] 03-01-PLAN.md — New Part 6 medical-history content plus DIAG-01, wired into QUIZ_PARTS/ALL_ITEMS/getQuestionById, with visibility, required-ness, integrity, and score-parity assertions
-- [ ] 03-02-PLAN.md — D-05 label map, both PHI renderers repointed, and the two legacy history fields removed from payload, validation, DB layer, types, E2E script, and fixtures
+- [x] 03-02-PLAN.md — D-05 label map, both PHI renderers repointed, and the two legacy history fields removed from payload, validation, DB layer, types, E2E script, and fixtures
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -413,7 +413,7 @@ exposures today.
 |-------|----------------|--------|-----------|
 | 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
 | 2. Quiz Schema Foundation | 4/4 | Complete    | 2026-08-09 |
-| 3. Mandatory Medical History | 1/7 | In Progress|  |
+| 3. Mandatory Medical History | 2/7 | In Progress|  |
 | 4. Mandatory Allergy Testing | 0/TBD | Not started | - |
 | 5. Preliminary Score Page | 0/TBD | Not started | - |
 | 6. Purchase Prerequisites | 0/TBD | Not started | - |
