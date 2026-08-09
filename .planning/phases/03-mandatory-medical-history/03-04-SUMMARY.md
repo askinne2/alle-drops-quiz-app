@@ -172,3 +172,14 @@ None — no external service configuration required. `node_modules/jsdom` and `n
 ---
 *Phase: 03-mandatory-medical-history*
 *Completed: 2026-08-09*
+
+## Self-Check: PASSED
+
+- FOUND: app/styles/quiz.module.css
+- FOUND: app/components/quiz/QuizPartRenderer.tsx
+- FOUND: package.json
+- FOUND: tests/quiz-part-renderer-dom.test.ts
+- FOUND: .planning/phases/03-mandatory-medical-history/03-04-SUMMARY.md
+- FOUND: 7602785 (Task 2 commit)
+- FOUND: b299208 (Task 3 commit)
+- FOUND: 2cb364e (initial summary commit, amended below)
