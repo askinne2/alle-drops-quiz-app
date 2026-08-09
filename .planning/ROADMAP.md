@@ -128,7 +128,24 @@ declaratively, with no question-ID literals anywhere in the renderer
   3. A static info block can be placed inside a quiz part and renders without collecting an answer
   4. The existing `med_list` and `med_control` conditional behavior is identical after being
      re-expressed through the new schema, with the existing test suite still green
-**Plans**: TBD
+**Plans**: 4 plans in 4 waves
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Failing literal inventory, the widened schema types, and the D-09 compile-time guarantee
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — Pure evaluator module (isAnswered, evaluateShowIf, visibleItems, visibleAnswers, toggleOption) plus the D-04 integrity guards
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-03-PLAN.md — Renderer refactor to zero question-ID literals; append-only regression tests
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 02-04-PLAN.md — D-03 boundary wiring at all three score sites, phase gate, blocking human verification
 **Notes**: ~1 day. This is the load-bearing phase — `CON-quiz-schema-foundation-is-load-bearing`.
 Ship it before Phases 3 and 4 or accept five more ID-literal special cases across
 `QuizPartRenderer.tsx`.
@@ -372,7 +389,7 @@ exposures today.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
-| 2. Quiz Schema Foundation | 0/TBD | Not started | - |
+| 2. Quiz Schema Foundation | 0/4 | Planned | - |
 | 3. Mandatory Medical History | 0/TBD | Not started | - |
 | 4. Mandatory Allergy Testing | 0/TBD | Not started | - |
 | 5. Preliminary Score Page | 0/TBD | Not started | - |
