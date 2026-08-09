@@ -5,13 +5,13 @@ milestone_name: milestone
 status: ready_to_plan
 stopped_at: Phase 2 complete (4/4) — ready to discuss Phase 3
 last_updated: 2026-08-09T15:41:10.190Z
-last_activity: 2026-08-09 -- Phase 2 execution started
+last_activity: 2026-08-09 -- Phase 2 complete, UAT'd, and deployed (Fly v49)
 progress:
   total_phases: 8
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
   completed_plans: 10
-  percent: 13
+  percent: 25
 ---
 
 # Project State
@@ -33,11 +33,20 @@ Last activity: 2026-08-09
 
 Progress: [░░░░░░░░░░] 0%
 
-Codebase baseline: `main` @ Phase 1 complete, **173 tests / 17 files passing**, typecheck clean,
-build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) releases v46+v47, and Shopify app version
-`alledrops-quiz-production-21`. Phase 1 changed application code for the first time since session 28
-and shipped it — DEF-01..04 plus three security fixes, one of which (an open redirect in
-`entry.theme.tsx`) was live and exploitable in production.
+Codebase baseline: `main` @ `a8c13d7`, Phase 2 complete and UAT'd, **282 tests / 23 files passing**,
+typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release **v49**, and
+Shopify app version `alledrops-quiz-production-21`. Phase 1 changed application code for the first
+time since session 28 and shipped it — DEF-01..04 plus three security fixes, one of which (an open
+redirect in `entry.theme.tsx`) was live and exploitable in production. Phase 2 then made the quiz
+schema declarative (`required`, `showIf`, info blocks) with zero question-ID literals left in the
+renderer.
+
+**Standing risk carried into Phase 3 — three defects have now shipped past a fully green suite, all
+in the same blind spot: no test renders `QuizPartRenderer` or `QuizContainer`.** Session 32's stale
+theme bundle and dropped info blocks, and session 33's exclusive-option disable (D-13, reversed)
+were each found by a human clicking, never by CI. `schema.ts` was correct in all three cases; the
+bugs live in the wiring between the pure module and the DOM. DOM test infra was declined in Phase 2
+on two data points. There are now three — decide before Phase 3 executes.
 
 ## Performance Metrics
 

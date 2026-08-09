@@ -1,19 +1,110 @@
-# Handoff — AlleDrops quiz app (2026-08-09 session 32)
+# Handoff — AlleDrops quiz app (2026-08-09 session 33)
 
-### Status: **GSD Phase 2 COMPLETE — 4/4 plans, verified 11/11 `passed`, marked complete in ROADMAP/STATE/REQUIREMENTS.** The quiz schema is now declarative: `required`, `showIf`, and a static info-block type, with **zero question-ID literals** left in the renderer. Suite 173 → **280 tests / 22 files**, typecheck and build clean, tree clean. **Two real defects were found by browser UAT that every automated test passed straight through** — one of them would have made the entire phase invisible on the storefront. **MERGED ([PR #17](https://github.com/askinne2/alle-drops-quiz-app/pull/17)) and DEPLOYED — Fly `v48`.** Verified on served bytes: production went 184542 → 185951 bytes and now serves an artifact byte-for-byte identical to the committed bundle. D-06 and D-16 re-confirmed live against production DOM. Next: Andrew's own visual pass, then `/gsd:discuss-phase 3`. **Phase 1's live exposures are still open — Klaviyo still loads 10× on the quiz page and the live clinical intake still carries no medical disclaimer.**
+### Status: **Phase 2 shipped and UAT'd by Andrew. One UAT defect found, fixed, merged ([PR #18](https://github.com/askinne2/alle-drops-quiz-app/pull/18)) and deployed as Fly `v49`.** Andrew ran the 8-check manual UAT script — all pass. Suite is **282 tests / 23 files**, typecheck clean, `main` clean. Next: `/gsd:discuss-phase 3` (mandatory medical history). **Phase 1's live exposures are still open — Klaviyo still loads 10× on the quiz page and the live clinical intake still carries no medical disclaimer.**
 
 ### Start here (fresh session)
 
-Phase 2 is **done, merged, and deployed** — nothing is half-finished and nothing is waiting on a build.
-
-1. Andrew's own visual pass on the quiz (his stated gate before Phase 3) — see "To UAT" in Resume context. The one to actually look at is **Part 5**: answer "yes" to medications, type something, toggle to "no" and back — the text must still be there.
-2. Then `/gsd:discuss-phase 3` (mandatory medical history).
-
-Do **not** re-run `/gsd:execute-phase 2` — it is complete, verified 11/11, and shipped as Fly v48.
+Nothing is half-finished and nothing is waiting on a build. Go straight to `/gsd:discuss-phase 3`.
 
 ---
 
-## Session 32 (2026-08-09) — what happened today
+## Session 33 (2026-08-09) — what happened today
+
+### Goal
+Andrew's visual UAT pass on Phase 2 (his stated gate before Phase 3). He hit a defect within a minute of starting.
+
+### The defect he found
+
+**Clicking "None of the above" made every other option in the group unclickable, with no way back that the UI signalled.**
+
+`QuizPartRenderer.tsx:91` passed `disabled={disabled || isOptionDisabledByExclusive(question, raw, opt)}`. Selecting an option flagged `exclusive: true` set the DOM `disabled` attribute on every sibling checkbox. A patient who mis-clicked "None of the above" could not switch to a real answer — the click never fired, and nothing on screen said that re-clicking "None" was the escape. Andrew's words: "which is HORRIBLE."
+
+Affects the 4 questions carrying an exclusive option: `symptoms_nasal`, `symptoms_eye`, `symptoms_sinus` (Part 1) and `timing_triggers` (Part 2).
+
+**Not a Phase 2 regression.** It shipped in `03ff72b` (session 28) as `isExclusiveNoneQuestion`, and Phase 2 deliberately preserved the behavior as **D-13** while removing the hardcoded ID. Phase 2 made it *cleaner*, not different.
+
+**`toggleOption` was already correct.** `toggleOption(q, ["none"], "sneezing") === ["sneezing"]` has been asserted in `schema.test.ts` since Phase 2 — the exclusive value gets dropped automatically when a normal option is clicked. The `disabled` attribute was the sole reason that correct path was unreachable. **The logic was right and the DOM prevented anyone from reaching it.**
+
+Fix: removed the binding and **deleted** `isOptionDisabledByExclusive` rather than leaving it unused, so a future renderer cannot wire it back in. D-13 is reversed; `schema.ts` carries a doc comment saying so and why. D-16 (clicking an already-selected exclusive option deselects to `[]`) is unchanged and still tested.
+
+### The lesson that matters — this is the third defect of its exact shape
+
+Three real defects have now shipped past a fully green suite, all in the same blind spot: **`QuizPartRenderer` and `QuizContainer` have no rendering test.**
+
+| Session | Defect | Suite at the time |
+|---|---|---|
+| 32 | `public/quiz-bundle.js` never rebuilt — phase invisible on storefront | 269 green |
+| 32 | Container filtered info blocks out before the renderer saw them | 269 green |
+| 33 | Exclusive option disabled every sibling, unreachable switch | 280 green |
+
+Each was caught by a human clicking, never by CI. `schema.ts` is thoroughly tested and was **correct in all three cases** — the bugs live in the wiring between the pure module and the DOM. Adding DOM test infra was explicitly declined in Phase 2. **This is now the third data point. Revisit it before Phase 3 execution, not after.**
+
+### The UAT script Andrew asked for — run this on every quiz-touching change
+
+Any change under `app/components/quiz/` or `app/lib/quiz/` gets all 8 checks before merge. ~6 minutes. **Run local, not production — a full run writes a PHI row.**
+
+```bash
+SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev
+# open http://localhost:3000/quiz-embed   (npm run dev will NOT work — see below)
+```
+
+TN → patient info → Part 1:
+
+1. Tick "Sneezing" → untick it → **Next greys out** (`[]` ≠ answered, D-06)
+2. Tick "None of the above" → **Next enables**, other options stay clickable
+3. With "None" ticked, click "Sneezing" → **switches in one click, "None" unticks** ← session 33's defect
+4. Tick "Sneezing" then "None" → **"Sneezing" unticks automatically**
+
+Part 5 (`showIf`):
+
+5. "Yes" to medications → list box appears; "No" → it disappears
+6. Type into the list, toggle to "No", toggle back to "Yes" → **text still there** (D-03)
+
+Whole run:
+
+7. Click through to the results screen → score and bracket render, no blank or dev text
+8. Go back a part and forward → answers preserved, Next never enables on a blank required question
+
+### Verification — deploy checked on served bytes, not exit code
+
+| | v48 (before) | v49 (now) |
+|---|---|---|
+| served bundle | 185,951 B | 185,796 B |
+| `exclusive` | 8 | **6** — the two refs in the deleted helper are gone |
+| `"None of the above"` | 4 | 4 — all labels intact |
+| `isAnswered` | 2 | 2 — Phase 2 still live |
+
+Served bundle byte-identical to the committed artifact. `/health` → 200. `fly deploy` printed "The app is not listening on the expected address" again — the known false alarm in this app.
+
+New guard: `tests/quiz-part-renderer-exclusive-clickable.test.ts`, **proven RED against the pre-fix file** (2 occurrences of `isOptionDisabledByExclusive`, 1 of `disabled={disabled || `, both now 0), with positive controls so it cannot pass vacuously. `schema.test.ts`'s 4 `isOptionDisabledByExclusive` cases replaced by 2 asserting the one-click switch on real Part 1 / Part 2 data.
+
+**No PHI row was written this session.** The fix is renderer-only: no new route, no new dependency, no logging change, no change to what is collected or submitted.
+
+### STATE.md drift corrected
+
+`.planning/STATE.md` still said `completed_phases: 1` and `last_activity: Phase 2 execution started` while `ROADMAP.md` had Phase 2 marked `[x] (completed 2026-08-09)`, and the codebase baseline line still quoted Phase 1's 173 tests. Counters realigned to 2 completed phases and 282 tests. Nothing was mid-execution, so this was safe to hand-edit.
+
+### Next steps
+
+1. **`/gsd:discuss-phase 3`** — mandatory medical history. Phase 3 ships the **first real info blocks** (HIST-04's PCP recommendation), so budget a browser check for them.
+2. **Decide on DOM test infra before Phase 3 executes** — see the three-defect table above.
+3. **Still open from Phase 1, unchanged:** Klaviyo loads 10× on `/pages/allergy-quiz` (theme `config/settings_data.json`, one-field flip); the live intake page carries no medical disclaimer at all; the Apntly embed needs a keep/disable decision.
+
+### Resume context
+
+- **Branch:** `main` @ `a8c13d7` (merge of PR #18), in sync with `origin`, clean tree. `fix-exclusive-option-disable` deleted on both sides. Fly release **v49**.
+- **How to verify:** `npm run typecheck && npm test && npm run build` → expect **282 passing / 23 files**. For the theme bundle: `npm run build:theme`, then confirm `public/quiz-bundle.js` is byte-identical to the committed artifact.
+- **`npm run dev` does not work** — it is `shopify app dev` and blocks on an interactive store prompt. Use `SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev` (port 3000). Without that env var `/quiz-embed` 500s with "Detected an empty appUrl configuration". The page nests an iframe, so query `document.querySelector('iframe').contentDocument`, not the top document.
+- **Key files:** `app/lib/quiz/schema.ts` (the pure evaluator — and the comment recording why D-13 is gone) · `app/components/quiz/QuizPartRenderer.tsx` · `tests/quiz-part-renderer-exclusive-clickable.test.ts` · `public/quiz-bundle.js` (**rebuild with `npm run build:theme` whenever quiz source changes**).
+- **Blockers / open questions:** no code blockers. Phase 3 open questions with William are unchanged — R6 diagnosis-question scope, the third medical-history free-text label, and whether resume/edit was ever expected.
+
+---
+
+## Session 32 (2026-08-09) — what happened previously
+
+### Status at the time: **GSD Phase 2 COMPLETE — 4/4 plans, verified 11/11 `passed`, marked complete in ROADMAP/STATE/REQUIREMENTS.** The quiz schema is now declarative: `required`, `showIf`, and a static info-block type, with **zero question-ID literals** left in the renderer. Suite 173 → **280 tests / 22 files**, typecheck and build clean, tree clean. **Two real defects were found by browser UAT that every automated test passed straight through** — one of them would have made the entire phase invisible on the storefront. **MERGED ([PR #17](https://github.com/askinne2/alle-drops-quiz-app/pull/17)) and DEPLOYED — Fly `v48`.** Verified on served bytes: production went 184542 → 185951 bytes and now serves an artifact byte-for-byte identical to the committed bundle. D-06 and D-16 re-confirmed live against production DOM. Next: Andrew's own visual pass, then `/gsd:discuss-phase 3`. **Phase 1's live exposures are still open — Klaviyo still loads 10× on the quiz page and the live clinical intake still carries no medical disclaimer.**
+
+Do **not** re-run `/gsd:execute-phase 2` — it is complete, verified 11/11, and shipped as Fly v48 (superseded by v49, see session 33 above).
 
 ### Goal
 Run Phase 2 (Quiz Schema Foundation) end to end: `/gsd-discuss-phase 2` → `/gsd-plan-phase 2` → `/gsd-execute-phase 2`, then UAT it in a real browser.
