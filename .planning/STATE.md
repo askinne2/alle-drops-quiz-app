@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-08-09T18:55:19.749Z"
+last_updated: "2026-08-09T19:21:35.436Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 17
-  completed_plans: 13
+  completed_plans: 14
   percent: 25
 ---
 
@@ -27,11 +27,11 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 03 (mandatory-medical-history) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-08-09
 
-Progress: [████████░░] 76%
+Progress: [████████░░] 82%
 
 Codebase baseline: `main` @ `a8c13d7`, Phase 2 complete and UAT'd, **282 tests / 23 files passing**,
 typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release **v49**, and
@@ -67,6 +67,7 @@ on two data points. There are now three — decide before Phase 3 executes.
 | Phase 03 P01 | 45min | 3 tasks | 5 files |
 | Phase 03-mandatory-medical-history P02 | 6min | 3 tasks | 10 files |
 | Phase 03 P03 | 25min | 3 tasks | 4 files |
+| Phase 03 P04 | 55min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,8 @@ Affecting current work:
 - [Phase 03-mandatory-medical-history]: 03-02: QuizContainer.tsx left untouched — client-side personal_history/family_history closure is plan 03-03's scope per the plan's own threat model (T-3-01), not this plan's files_modified list
 - [Phase 03]: 03-03: D-11 proceed-without-testing chain and D-12 medical_history FlowStep both deleted from QuizContainer.tsx/ResultsDisplay.tsx; extra payload parameter removed, closing T-3-01's client half
 - [Phase 03]: 03-03: source-text guard tests/quiz-medical-history-deletion.test.ts proven RED (11 QuizContainer.tsx + 1 ResultsDisplay.tsx assertions failed) against pre-change source before going green — guard's own prose contains medical_history 9x, intentionally, per its own acceptance criteria
+- [Phase 03-mandatory-medical-history]: 03-04: Task 1's package-legitimacy checkpoint (jsdom, @testing-library/react) explicitly approved by Andrew in-session; DOM test infra adopted as devDependencies only, closing the QUIZ_PARTS -> itemsForPart -> renderer blind spot behind three prior UAT defects
+- [Phase 03]: 03-04: gate/reveal fusion CSS (.questionCard__gateParent/.revealChild) derived purely from showIf+required, zero question-ID literals; InfoBlockCard given its own .infoBlockCard class family and role=note, no longer sharing classes with a question card
 
 ### Pending Todos
 
@@ -300,6 +303,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-09T18:55:19.744Z
+Last session: 2026-08-09T19:21:35.428Z
 Stopped at: Completed 03-03-PLAN.md
 Resume file: None
