@@ -139,3 +139,79 @@ node -e "const fs=require('fs');const T='/Users/andrewskinner/Local Sites/allerg
 ```
 
 Result: `OK`
+
+---
+
+# Plan 04-05 — Push provenance and post-push verification
+
+**Andrew's authorization (quoted verbatim from the session that resumed this plan):** "THEME PUSH IS
+AUTHORIZED. Commit the reconciled theme working tree and run `shopify theme push` against the live
+Sense theme. Andrew reviewed the diff." Also: "TEST-06 MOVES TO PHASE 8" — see the note at the bottom
+of this section; the push cannot close TEST-06 because the D-13 clause is Shopify Admin content, not
+theme-repo content (confirmed again below on live served bytes, pre- and post-push).
+
+## Task 1 — Preconditions re-verified independently before pushing
+
+1. **Push authorization confirmed** — read directly from this session's task context (quoted above),
+   not merely trusted from 04-04's SUMMARY.
+2. **Working tree re-checked immediately before pushing**, not trusted from 04-04's snapshot:
+   `git -C "/Users/andrewskinner/Local Sites/allergist-on-demand" diff -- config/settings_data.json`
+   showed the Klaviyo block's `disabled` value at `false` pre-edit and confirmed it should read `true`
+   post-edit (see Drift item 1 above); `grep -n "apntly-appointment-booking-app" config/settings_data.json`
+   plus a manual read of the surrounding 3 lines confirmed the Appointly block still reads
+   `"disabled": false`, unchanged.
+3. **`shopify theme list --json`** confirmed the Active/Live theme:
+   ```json
+   [
+     { "id": 135799767246, "name": "Sense", "processing": false, "createdAtRuntime": false, "role": "live" },
+     { "id": 135799734478, "name": "Dawn", "processing": false, "createdAtRuntime": false, "role": "unpublished" }
+   ]
+   ```
+   **Theme ID: `135799767246`** ("Sense", role `live`) — this is the ID the push targeted.
+
+## Pre-push baseline (authenticated, cache-busted, `split(needle).length - 1`, never `grep -c`)
+
+Authenticated via the storefront password flow (`AoD/.claude/CLAUDE.md` §"Verifying anything on the
+live store" — password cookie flow against `/password`), confirmed non-vacuous by an HTTP 200 with
+real page bytes (113–139 KB per surface, not the ~small password-page body).
+
+**Fetch timestamp:** `2026-08-09T23:48:44Z`. **Cache-buster:** `prepush-1786319324-a`.
+
+| Surface | HTTP | klaviyo | static.klaviyo.com | _klOnsite | gtag | googletagmanager | google-analytics | connect.facebook | fbq( | hotjar | no longer a need | needles |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `/pages/allergy-quiz` | 200 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | — | — |
+| `/products/tennessee-alledrops` | 200 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | **5** | **5** |
+| `/products/texas-alledrops` | 200 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | **5** | **5** |
+| `/pages/test-options` | 200 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | — | — |
+
+**Non-vacuity controls, pre-push:**
+- `/pages/allergy-quiz`: `appointly` = 15 (known-nonzero control, Phase 8-owned). The plan's literal
+  control needle `data-alledrops-quiz` reads **0** — that attribute does not exist in the current
+  markup; the quiz embed renders as `<iframe id="alledrops-quiz-AY3ZzaUJLUXRrcU51d__alledrops_quiz_production_symptom_quiz_igLDNJ" ...>`,
+  not a `data-` attribute. Corrected control used instead: `id="alledrops-quiz` = 1, and
+  `quiz-embed?consult` = 1 (the iframe `src` carries the app's redirect query string). Both confirm
+  real page bytes were fetched. Documented as a Rule 1 deviation in the plan-05 SUMMARY.
+- `/products/tennessee-alledrops`: contains `tennessee-alledrops` 32 times. `/products/texas-alledrops`:
+  contains `texas-alledrops` 32 times.
+- `/pages/test-options`: contains `Test Options` 3 times.
+
+**Pre-push confirms the push will change something:** the Klaviyo/tracking needles were already 0
+pre-push (Andrew's 2026-08-09 theme-editor change already closed that live) — the push's job here was
+to make the *theme repo* match that already-live state so a *future* push cannot silently re-enable
+Klaviyo, not to flip a currently-nonzero count to zero. The `no longer a need` / `needles` = 5 counts
+on both product pages are the D-13 clause; they are **expected to remain 5 after the push** because
+04-04 Task 2 confirmed this content is `{{ product.description }}` (Shopify Admin), not theme-repo
+source — no theme push can touch it. Recording 5 here, pre-push, is the baseline that Task 2's
+post-push measurement is diffed against.
+
+## Push executed
+
+- **Commit (theme repo):** `9c36e0f7437d7470012a2d16c9280b3f4ed6623f` — "fix(theme): reconcile
+  settings_data.json and page.quiz.json against live". Two files only: `config/settings_data.json`,
+  `templates/page.quiz.json`. The other eight pre-existing-drift files and `docs/superpowers/` were
+  left uncommitted, exactly as scoped.
+- **Theme ID pushed to:** `135799767246` ("Sense", live).
+- **Push timestamp:** start `2026-08-09T23:49:53Z`, end `2026-08-09T23:49:58Z`.
+- **CLI reported result:** `shopify theme push --theme=135799767246 --allow-live` exited 0 with
+  "The theme 'Sense' (#135799767246) was pushed successfully." **This exit code and message are not
+  treated as evidence of anything live** — Task 2 below measures served bytes independently.
