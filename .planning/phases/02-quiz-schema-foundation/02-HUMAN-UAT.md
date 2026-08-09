@@ -9,8 +9,9 @@ updated: 2026-08-09
 
 ## Current Test
 
-Checks 1–3 PASSED in a real browser. Check 4 FAILED, root-caused, and fixed — but **not yet
-re-verified end-to-end in a browser after the fix** (see "Residual" below).
+All four checks PASSED in a real browser. Check 4 failed on its first run, was root-caused to a
+container-level filter, fixed, and then **re-verified end-to-end in a browser** — see Check 4 and
+the Gaps section.
 
 ## How this was run
 
@@ -53,7 +54,7 @@ typed medication list on a mis-click, with no undo.
 ### 4. D-10 — a static info block renders inside a quiz part
 expected: an info block placed in a quiz part renders (heading, paragraphs, bullets), collects no
 answer, and respects `showIf`
-result: **FAILED, then fixed.** With two info-block fixtures injected into `QUIZ_PARTS[0]`, the
+result: **FAILED on first run, fixed, then PASSED on re-run.** With two info-block fixtures injected into `QUIZ_PARTS[0]`, the
 renderer's `items` prop contained **only the three questions** — both info blocks were stripped
 before reaching it. Root cause: `QuizContainer.tsx` filtered `item.kind === "question"` before
 passing items to `QuizPartRenderer`. This failed **Phase 2 Success Criterion 3** outright.
@@ -65,6 +66,11 @@ was the only broken link.
 Fixed by extracting `itemsForPart(parts, index)` into `app/lib/quiz/schema.ts` and removing the
 filter, with a pure unit test proving an info block survives selection and a source-text guard
 preventing the filter's return. Both tests were observed FAILING against the pre-fix code first.
+
+**Re-run after the fix — PASSED on all four assertions:** `items` = `[__uat_info_plain (info),
+__uat_info_conditional (info), symptoms_nasal, symptoms_eye, symptoms_sinus]`; heading,
+`First UAT paragraph.` and `UAT bullet one` all rendered; `0` inputs inside the info card;
+conditional block absent before ticking Sneezing and present after.
 
 ## Defects found and closed
 
@@ -82,11 +88,10 @@ produced a false D-06 failure. Caught only because the live React component took
 
 ## Residual
 
-- **Check 4 has not been re-run in a browser since the fix.** It is verified by construction: the
-  renderer was proven capable of drawing info blocks during the failed run, the filter is proven
-  gone (0 occurrences), `itemsForPart` is proven to return info blocks by pure test, and the
-  rebuilt bundle contains the info branch. That is strong but it is not the same as watching one
-  render. Re-run check 4 in a browser before go-live.
+- **Check 4 re-run in a browser on 2026-08-09 after the fix — PASSED.** Both info blocks reached
+  the renderer's `items` prop, the plain block rendered heading/paragraphs/bullets, the info card
+  contained zero inputs, and the conditional block appeared only once Sneezing was ticked. Fixture
+  reverted; `__uat_` occurrences in `questions.ts` = 0.
 - The remaining coverage limit from `02-VALIDATION.md` still stands: **no test renders
   `QuizContainer`**, so a wiring bug of exactly this class can still pass the whole suite. The two
   new source-text guards narrow it but do not remove it.
@@ -94,7 +99,7 @@ produced a false D-06 failure. Caught only because the live React component took
 ## Summary
 
 total: 4
-passed: 3
+passed: 4
 issues: 1 (fixed and re-verified in browser 2026-08-09)
 pending: 0
 skipped: 0
