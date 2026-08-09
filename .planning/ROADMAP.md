@@ -172,7 +172,30 @@ who will only book a telehealth consult
 
   5. Medical history answers appear in the clinical PDF and admin submission modal with no new
      plumbing, and the patient's score is unchanged by anything they answered here
-**Plans**: TBD
+**Plans**: 7 plans in 5 waves
+
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — New Part 6 medical-history content plus DIAG-01, wired into QUIZ_PARTS/ALL_ITEMS/getQuestionById, with visibility, required-ness, integrity, and score-parity assertions
+- [ ] 03-02-PLAN.md — D-05 label map, both PHI renderers repointed, and the two legacy history fields removed from payload, validation, DB layer, types, E2E script, and fixtures
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-03-PLAN.md — Delete the medical_history FlowStep, the proceed-without-testing chain, and the dead `extra` payload parameter; new source-text guard proven RED
+- [ ] 03-04-PLAN.md — DOM test infrastructure adopted narrowly (devDependencies only), info-block visual identity, and HIST-03 gate/reveal pairing
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 03-05-PLAN.md — Theme bundle rebuild with new staleness markers, full phase gate, and the eight-check human browser verification
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 03-06-PLAN.md — Named pre-migration Cloud SQL backup (human-gated) and the DROP COLUMN migration file, committed alone
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 03-07-PLAN.md — Merge, deploy, prove the release live on served bytes, then execute the DROP COLUMN and verify by query results
 **UI hint**: yes
 **Notes**: ~1.5–2 days — content is trivial, the schema is the work, and Phase 2 does that work.
 The old `PART6_MEDICAL_HISTORY` (`questions.ts:222-249`) is fully replaced, not extended;
