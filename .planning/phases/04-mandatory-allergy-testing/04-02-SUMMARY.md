@@ -80,7 +80,19 @@ _No TDD tasks; all three verified via `npm run typecheck` and/or targeted vitest
 
 ## Deviations from Plan
 
-None - plan executed exactly as written. All three tasks' automated verify commands passed on first attempt; no auto-fixes, no blockers, no architectural questions arose.
+None in task execution - all three tasks' automated verify commands passed on first attempt; no auto-fixes, no blockers, no architectural questions arose.
+
+**One process deviation, at the state-update step:** this plan's frontmatter lists `requirements:
+[TEST-01, TEST-03, TEST-04]`, and the standard post-plan step is `requirements mark-complete` on
+those IDs. All three are also claimed by later plans in this phase — `TEST-01`/`TEST-03` by
+04-06/04-07/04-09/04-19, and `TEST-04` by 04-10 through 04-18 and 04-19 — because this plan only
+delivers the schema foundation (type extension + `isAnswered` coverage), not the actual Part 7
+question content, upload endpoint, or rendering that those requirements describe end-to-end.
+Running `requirements mark-complete` now would flip all three checkboxes to "Complete" in
+`REQUIREMENTS.md` while zero Part 7 UI or upload code exists yet — the same false-record risk
+04-01-SUMMARY.md already flagged for `TEST-04`. Skipped intentionally, following that same
+precedent; `04-19` (which lists all seven `TEST-*` IDs) is the most likely plan to actually
+complete this bookkeeping.
 
 ## Issues Encountered
 None.
