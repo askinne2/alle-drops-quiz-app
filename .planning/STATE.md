@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-08-09T19:27:53.350Z"
+stopped_at: Completed 03-06-PLAN.md
+last_updated: "2026-08-09T20:15:30.233Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 17
-  completed_plans: 15
+  completed_plans: 16
   percent: 25
 ---
 
@@ -27,12 +27,13 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 03 (mandatory-medical-history) — EXECUTING
-Plan: 5 of 7
-Status: Tasks 1-2 complete (theme bundle rebuilt, 358 tests/27 files green); Task 3 human browser
-  checkpoint (8 checks) awaiting Andrew before plans 03-06/03-07 may proceed
+Plan: 6 of 7 — COMPLETE
+Status: 03-06 complete (pre-migration backup ID 1786306233540 SUCCESSFUL, migration file
+  committed alone, no DDL run). Plan 03-07 next: run the DROP COLUMN DDL, but only after
+  confirming plan 03-02's app code is deployed and live on Fly.
 Last activity: 2026-08-09
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 94%
 
 Codebase baseline: `main` @ `a8c13d7`, Phase 2 complete and UAT'd, **282 tests / 23 files passing**,
 typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release **v49**, and
@@ -53,7 +54,7 @@ on two data points. There are now three — decide before Phase 3 executes.
 
 **Velocity:**
 
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -70,6 +71,7 @@ on two data points. There are now three — decide before Phase 3 executes.
 | Phase 03 P03 | 25min | 3 tasks | 4 files |
 | Phase 03 P04 | 55min | 3 tasks | 5 files |
 | Phase 03 P05 (Tasks 1-2 only; Task 3 checkpoint outstanding) | 35min | 2 tasks | 3 files |
+| Phase 03 P06 | 15min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -98,6 +100,8 @@ Affecting current work:
 - [Phase 03-mandatory-medical-history]: 03-04: Task 1's package-legitimacy checkpoint (jsdom, @testing-library/react) explicitly approved by Andrew in-session; DOM test infra adopted as devDependencies only, closing the QUIZ_PARTS -> itemsForPart -> renderer blind spot behind three prior UAT defects
 - [Phase 03]: 03-04: gate/reveal fusion CSS (.questionCard__gateParent/.revealChild) derived purely from showIf+required, zero question-ID literals; InfoBlockCard given its own .infoBlockCard class family and role=note, no longer sharing classes with a question card
 - [Phase 03]: 03-05 (Tasks 1-2): public/quiz-bundle.js rebuilt (185796 -> 186699 bytes), folding in three commits of deferred quiz-source changes from 03-01/03-03/03-04; freshness guard extended with 5 presence + 2 absence Phase-3 markers, each independently proven 0-before/>=1-after (or 6-before/0-after for the absence pair); phase-wide absence/presence audit all clean in live code (358/27 tests green, typecheck clean, both builds green, theme build proven deterministic). Task 3 (8-check human browser verification) is outstanding — plans 03-06/03-07 remain blocked until Andrew completes it.
+- [Phase 03]: 03-06: Named on-demand Cloud SQL backup taken and verified before any DDL: ID 1786306233540, SUCCESSFUL, read back via `gcloud sql backups list`/`describe` rather than trusted from exit code
+- [Phase 03]: 03-06: migrations/003_drop_medical_history_legacy_columns.sql authored and committed alone (D-01 non-negotiable) — no DDL executed, plan 03-07 runs it after app code is confirmed live on Fly
 
 ### Pending Todos
 
@@ -306,6 +310,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-09T19:27:53.344Z
-Stopped at: 03-05-PLAN.md Tasks 1-2 complete (theme bundle rebuilt, freshness guard extended, phase gate green); Task 3 (human browser verification, 8 checks) is a checkpoint awaiting Andrew
-Resume file: .planning/phases/03-mandatory-medical-history/03-05-PLAN.md (Task 3)
+Last session: 2026-08-09T20:15:30.228Z
+Stopped at: Completed 03-06-PLAN.md
+Resume file: None
