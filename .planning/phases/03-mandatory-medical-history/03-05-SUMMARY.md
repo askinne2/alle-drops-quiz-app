@@ -206,3 +206,12 @@ Until Task 3 is completed and approved:
 *Phase: 03-mandatory-medical-history*
 *Completed (Tasks 1-2): 2026-08-09*
 *Task 3 outstanding — see checkpoint*
+
+## Self-Check: PASSED
+
+- FOUND: public/quiz-bundle.js
+- FOUND: public/quiz-bundle.css
+- FOUND: tests/quiz-bundle-freshness.test.ts
+- FOUND: .planning/phases/03-mandatory-medical-history/03-05-SUMMARY.md
+- FOUND: 5b4fe94 (Task 1 commit)
+- FOUND: 4f532dd (summary commit)

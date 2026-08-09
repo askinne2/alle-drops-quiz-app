@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-08-09T19:21:35.436Z"
+last_updated: "2026-08-09T19:27:53.350Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 8
   completed_phases: 2
   total_plans: 17
-  completed_plans: 14
+  completed_plans: 15
   percent: 25
 ---
 
@@ -28,7 +28,8 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 
 Phase: 03 (mandatory-medical-history) — EXECUTING
 Plan: 5 of 7
-Status: Ready to execute
+Status: Tasks 1-2 complete (theme bundle rebuilt, 358 tests/27 files green); Task 3 human browser
+  checkpoint (8 checks) awaiting Andrew before plans 03-06/03-07 may proceed
 Last activity: 2026-08-09
 
 Progress: [████████░░] 82%
@@ -68,6 +69,7 @@ on two data points. There are now three — decide before Phase 3 executes.
 | Phase 03-mandatory-medical-history P02 | 6min | 3 tasks | 10 files |
 | Phase 03 P03 | 25min | 3 tasks | 4 files |
 | Phase 03 P04 | 55min | 3 tasks | 5 files |
+| Phase 03 P05 (Tasks 1-2 only; Task 3 checkpoint outstanding) | 35min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -95,6 +97,7 @@ Affecting current work:
 - [Phase 03]: 03-03: source-text guard tests/quiz-medical-history-deletion.test.ts proven RED (11 QuizContainer.tsx + 1 ResultsDisplay.tsx assertions failed) against pre-change source before going green — guard's own prose contains medical_history 9x, intentionally, per its own acceptance criteria
 - [Phase 03-mandatory-medical-history]: 03-04: Task 1's package-legitimacy checkpoint (jsdom, @testing-library/react) explicitly approved by Andrew in-session; DOM test infra adopted as devDependencies only, closing the QUIZ_PARTS -> itemsForPart -> renderer blind spot behind three prior UAT defects
 - [Phase 03]: 03-04: gate/reveal fusion CSS (.questionCard__gateParent/.revealChild) derived purely from showIf+required, zero question-ID literals; InfoBlockCard given its own .infoBlockCard class family and role=note, no longer sharing classes with a question card
+- [Phase 03]: 03-05 (Tasks 1-2): public/quiz-bundle.js rebuilt (185796 -> 186699 bytes), folding in three commits of deferred quiz-source changes from 03-01/03-03/03-04; freshness guard extended with 5 presence + 2 absence Phase-3 markers, each independently proven 0-before/>=1-after (or 6-before/0-after for the absence pair); phase-wide absence/presence audit all clean in live code (358/27 tests green, typecheck clean, both builds green, theme build proven deterministic). Task 3 (8-check human browser verification) is outstanding — plans 03-06/03-07 remain blocked until Andrew completes it.
 
 ### Pending Todos
 
@@ -303,6 +306,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-09T19:21:35.428Z
-Stopped at: Completed 03-03-PLAN.md
-Resume file: None
+Last session: 2026-08-09T19:27:53.344Z
+Stopped at: 03-05-PLAN.md Tasks 1-2 complete (theme bundle rebuilt, freshness guard extended, phase gate green); Task 3 (human browser verification, 8 checks) is a checkpoint awaiting Andrew
+Resume file: .planning/phases/03-mandatory-medical-history/03-05-PLAN.md (Task 3)
