@@ -314,15 +314,30 @@ and if the answer is still no, say why in the plan.
 <deferred>
 ## Deferred Ideas
 
-- **🔴 TEST-RESULT UPLOAD — this is a REQUIREMENT CHANGE, not a nice-to-have.**
+- **🔴 TEST-RESULT UPLOAD — this reverses a LOCKED client decision, not just a requirement.**
   Andrew decided in this discussion that patients must be able to **upload allergy test results
-  directly in the quiz**, associated with the patient's file. This **reverses TEST-04**, which
-  currently reads "instructs the patient to email results to `testing@alledrops.com` … with no file
-  input, multipart parsing, object storage, or upload column introduced."
+  directly in the quiz**, associated with the patient's file.
 
-  **Decision: expand Phase 4 to include upload.** Phase 4 does not ship until upload works.
+  **It reverses `DEC-testing-results-by-email-not-upload`** (`PROJECT.md:229`, status **LOCKED**,
+  dated 2026-07-29, sourced to the William Miller call). That decision records William's own words —
+  *"it's fine if they just want to email it directly to us"* — and states the consequence
+  explicitly: "no new PHI file-handling infrastructure … Removes the single most expensive item on
+  the 6/27 list (**3–4 days → ~1 day** of static copy and three text fields)."
+
+  It also reverses TEST-04, which inherits from that decision.
+
+  ⚠️ **This is a client and commercial conversation before it is an engineering one.** William
+  agreed to drop upload on a call, and dropping it is what made Phase 4 cheap. Re-adding it puts
+  back 3–4 days of work on a project that already has **$1,800 unbilled and a Phase 2 SOW unwritten
+  since 6/30**. Do not plan Phase 4 around upload until William has agreed and the scope is priced.
+
+  **Decision recorded: expand Phase 4 to include upload.** Phase 4 does not ship until upload works.
 
   **Actions required before Phase 4 is planned — do not let this get lost:**
+  - **Get William's agreement first**, and price it. He is the source of the decision being reversed.
+  - Retract `DEC-testing-results-by-email-not-upload` in `PROJECT.md` **in place**, so the retraction
+    is visible to anyone who read the original — the same convention used for the `injectIframe`
+    correction and the Apntly entry in `STATE.md`
   - Rewrite TEST-04 in `.planning/REQUIREMENTS.md` from email-only to upload
   - Update the Phase 4 block in `.planning/ROADMAP.md`: new dependencies, revised estimate, and
     note that half of TEST-05 already landed in Phase 3 (D-11)
