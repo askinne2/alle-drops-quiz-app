@@ -215,3 +215,73 @@ Until Task 3 is completed and approved:
 - FOUND: .planning/phases/03-mandatory-medical-history/03-05-SUMMARY.md
 - FOUND: 5b4fe94 (Task 1 commit)
 - FOUND: 4f532dd (summary commit)
+
+---
+
+## Task 3 — Human browser verification: COMPLETE (2026-08-09)
+
+Andrew ran checks 1, 2 and 4 by hand; the orchestrator drove checks 3, 5, 6, 7 and 8 through
+Chrome against `http://localhost:3000/quiz-embed`, driving the DOM directly rather than clicking
+coordinates (session-32 lesson: window sizes differ between sessions and coordinate clicks land
+wrong).
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Six-part flow, "Part N of 6", "See results" on Part 6, no section heading | PASS |
+| 2 | HIST-01 exclusivity — switches in one click, no disabled siblings | PASS (Andrew) |
+| 3 | HIST-02 medications reveal | PASS |
+| 4 | HIST-04 info block renders, visually distinct, collects nothing | PASS (Andrew) |
+| 5 | HIST-03 gate + reveal pairs fused | PASS |
+| 6 | Mobile sticky-header clearance | **NOT VERIFIABLE HERE — deferred, see below** |
+| 7 | 0–2 bracket: exactly one POST, results only after Part 6 | PASS |
+| 8 | 7+ bracket: "Proceed Without Testing" gone | PASS |
+
+**Check 3 evidence** — the exact `isAnswered` contract `equals` could not express, measured in the
+live DOM: nothing ticked → hidden; **"None of the above" alone → visible**; untick all → hidden;
+"Asthma" → visible. Label verbatim: "What medications (including dosage) are you currently taking
+(please list all)".
+
+**Check 7 evidence** — score 1, bracket `0-2`, results rendered only after Part 6, and exactly
+**one** `POST /api/quiz/submit` (counted via a patched `window.fetch`, not the network panel).
+
+**Check 8 evidence** — score 57, bracket `7+`, sole button "I'd Like Allergy Testing First",
+`proceedWithoutTesting` absent from the rendered text, and **zero** submit POSTs (correct — only
+the 0–2 bracket auto-submits).
+
+**Check 6 — deferred, accepted by Andrew.** `/quiz-embed` has **no sticky element anywhere**
+(verified by testing computed `position` on every node). The sticky header lives in the Shopify
+theme repo, so any clearance measured here would be a vacuous pass. Recording it as deferred rather
+than passed. It remains the open item carried from Phase 1's `01-HUMAN-UAT.md`. What WAS verified at
+a 373px viewport: no horizontal overflow, 46px minimum option height (above the 44px accessibility
+floor), and the longest option label wrapping cleanly to two lines — which is the evidence behind
+UI-SPEC's decision to reject a grid layout for HIST-01's eleven options.
+
+**No PHI rows were written.** The 0–2 submit failed on a stale local `DATABASE_URL` password
+(Postgres `28P01`, "Could not save assessment") and the 7+ path never POSTs. The local credential
+failure is environmental, not a Phase 3 defect — a broken INSERT from this phase's column changes
+would surface as `42703 column does not exist`.
+
+### Two defects found by UAT that the whole suite passed through
+
+Both were caught by a human looking, not by CI — the fourth and fifth such findings on this project.
+
+1. **DIAG-01 read as a duplicate question.** Its example text ("allergic rhinitis, asthma, or
+   eczema") collided with HIST-01's checklist, which asks the patient to tick asthma and eczema one
+   part later. This is precisely the redundancy `ROADMAP.md` flagged for DIAG-01. The questions are
+   distinct (D-10); only the examples collided, so the examples were dropped. Commit `bfa0431`.
+
+2. **HIST-02's medications field was required with no escape.** A healthy patient ticking "None of
+   the above" still had to type into a medications box. Isolated in the DOM: filling only that field
+   enabled Next while all three HIST-03 reveals sat empty. Fixed with the same "none" gate the
+   HIST-03 fields already had. Commit `1da8c3d`.
+
+   The first attempt at that fix was rejected by the `no chained showIf` forward guard — gating the
+   new question on `history_comorbidities` built a two-level chain, and `evaluateShowIf` is
+   non-transitive by design. The guard did its job.
+
+   Two consequences recorded in code: the medications QUESTION is now unconditional in Part 6 (a
+   deviation from HIST-02's literal wording — the LIST is still revealed), and this removed the last
+   production consumer of the `isAnswered` operator that Phase 2 D-02 introduced for it.
+
+Suite after both fixes: **361 tests / 27 files**, typecheck clean, both builds clean, theme bundle
+rebuilt in the same commit as each source change.
