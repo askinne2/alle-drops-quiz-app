@@ -34,8 +34,6 @@ const mockRow: SubmissionFullRow = {
   quiz_score: 9,
   score_bracket: '7+',
   answers_json: {},
-  personal_history_json: null,
-  family_history_json: null,
   consent_version: 'v1',
   consent_accepted_at: '2026-05-01T12:00:00.000Z',
   consent_ip_address: null,

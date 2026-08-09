@@ -47,7 +47,6 @@ const TEST_CASES = [
     },
     expectedBracket: '0-2',
     expectedState: 'tennessee',
-    hasHistory: false,
   },
   {
     label: 'E2E-MOD-TX (3-6, Texas)',
@@ -67,7 +66,6 @@ const TEST_CASES = [
     },
     expectedBracket: '3-6',
     expectedState: 'texas',
-    hasHistory: false,
   },
   {
     label: 'E2E-HIGH-TN (7+, Tennessee, with history)',
@@ -84,12 +82,9 @@ const TEST_CASES = [
       answers: { sneezing: 'daily', eye_itching: 'often', nasal_congestion: 'daily' },
       completion_time: 180,
       consent_version: 'draft-2026-05-09',
-      personal_history: ['asthma', 'eczema'],
-      family_history: ['hay fever'],
     },
     expectedBracket: '7+',
     expectedState: 'tennessee',
-    hasHistory: true,
   },
 ] as const;
 
@@ -166,8 +161,6 @@ interface DbRow {
   patient_state: string;
   consent_version: string | null;
   answers_json: Record<string, unknown> | null;
-  personal_history_json: unknown[] | null;
-  family_history_json: unknown[] | null;
 }
 
 async function step2_dbVerify(pool: Pool): Promise<void> {
@@ -175,7 +168,7 @@ async function step2_dbVerify(pool: Pool): Promise<void> {
 
   const { rows } = await pool.query<DbRow>(
     `SELECT id, symptom_profile_id, score_bracket, patient_state, consent_version,
-            answers_json, personal_history_json, family_history_json
+            answers_json
        FROM submissions
       WHERE symptom_profile_id = ANY($1::text[])`,
     [TEST_PROFILE_IDS],
@@ -201,14 +194,6 @@ async function step2_dbVerify(pool: Pool): Promise<void> {
     }
     if (!r.answers_json || typeof r.answers_json !== 'object') {
       fail(`[${tc.label}] answers_json is null or not an object`);
-    }
-    if (tc.hasHistory) {
-      if (!Array.isArray(r.personal_history_json) || r.personal_history_json.length === 0) {
-        fail(`[${tc.label}] personal_history_json should be a non-empty array`);
-      }
-      if (!Array.isArray(r.family_history_json) || r.family_history_json.length === 0) {
-        fail(`[${tc.label}] family_history_json should be a non-empty array`);
-      }
     }
 
     pass(

@@ -43,8 +43,6 @@ export interface SubmissionFullRow {
   quiz_score: number;
   score_bracket: string;
   answers_json: Record<string, unknown>;
-  personal_history_json: string[] | null;
-  family_history_json: string[] | null;
   consent_version: string | null;
   consent_accepted_at: string | null;
   consent_ip_address: string | null;
@@ -70,15 +68,13 @@ export async function insertSubmission(
       quiz_score,
       score_bracket,
       answers_json,
-      personal_history_json,
-      family_history_json,
       consent_version,
       consent_accepted_at,
       consent_ip_address,
       consent_user_agent,
       completion_time_seconds
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
     )
     RETURNING id, symptom_profile_id, created_at
   `;
@@ -94,12 +90,6 @@ export async function insertSubmission(
     input.quiz_score,
     input.score_bracket,
     JSON.stringify(input.answers ?? {}),
-    input.personal_history && input.personal_history.length > 0
-      ? JSON.stringify(input.personal_history)
-      : null,
-    input.family_history && input.family_history.length > 0
-      ? JSON.stringify(input.family_history)
-      : null,
     input.consent_version ?? null,
     input.consent_version ? new Date() : null,
     input.consent_ip_address ?? null,
