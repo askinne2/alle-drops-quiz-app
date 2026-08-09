@@ -215,3 +215,96 @@ post-push measurement is diffed against.
 - **CLI reported result:** `shopify theme push --theme=135799767246 --allow-live` exited 0 with
   "The theme 'Sense' (#135799767246) was pushed successfully." **This exit code and message are not
   treated as evidence of anything live** — Task 2 below measures served bytes independently.
+
+## Task 2 — Post-push verification, two independent fetches, five-plus minutes apart
+
+Method restated: authenticated past the storefront password (cookie-jar flow against `/password`,
+per `AoD/.claude/CLAUDE.md` §"Verifying anything on the live store"), each fetch carries a distinct
+cache-buster query parameter, every count uses `SOURCE.split(needle).length - 1` in Node — **`grep -c`
+was not used anywhere in this plan's verification**, because it counts matching *lines*, not
+occurrences, and collapses every count against a single-line minified/JSON bundle to 1 (the trap named
+in D-14 and hit by three prior executors).
+
+**Fetch A (first post-push measurement):** timestamp `2026-08-09T23:50:53Z`, cache-buster
+`postpush-1786319453-a`.
+**Fetch B (second post-push measurement):** timestamp `2026-08-09T23:56:03Z`, cache-buster
+`postpush-1786319763-b`.
+**Gap between Fetch A and Fetch B: 5 minutes 10 seconds** — satisfies the "at least five minutes
+apart" requirement (D-14, T-4-17).
+
+### Absence needles — every surface, both fetches
+
+Expected 0 everywhere: `klaviyo`, `static.klaviyo.com`, `_klOnsite`, `gtag`, `googletagmanager`,
+`google-analytics`, `connect.facebook`, `fbq(`, `hotjar`.
+
+| Surface | HTTP (A) | HTTP (B) | All 9 needles, Fetch A | All 9 needles, Fetch B |
+|---|---|---|---|---|
+| `/pages/allergy-quiz` | 200 | 200 | all 0 | all 0 |
+| `/products/tennessee-alledrops` | 200 | 200 | all 0 | all 0 |
+| `/products/texas-alledrops` | 200 | 200 | all 0 | all 0 |
+| `/pages/test-options` | 200 | 200 | all 0 | all 0 |
+
+Every one of the 9 tracking/Klaviyo needles read exactly 0 on both fetches of every surface — 72
+individual assertions (9 needles × 4 surfaces × 2 fetches), all 0.
+
+### D-13 clause needles — the two product pages only
+
+Expected 0 (removal target); **actual result: unchanged from pre-push, confirming the push cannot
+reach this content.**
+
+| Surface | `no longer a need` pre-push | Fetch A | Fetch B | `needles` pre-push | Fetch A | Fetch B |
+|---|---|---|---|---|---|---|
+| `/products/tennessee-alledrops` | 5 | **5** | **5** | 5 | **5** | **5** |
+| `/products/texas-alledrops` | 5 | **5** | **5** | 5 | **5** | **5** |
+
+**This is the expected, correct result, not a failure of the push.** 04-04 Task 2 traced both surfaces
+to `{{ product.description }}` via `sections/main-product.liquid:197` — a Shopify Admin product field,
+not theme-repo source (`templates/product.json`, `templates/product.regional-drops.json` carry no
+static body copy for this clause). No `shopify theme push` from any commit of this repo can change a
+Shopify Admin field. **TEST-06 is therefore reassigned to Phase 8** (see `REQUIREMENTS.md`) — Andrew's
+explicit decision this session, made on this exact evidence.
+
+### `/pages/test-options` — proceed-without-testing content
+
+The exact proceed-without-testing string was never confirmed to exist in the theme repo (04-04 Task 2:
+zero occurrences of `no longer a need`, `without testing`, `not required`, `not necessary`,
+`unnecessary`, `skip the test`, `already have` anywhere in the theme repo). Per 04-STOREFRONT-COPY-DRAFT.md,
+this page also renders `{{ page.content }}` (`sections/main-page.liquid:22`), a Shopify Admin field —
+same Admin-managed conclusion as the product pages. No theme-repo needle to test to 0; recorded here
+so the absence of a specific proceed-without-testing needle-check is explained rather than silently
+omitted.
+
+### Non-vacuity controls — proving real page bytes, not the `/password` page
+
+| Control | Surface | Pre-push | Fetch A | Fetch B | Verdict |
+|---|---|---|---|---|---|
+| `id="alledrops-quiz` (corrected — see below) | `/pages/allergy-quiz` | 1 | 1 | 1 | present, non-vacuous |
+| `appointly` (known-nonzero control, Phase 8-owned) | `/pages/allergy-quiz` | 15 | 15 | 15 | present, non-vacuous, unchanged (Appointly correctly left untouched) |
+| `tennessee-alledrops` | `/products/tennessee-alledrops` | 32 | 32 | 32 | present, non-vacuous |
+| `texas-alledrops` | `/products/texas-alledrops` | 32 | 32 | 32 | present, non-vacuous |
+| `Test Options` | `/pages/test-options` | 3 | 3 | 3 | present, non-vacuous |
+
+**Deviation from the plan's literal non-vacuity needle (Rule 1 — corrected an incorrect verification
+assumption):** the plan specified `data-alledrops-quiz` as the `/pages/allergy-quiz` presence control.
+That literal string reads **0** on every fetch — it does not exist in the current markup. The quiz
+embeds as `<iframe id="alledrops-quiz-AY3ZzaUJLUXRrcU51d__alledrops_quiz_production_symptom_quiz_igLDNJ" ...>`,
+an `id` attribute, not a `data-` attribute (confirmed by direct inspection of the fetched HTML around
+the string `alledrops-quiz-AY`). Substituted `id="alledrops-quiz` (count 1, all three fetches) plus the
+already-required `appointly` control (count 15, all three fetches) as the non-vacuity proof for this
+surface — both are strictly stronger evidence than the plan's original needle would have been, since
+neither could appear on the `/password` page. This does not weaken any absence claim: the absence
+needles (`klaviyo` etc.) are counted the same way regardless of which presence control is used.
+
+### Summary — TEST-06 measurement result
+
+- **Klaviyo/tracking absence: PROVEN.** 0 occurrences of all 9 needles, on both fetches, on all 4
+  surfaces (72/72 assertions at 0).
+- **Appointly: confirmed unchanged and correctly left enabled** (15 occurrences, all three fetches),
+  per the explicit Phase 8 keep/disable deferral.
+- **D-13 clause removal: NOT achieved by this push, and cannot be achieved by any theme push** — the
+  clause lives in Shopify Admin content on both product pages (`no longer a need` = 5, `needles` = 5,
+  unchanged pre/post on both fetches) and possibly on `/pages/test-options` (unconfirmed, same
+  Admin-managed surface). **TEST-06 is reassigned to Phase 8**, not completed, per Andrew's explicit
+  decision this session — recorded in `REQUIREMENTS.md` and this plan's SUMMARY.
+- Every count in this section used `SOURCE.split(needle).length - 1`. `grep -c` was not used anywhere.
+
