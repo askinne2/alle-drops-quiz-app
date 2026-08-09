@@ -238,53 +238,168 @@ export const PART5_TREATMENT: QuizQuestion[] = [
     order: 52,
     showIf: { questionId: "taking_meds", equals: "yes" },
   },
+  {
+    kind: "question",
+    id: "diagnosed_allergic_condition",
+    type: "yesno",
+    part: 5,
+    // UNCONFIRMED clinical copy — DIAG-01's scope (whether it duplicates HIST-01's comorbidity
+    // checklist) is still open with William; see CONTEXT.md <specifics> #3 and D-10.
+    text: "Has a healthcare provider ever diagnosed you with an allergic condition (for example, allergic rhinitis, asthma, or eczema)?",
+    order: 53,
+    // scoreQuestion returns 0 for yesno, so this contributes zero to the score even though
+    // PART5_TREATMENT is inside ALL_SCORED_QUESTIONS.
+  },
 ];
 
 // ─────────────────────────────────────────────
-// PART 6 — Medical History (checkbox_multi, no score)
-// Displayed only if patient chooses to proceed after 7+ result
+// PART 6 — Medical History (mandatory, no score)
+// Every patient passes through this part before the outcome page (D-13). Nothing here is
+// scored — ALL_SCORED_QUESTIONS stays Parts 1-5 only (D-04). The prior two-question checklist
+// here (the two "personal"/"family" checkbox questions, both required: false) is replaced
+// wholesale by HIST-01..HIST-04 (D-01/D-03).
 // ─────────────────────────────────────────────
 
-export const PART6_MEDICAL_HISTORY: QuizQuestion[] = [
+export const PART6_MEDICAL_HISTORY: QuizItem[] = [
   {
     kind: "question",
-    id: "history_personal",
+    id: "history_comorbidities",
     type: "checkbox_multi",
     part: 6,
-    text: "Do you have a personal history of any of the following? (Check all that apply)",
+    // Proposed copy (UNCONFIRMED) — see CONTEXT.md D-07 / 03-UI-SPEC.md Copywriting Contract.
+    text: "Do you have a personal history of any of the following conditions? (Check all that apply)",
     options: [
       { value: "asthma", label: "Asthma" },
-      { value: "eczema", label: "Eczema or atopic dermatitis" },
-      { value: "food_allergies", label: "Food allergies" },
-      { value: "positive_allergy_test", label: "Previous positive allergy testing" },
-      { value: "ed_visits", label: "Previous Emergency Dept visits for allergic reactions" },
+      { value: "eczema", label: "Eczema" },
+      { value: "anaphylaxis", label: "Anaphylaxis" },
+      { value: "heart_disease", label: "Heart disease" },
+      { value: "copd", label: "COPD" },
+      { value: "lung_disease", label: "Lung disease" },
+      { value: "cancer", label: "Cancer" },
+      { value: "autoimmune", label: "Autoimmune conditions" },
+      { value: "immune_deficiency", label: "Immune system deficiencies (acquired / induced)" },
+      { value: "angioedema", label: "Angioedema" },
+      // Exclusive option (D-07). Independent of excludeFromScore below (D-14) — do not derive
+      // one from the other. Per the D-13 reversal, selecting this must never disable siblings.
+      { value: "none", label: "None of the above", exclusive: true },
     ],
+    excludeFromScore: ["none"],
     order: 60,
-    // Opted out of the required default below (D-05/D-06). Neither history_personal nor
-    // history_family offers a "none of the above" option, and QuizContainer seeds both to [] on
-    // entering this step. Under D-06's rule that [] no longer satisfies a required question, that
-    // would make this question permanently un-completable for a patient with no personal history
-    // — a new dead end, not the intended behavior change. The flag below reproduces today's
-    // behavior exactly. Phase 3 (HIST-01..HIST-05) replaces Part 6 wholesale and designs
-    // required-ness for it properly.
+    // required omitted — defaults to true (Phase 2 D-05). The "none of the above" option is what
+    // makes this reachable for a healthy patient ([] alone does not satisfy a required checkbox
+    // question — Phase 2 D-06).
+  },
+  {
+    kind: "question",
+    id: "current_medications",
+    type: "text_input",
+    part: 6,
+    // LOCKED copy, verbatim — 03-UI-SPEC.md Copywriting Contract / REQUIREMENTS.md HIST-02.
+    text: "What medications (including dosage) are you currently taking (please list all)",
+    // UNCONFIRMED proposed subtitle — see <required_ness_decision> in 03-01-PLAN.md.
+    subtitle: "If you are not currently taking any medications, enter None.",
+    order: 61,
+    // MUST be isAnswered, not equals — "including none of the above" is precisely the case
+    // equals cannot express (D-08). required omitted (defaults to true) — see plan's
+    // required_ness_decision for why this field stays required unlike the HIST-03 reveals below.
+    showIf: { questionId: "history_comorbidities", isAnswered: true },
+  },
+  {
+    kind: "question",
+    id: "history_surgeries_has",
+    type: "yesno",
+    part: 6,
+    text: "Have you had any previous surgeries?",
+    order: 62,
+  },
+  {
+    kind: "question",
+    id: "history_surgeries",
+    type: "text_input",
+    part: 6,
+    text: "Please list your previous surgeries and the approximate dates.",
+    order: 63,
+    showIf: { questionId: "history_surgeries_has", equals: "yes" },
     required: false,
   },
   {
     kind: "question",
-    id: "history_family",
-    type: "checkbox_multi",
+    id: "history_allergies_has",
+    type: "yesno",
     part: 6,
-    text: "Do you have a family history of any of the following? (Check all that apply)",
-    options: [
-      { value: "rhinitis", label: "Allergic rhinitis (hay fever)" },
-      { value: "asthma", label: "Asthma" },
-      { value: "eczema", label: "Eczema or other allergic conditions" },
-    ],
-    order: 61,
-    // Opted out of the required default below — same rationale as history_personal above
-    // (D-05/D-06). No "none of the above" option exists here either, and QuizContainer seeds this
-    // to [] on step entry.
+    text: "Do you have any known medication, food, or environmental allergies?",
+    order: 64,
+  },
+  {
+    kind: "question",
+    id: "history_allergies",
+    type: "text_input",
+    part: 6,
+    text: "Please list your known allergies (medication, food, or environmental).",
+    order: 65,
+    showIf: { questionId: "history_allergies_has", equals: "yes" },
     required: false,
+  },
+  {
+    kind: "question",
+    id: "history_conditions_has",
+    type: "yesno",
+    part: 6,
+    text: "Do you have any other medical conditions not already listed?",
+    order: 66,
+  },
+  {
+    kind: "question",
+    id: "history_conditions",
+    type: "text_input",
+    part: 6,
+    // UNCONFIRMED clinical copy — this is the truncated third label from William's 6/27 email.
+    // Probable wording pending confirmation; see CONTEXT.md <specifics> #4 and 03-UI-SPEC.md.
+    text: "Please list any other medical conditions that you have.",
+    order: 67,
+    showIf: { questionId: "history_conditions_has", equals: "yes" },
+    required: false,
+  },
+  {
+    kind: "question",
+    id: "has_pcp",
+    type: "yesno",
+    part: 6,
+    text: "Do you have a Primary Care Physician (PCP)?",
+    order: 68,
+  },
+  {
+    kind: "question",
+    id: "pcp_clinic_name",
+    type: "text_input",
+    part: 6,
+    text: "What is the name of your PCP's clinic?",
+    order: 69,
+    // required omitted — defaults to true. D-09: both clinic fields are required when visible.
+    showIf: { questionId: "has_pcp", equals: "yes" },
+  },
+  {
+    kind: "question",
+    id: "pcp_clinic_address",
+    type: "text_input",
+    part: 6,
+    text: "What is the address of your PCP's clinic?",
+    order: 70,
+    // required omitted — defaults to true. D-09: both clinic fields are required when visible.
+    showIf: { questionId: "has_pcp", equals: "yes" },
+  },
+  {
+    kind: "info",
+    id: "no_pcp_recommendation",
+    // LOCKED copy, verbatim — 03-UI-SPEC.md Copywriting Contract / CONTEXT.md D-09. No heading,
+    // no bullets, no invented text around this sentence. MUST NOT declare `required` — the
+    // compiler enforces that on QuizInfoBlock.
+    paragraphs: [
+      "We recommend that you establish with a primary care physician before beginning SLIT.",
+    ],
+    order: 71,
+    part: 6,
+    showIf: { questionId: "has_pcp", equals: "no" },
   },
 ];
 
@@ -297,22 +412,29 @@ export const ALL_SCORED_QUESTIONS: QuizQuestion[] = [
   ...PART5_TREATMENT,
 ];
 
-// Helper: get question by id
+// Helper: get question by id. Filters with an inline type predicate (item.kind === "question")
+// rather than importing isQuestion from ./schema — schema.ts imports getQuestionById from this
+// file, so an import in the other direction would be circular. Do not "simplify" this into an
+// isQuestion import.
 export function getQuestionById(id: string): QuizQuestion | undefined {
-  return [...ALL_SCORED_QUESTIONS, ...PART6_MEDICAL_HISTORY].find((q) => q.id === id);
+  return [...ALL_SCORED_QUESTIONS, ...PART6_MEDICAL_HISTORY]
+    .filter((item): item is QuizQuestion => item.kind === "question")
+    .find((q) => q.id === id);
 }
 
-/** Ordered parts 1–5 for the main quiz flow. Widened to QuizItem[][] so Phase 3 can place an info
- *  block inside a part without a further type change — contents stay QuizQuestion[] this phase. */
+/** Ordered parts 1–6 for the main quiz flow. QuizItem[][] so a part can hold an info block (Part
+ *  6's no_pcp_recommendation) without a further type change. Part 6 (medical history) is reached
+ *  by 100% of patients — see 03-CONTEXT.md D-13. */
 export const QUIZ_PARTS: QuizItem[][] = [
   PART1_SYMPTOM_CHECKLIST,
   PART2_TIMING_TRIGGERS,
   PART3_SEVERITY,
   PART4_IMPACT,
   PART5_TREATMENT,
+  PART6_MEDICAL_HISTORY,
 ];
 
-// The full item set visibleAnswers is called with, deliberately including Part 6 so
-// history_personal / history_family are known-and-visible rather than unknown keys. A
-// Part-6-blind item set would silently strip them from the clinical record.
-export const ALL_ITEMS: QuizItem[] = [...ALL_SCORED_QUESTIONS, ...PART6_MEDICAL_HISTORY];
+// Derived from QUIZ_PARTS so a new part can never be omitted from the payload boundary by
+// accident (D-03). Replaces the old explicit ALL_SCORED_QUESTIONS + PART6_MEDICAL_HISTORY
+// concatenation and the Part-6 carve-out it existed to preserve.
+export const ALL_ITEMS: QuizItem[] = QUIZ_PARTS.flat();
