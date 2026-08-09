@@ -6,7 +6,7 @@ import { authenticate } from '../shopify.server'
 import { boundary } from '@shopify/shopify-app-react-router/server'
 import { listAdminSubmissions } from '../lib/submissions'
 import type { AdminSubmissionsPage, SubmissionFullRow } from '../lib/submissions'
-import { capitalize, formatDate, formatAnswerValue } from '../lib/format'
+import { capitalize, formatDate, formatAnswerValue, getAnswerLabel } from '../lib/format'
 
 declare global {
   interface Window {
@@ -251,19 +251,11 @@ export default function QuizResultsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                   {Object.entries(detailRow.answers_json ?? {}).map(([key, val]) => (
                     <div key={key} style={answerRowStyle}>
-                      <span style={{ fontSize: '0.875rem', color: '#374151' }}>{capitalize(key.replace(/_/g, ' '))}</span>
+                      <span style={{ fontSize: '0.875rem', color: '#374151' }}>{getAnswerLabel(key)}</span>
                       <SeverityPill value={formatAnswerValue(val)} />
                     </div>
                   ))}
                 </div>
-
-                {((detailRow.personal_history_json?.length ?? 0) > 0 || (detailRow.family_history_json?.length ?? 0) > 0) && (
-                  <>
-                    <SectionHeader>Medical History</SectionHeader>
-                    <HistoryTagList label="Personal" items={detailRow.personal_history_json} />
-                    <HistoryTagList label="Family" items={detailRow.family_history_json} />
-                  </>
-                )}
 
                 <div style={{ marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid #f0f0f0' }}>
                   <div style={{ fontSize: '0.72rem', color: '#9ca3af', fontFamily: 'monospace', lineHeight: 1.6 }}>
@@ -350,18 +342,6 @@ function InfoCell({ label, value }: { label: string; value: string }) {
   )
 }
 
-function HistoryTagList({ label, items }: { label: string; items: string[] | null | undefined }) {
-  if (!items?.length) return null
-  return (
-    <div style={{ marginBottom: '0.6rem' }}>
-      <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#6b7280', marginBottom: '0.35rem' }}>{label}</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-        {items.map((item, i) => <span key={i} style={historyTagStyle}>{item}</span>)}
-      </div>
-    </div>
-  )
-}
-
 const BRACKET_BADGE_COLORS: Record<string, { bg: string; color: string; label: string }> = {
   '0-2': { bg: '#dcfce7', color: '#15803d', label: '0–2 Low' },
   '3-6': { bg: '#fef9c3', color: '#a16207', label: '3–6 Moderate' },
@@ -410,7 +390,6 @@ const closeBtnStyle: CSSProperties = { background: 'none', border: 'none', fontS
 const pdfBtnStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', padding: '0.5rem 1.1rem', background: '#0070f3', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }
 const closeBtnSecStyle: CSSProperties = { padding: '0.5rem 1.1rem', background: 'white', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 }
 const infoGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem 1.5rem' }
-const historyTagStyle: CSSProperties = { background: '#eff6ff', color: '#1d4ed8', fontSize: '0.8rem', fontWeight: 500, padding: '0.2rem 0.65rem', borderRadius: '999px', border: '1px solid #bfdbfe' }
 
 const BRACKET_BANNER_COLORS: Record<string, { bg: string; color: string }> = {
   '0-2': { bg: '#f0fdf4', color: '#14532d' },

@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit'
 import type { SubmissionFullRow } from './submissions'
-import { capitalize, formatDate, formatAnswerValue } from './format'
+import { capitalize, formatDate, formatAnswerValue, getAnswerLabel } from './format'
 
 const BRACKET_LABELS: Record<string, string> = {
   '0-2': '0–2 (Low)',
@@ -78,34 +78,10 @@ export function generateVisitSummaryPdf(row: SubmissionFullRow): Promise<Buffer>
       doc.fontSize(10).font('Helvetica').text('No responses recorded.')
     } else {
       for (const [key, val] of answerEntries) {
-        const displayKey = key.replace(/_/g, ' ')
-        labelValue(capitalize(displayKey), formatAnswerValue(val))
+        labelValue(getAnswerLabel(key), formatAnswerValue(val))
       }
     }
     doc.moveDown(0.8)
-
-    // ── Medical history (conditional) ────────────────────────────────────────
-    const hasPersonal = row.personal_history_json && row.personal_history_json.length > 0
-    const hasFamily   = row.family_history_json   && row.family_history_json.length > 0
-    if (hasPersonal || hasFamily) {
-      sectionHeader('Medical History')
-      if (hasPersonal) {
-        doc.fontSize(10).font('Helvetica-Bold').text('Personal History:')
-        doc.font('Helvetica')
-        for (const item of row.personal_history_json!) {
-          doc.text(`  • ${item}`)
-        }
-        doc.moveDown(0.3)
-      }
-      if (hasFamily) {
-        doc.fontSize(10).font('Helvetica-Bold').text('Family History:')
-        doc.font('Helvetica')
-        for (const item of row.family_history_json!) {
-          doc.text(`  • ${item}`)
-        }
-      }
-      doc.moveDown(0.8)
-    }
 
     // ── Consent record (conditional) ─────────────────────────────────────────
     if (row.consent_version) {
