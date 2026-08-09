@@ -18,7 +18,11 @@ import {
   ALL_SCORED_QUESTIONS,
   ALL_ITEMS,
 } from "./questions";
+// Separate import statements (rather than folding into the blocks above) so Task 3's diff is
+// additions-only against the Task 1 commit, per this task's acceptance criteria.
+import { getQuestionById } from "./questions";
 import type { QuizAnswers, QuizInfoBlock, QuizQuestion, ShowIfCondition } from "./types";
+import type { QuizItem } from "./types";
 
 /**
  * Behavior spec for the pure evaluator module every question-ID literal in the renderer is
@@ -586,5 +590,109 @@ describe("isOptionDisabledByExclusive", () => {
     const onlyRarelyOption = TIMING_SEASON.options!.find((o) => o.value === "only_rarely")!;
     expect(isOptionDisabledByExclusive(TIMING_SEASON, ["spring"], onlyRarelyOption)).toBe(false);
     expect(isOptionDisabledByExclusive(TIMING_SEASON, ["only_rarely"], springOption)).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────
+// reference integrity (D-04) — Task 3
+// ─────────────────────────────────────────────
+// A dangling showIf.questionId must be caught at test time, not just fail open at runtime.
+// This block is the test-time half of D-04's two-halves mitigation (T-2-08).
+
+/** Returns the showIf.questionId of every item whose reference does NOT resolve via
+ * getQuestionById. An empty result means every showIf in `items` points at a real question. */
+function findDanglingShowIfReferences(items: QuizItem[]): string[] {
+  const dangling: string[] = [];
+  for (const item of items) {
+    if (item.showIf && getQuestionById(item.showIf.questionId) === undefined) {
+      dangling.push(item.showIf.questionId);
+    }
+  }
+  return dangling;
+}
+
+describe("reference integrity (D-04)", () => {
+  it("finds zero dangling showIf references in the real ALL_ITEMS, so a typo cannot ship", () => {
+    expect(findDanglingShowIfReferences(ALL_ITEMS)).toEqual([]);
+  });
+
+  // Without this row the assertion above is vacuous — it would pass identically against a
+  // checker that always returns []. This proves the checker can actually detect the typo class
+  // D-04 exists to prevent, using a test-local fixture rather than editing questions.ts.
+  it("detects a dangling reference in a deliberately broken fixture", () => {
+    const broken: QuizItem[] = [
+      {
+        kind: "question",
+        id: "broken_fixture_question",
+        type: "text_input",
+        part: 1,
+        text: "test fixture for the dangling-reference guard",
+        order: 999,
+        showIf: { questionId: "does_not_exist", equals: "yes" },
+      },
+    ];
+    expect(findDanglingShowIfReferences(broken)).toEqual(["does_not_exist"]);
+  });
+
+  // getQuestionById's search scope is QuizQuestion-only (RESEARCH.md Pitfall 5) — it never
+  // returns an info block. With that scoping, "every showIf.questionId resolves" (asserted
+  // above) already implies "no showIf.questionId resolves to an info block"; this assertion
+  // makes that implication explicit rather than leaving it implicit. A future change widening
+  // getQuestionById's search scope to include info blocks would silently break this guarantee,
+  // which is exactly why it is pinned here as its own assertion.
+  it("resolves no showIf.questionId in ALL_ITEMS to an info block", () => {
+    for (const item of ALL_ITEMS) {
+      if (!item.showIf) continue;
+      const target = getQuestionById(item.showIf.questionId);
+      expect(target !== undefined && target.kind === "question").toBe(true);
+    }
+  });
+});
+
+// ─────────────────────────────────────────────
+// no chained showIf (forward guard) — Task 3
+// ─────────────────────────────────────────────
+// RESEARCH.md Pitfall 4 / Assumption A3: evaluateShowIf has no transitive-visibility awareness.
+// If C's showIf targets B, and B is itself conditionally hidden, C reads B's possibly-stale
+// answer and can stay visible after B disappears. This phase resolves that deliberately: the
+// rule is NON-TRANSITIVE, and it is safe today only because no chain exists in the locked scope
+// — med_list and med_control both depend on taking_meds, which carries no showIf of its own, and
+// Phase 3's HIST-02/HIST-04 and Phase 4's TEST-02/TEST-03 all branch off unconditional questions
+// through Phase 4. The day this guard goes red, the transitive-visibility rule must be decided
+// before the chain ships — that is the point of encoding it now, while it is cheap, instead of
+// letting Phase 3 discover the ambiguity under schedule pressure.
+
+/** Returns every item in `items` whose showIf points at a question that itself carries a
+ * showIf — a two-link chain. An empty result means the non-transitive rule holds today. */
+function findChainedShowIf(items: QuizItem[]): QuizItem[] {
+  const chained: QuizItem[] = [];
+  for (const item of items) {
+    if (!item.showIf) continue;
+    const target = getQuestionById(item.showIf.questionId);
+    if (target?.showIf) chained.push(item);
+  }
+  return chained;
+}
+
+describe("no chained showIf (forward guard)", () => {
+  it("finds zero chained showIf references in the real ALL_ITEMS — non-transitive is safe today", () => {
+    expect(findChainedShowIf(ALL_ITEMS)).toEqual([]);
+  });
+
+  // Non-vacuous proof, per the same pattern as the reference-integrity block above: a
+  // test-local item whose showIf targets med_list — a REAL question that itself carries a
+  // showIf (med_list depends on taking_meds) — creating a genuine two-link chain resolvable
+  // through the real getQuestionById, without editing questions.ts.
+  it("detects a two-link chain built from a test-local item pointing at a real question that itself carries a showIf", () => {
+    const chainedItem: QuizItem = {
+      kind: "question",
+      id: "chain_test_fixture",
+      type: "yesno",
+      part: 5,
+      text: "test fixture for the no-chained-showIf guard",
+      order: 999,
+      showIf: { questionId: "med_list", isAnswered: true },
+    };
+    expect(findChainedShowIf([chainedItem])).toEqual([chainedItem]);
   });
 });
