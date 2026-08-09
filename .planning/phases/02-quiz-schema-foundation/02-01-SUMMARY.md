@@ -159,3 +159,10 @@ None - no external service configuration required.
 ---
 *Phase: 02-quiz-schema-foundation*
 *Completed: 2026-08-09*
+
+## Self-Check: PASSED
+
+All claimed files verified present on disk (`tests/quiz-part-renderer-no-literals.test.ts`,
+`tests/quiz-schema-type-guarantees.test.ts`, `app/lib/quiz/types.ts`, `app/lib/quiz/questions.ts`,
+`app/components/quiz/QuizContainer.tsx`, this SUMMARY). All four commit hashes
+(`5871f19`, `d13086f`, `b7baac4`, `6b3f327`) verified present in `git log`.
