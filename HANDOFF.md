@@ -1,6 +1,6 @@
 # Handoff — AlleDrops quiz app (2026-08-09 session 32)
 
-### Status: **GSD Phase 2 COMPLETE — 4/4 plans, verified 11/11 `passed`, marked complete in ROADMAP/STATE/REQUIREMENTS.** The quiz schema is now declarative: `required`, `showIf`, and a static info-block type, with **zero question-ID literals** left in the renderer. Suite 173 → **280 tests / 22 files**, typecheck and build clean, tree clean. **Two real defects were found by browser UAT that every automated test passed straight through** — one of them would have made the entire phase invisible on the storefront. **NOT deployed, NOT pushed, no PR yet.** Branch `phase-2-quiz-schema-foundation` is local-only. Next: push + PR, then `/gsd:discuss-phase 3`. **Phase 1's live exposures are still open — Klaviyo still loads 10× on the quiz page and the live clinical intake still carries no medical disclaimer.**
+### Status: **GSD Phase 2 COMPLETE — 4/4 plans, verified 11/11 `passed`, marked complete in ROADMAP/STATE/REQUIREMENTS.** The quiz schema is now declarative: `required`, `showIf`, and a static info-block type, with **zero question-ID literals** left in the renderer. Suite 173 → **280 tests / 22 files**, typecheck and build clean, tree clean. **Two real defects were found by browser UAT that every automated test passed straight through** — one of them would have made the entire phase invisible on the storefront. **Pushed, [PR #17](https://github.com/askinne2/alle-drops-quiz-app/pull/17) open and `MERGEABLE` — awaiting Andrew's review + merge. NOT deployed.** Next: Andrew's visual UAT, then merge → `fly deploy` → `/gsd:discuss-phase 3`. **Phase 1's live exposures are still open — Klaviyo still loads 10× on the quiz page and the live clinical intake still carries no medical disclaimer.**
 
 ---
 
@@ -64,14 +64,26 @@ Closed: `itemsForPart(parts, index)` extracted into `schema.ts` (pure, testable 
 
 ### Next steps
 
-1. **Push the branch and open a PR.** `phase-2-quiz-schema-foundation` is local-only; all four executors correctly deferred the push (isolated worktrees couldn't push a branch checked out in the main tree). Per `CLAUDE.md`, Andrew reviews and merges — do not merge yourself. PR description should call out that no PHI-path file was touched and no dependency was added.
-2. **Deploy is NOT done.** After merge, `fly deploy` and, because the theme bundle changed, confirm the served `/quiz-bundle-js` bytes actually changed — do not trust deploy success.
-3. `/gsd:discuss-phase 3` — mandatory medical history. Phase 3 ships the **first real info blocks** (HIST-04's PCP recommendation), so budget a browser check for them.
-4. **Still open from Phase 1, unchanged:** Klaviyo loads 10× on `/pages/allergy-quiz` (theme `config/settings_data.json`, one-field flip); the live intake page carries no medical disclaimer at all; the Apntly embed needs a keep/disable decision.
+1. ~~Push the branch and open a PR.~~ **DONE — [PR #17](https://github.com/askinne2/alle-drops-quiz-app/pull/17)**, `main` ← `phase-2-quiz-schema-foundation`, state `MERGEABLE`, GitGuardian passed. **Andrew reviews and merges — do not merge from a session.**
+2. **Andrew's visual UAT (his stated next action, before Phase 3).** Recipe:
+   ```bash
+   SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev
+   # then open http://localhost:3000/quiz-embed
+   ```
+   `npm run dev` will NOT work — it is `shopify app dev` and blocks on an interactive store prompt. Without `SHOPIFY_APP_URL` the route 500s with "Detected an empty appUrl configuration".
+
+   Four things to look at, TN → any patient info → Part 1:
+   - **Empty selection blocks Next.** Tick a nasal symptom, untick it → Next greys out. Tick "None of the above" → Next enables.
+   - **Exclusive option still unchecks.** Tick "None of the above" → other five grey out but "None" stays clickable. Click it again → everything re-enables, Next greys out.
+   - **Medication list survives a toggle.** Part 5, "yes" to medications, type something, switch to "no", switch back to "yes" → the text is still there. On `main` today it is gone.
+   - **Info block** needs a throwaway fixture to see (nothing ships one yet) — Phase 3 is the first phase with real ones. Skippable.
+3. **Deploy is NOT done.** After merge, `fly deploy`, then confirm the **served** `/quiz-bundle-js` bytes actually changed. A successful deploy is not proof — that is the session-28 lesson and it recurred in this phase.
+4. `/gsd:discuss-phase 3` — mandatory medical history. Phase 3 ships the **first real info blocks** (HIST-04's PCP recommendation), so budget a browser check for them.
+5. **Still open from Phase 1, unchanged:** Klaviyo loads 10× on `/pages/allergy-quiz` (theme `config/settings_data.json`, one-field flip); the live intake page carries no medical disclaimer at all; the Apntly embed needs a keep/disable decision.
 
 ### Resume context
 
-- **Branch:** `phase-2-quiz-schema-foundation` @ `a345d52`, clean tree, **not pushed**. Forked from `main` @ `7ac835e`.
+- **Branch:** `phase-2-quiz-schema-foundation`, pushed and tracking `origin`, clean tree. Forked from `main` @ `7ac835e`. **PR #17 open, do not merge from a session.**
 - **How to verify:** `npm run typecheck && npm test && npm run build` → expect **280 passing / 22 files**, all clean. For the theme bundle: `npm run build:theme` then confirm `public/quiz-bundle.js` is byte-identical to the committed artifact (the build is deterministic — a diff means source drifted).
 - **To UAT locally:** `SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev`, open `http://localhost:3000/quiz-embed`. Note the page nests an iframe (`initQuiz()` picks `injectIframe` when `window.self === window.top`), so query `document.querySelector('iframe').contentDocument`, not the top document.
 - **Key files:**
