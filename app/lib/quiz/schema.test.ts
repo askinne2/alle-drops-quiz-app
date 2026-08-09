@@ -8,6 +8,7 @@ import {
   visibleAnswers,
   toggleOption,
   isOptionDisabledByExclusive,
+  itemsForPart,
 } from "./schema";
 import {
   PART1_SYMPTOM_CHECKLIST,
@@ -423,6 +424,61 @@ describe("visibleItems", () => {
     const result = visibleItems(input, { taking_meds: "no" });
     expect(result).toEqual([SEVERITY_NASAL_CONGESTION, TAKING_MEDS]);
     expect(input).toEqual(snapshot);
+  });
+});
+
+// ─────────────────────────────────────────────
+// itemsForPart (UAT defect fix — info blocks never reached the renderer)
+// ─────────────────────────────────────────────
+// UAT found that QuizContainer.tsx filtered QUIZ_PARTS[currentPartIndex] down to
+// `item.kind === "question"` before handing the result to QuizPartRenderer, which silently
+// discarded every info block. QuizPartRenderer and isPartComplete both already accept the full
+// QuizItem[] union correctly (isPartComplete's own `isQuestion` narrow already skips info blocks
+// for the required check without needing them pre-filtered out of the list). itemsForPart is the
+// pure selector QuizContainer now calls instead of filtering inline.
+
+describe("itemsForPart", () => {
+  it("returns the full item array for a valid index, unfiltered", () => {
+    expect(itemsForPart([PART1_SYMPTOM_CHECKLIST], 0)).toEqual(PART1_SYMPTOM_CHECKLIST);
+  });
+
+  it("returns [] for an index past the end of the array", () => {
+    expect(itemsForPart([PART1_SYMPTOM_CHECKLIST], 5)).toEqual([]);
+  });
+
+  it("returns [] for a negative index", () => {
+    expect(itemsForPart([PART1_SYMPTOM_CHECKLIST], -1)).toEqual([]);
+  });
+
+  // This is the actual regression proof: an info block placed inside a part MUST survive the
+  // selection step. A `item.kind === "question"` filter (the bug UAT found) would strip it and
+  // this assertion would fail — that is the failure this test exists to catch.
+  it("keeps a QuizInfoBlock placed inside a part — the info block must survive selection, not just visibility filtering", () => {
+    const info: QuizInfoBlock = {
+      kind: "info",
+      id: "info_itemsForPart_survives",
+      paragraphs: ["Informational content with no answer to collect."],
+      order: 5,
+      part: 1,
+    };
+    const partWithInfoBlock: QuizItem[] = [SYMPTOMS_NASAL, info, TAKING_MEDS];
+    const result = itemsForPart([partWithInfoBlock], 0);
+    expect(result).toEqual([SYMPTOMS_NASAL, info, TAKING_MEDS]);
+    expect(result.some((item) => item.kind === "info")).toBe(true);
+  });
+
+  it("does not mutate the source parts array", () => {
+    const info: QuizInfoBlock = {
+      kind: "info",
+      id: "info_itemsForPart_no_mutate",
+      paragraphs: ["n/a"],
+      order: 1,
+      part: 1,
+    };
+    const parts: QuizItem[][] = [[SYMPTOMS_NASAL, info]];
+    const snapshot = JSON.parse(JSON.stringify(parts));
+    itemsForPart(parts, 0);
+    expect(parts).toEqual(snapshot);
   });
 });
 

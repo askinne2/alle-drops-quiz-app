@@ -17,8 +17,8 @@ import {
   generateSymptomProfileId,
   type ScoreBracket,
 } from "../../lib/quiz/scoring";
-import { visibleAnswers } from "../../lib/quiz/schema";
-import { type QuizAnswers, type QuizQuestion } from "../../lib/quiz/types";
+import { visibleAnswers, itemsForPart } from "../../lib/quiz/schema";
+import { type QuizAnswers } from "../../lib/quiz/types";
 import { CONSENT_VERSION } from "../../lib/consent-version";
 import { getProductHandle, type QuizProductConfig } from "../../lib/quiz/product-links";
 import {
@@ -314,13 +314,11 @@ export function QuizContainer() {
     }
   }, [consentChecked, submitPayload, answers]);
 
-  // QUIZ_PARTS widened to QuizItem[][] in Plan 02-01 so Phase 3 can place an info block inside a
-  // part without a further type change. QuizPartRenderer and isPartComplete still take
-  // QuizQuestion[] this phase (that signature widening is later plan work), so narrow here. This
-  // filter is a no-op today — no info block exists in QUIZ_PARTS' actual content yet.
-  const currentPartQuestions = (QUIZ_PARTS[currentPartIndex] ?? []).filter(
-    (item): item is QuizQuestion => item.kind === "question",
-  );
+  // UAT defect fix: QuizPartRenderer and isPartComplete both already accept the full QuizItem[]
+  // union (questions AND info blocks) — a question-only filter here used to strip every info
+  // block before it ever reached the renderer. itemsForPart is the pure, tested selector; no
+  // filtering happens in this component (see app/lib/quiz/schema.ts).
+  const currentPartItems = itemsForPart(QUIZ_PARTS, currentPartIndex);
   const quizPartsTotal = QUIZ_PARTS.length;
 
   // Overall flow: state_gate (1) + patient_info (2) + 5 quiz parts (3-7) = 7 steps
@@ -457,7 +455,7 @@ export function QuizContainer() {
         {step === "quiz_parts" && (
           <>
             <QuizPartRenderer
-              items={currentPartQuestions}
+              items={currentPartItems}
               answers={answers}
               onAnswerChange={handleAnswerChange}
             />
@@ -484,8 +482,8 @@ export function QuizContainer() {
                   <button
                     type="button"
                     className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                    disabled={!isPartComplete(currentPartQuestions, answers)}
-                    onClick={() => isPartComplete(currentPartQuestions, answers) && setCurrentPartIndex((i) => i + 1)}
+                    disabled={!isPartComplete(currentPartItems, answers)}
+                    onClick={() => isPartComplete(currentPartItems, answers) && setCurrentPartIndex((i) => i + 1)}
                   >
                     Next →
                   </button>
@@ -493,8 +491,8 @@ export function QuizContainer() {
                   <button
                     type="button"
                     className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                    disabled={!isPartComplete(currentPartQuestions, answers)}
-                    onClick={() => isPartComplete(currentPartQuestions, answers) && goToOutcome()}
+                    disabled={!isPartComplete(currentPartItems, answers)}
+                    onClick={() => isPartComplete(currentPartItems, answers) && goToOutcome()}
                   >
                     See results
                   </button>
