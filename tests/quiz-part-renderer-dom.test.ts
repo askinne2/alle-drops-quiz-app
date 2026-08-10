@@ -39,7 +39,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import React from "react";
-import { QuizPartRenderer } from "../app/components/quiz/QuizPartRenderer";
+import { QuizPartRenderer, isPartComplete } from "../app/components/quiz/QuizPartRenderer";
 import { itemsForPart } from "../app/lib/quiz/schema";
 import { QUIZ_PARTS } from "../app/lib/quiz/questions";
 import type { QuizAnswers } from "../app/lib/quiz/types";
@@ -62,6 +62,25 @@ const MEDICATIONS_LABEL =
 function renderPart6(answers: QuizAnswers, onAnswerChange: (...args: unknown[]) => void = vi.fn()) {
   const utils = render(
     React.createElement(QuizPartRenderer, { items: PART_6_ITEMS, answers, onAnswerChange })
+  );
+  return { onAnswerChange, ...utils };
+}
+
+// The REAL Part 7 items — 04-07's target seam. Part 7 is Phase 4's mandatory allergy-testing
+// split: a required radio_single gate (testing_status) plus three showIf-gated required
+// text_input_short/text_input children, all declared in questions.ts (04-06), rendered here
+// through the real QuizPartRenderer (04-07 Task 1) with no synthetic question array.
+const PART_7_ITEMS = itemsForPart(QUIZ_PARTS, 6);
+
+const NEEDS_TESTING_LABEL = "I need allergy testing";
+const HAD_TESTING_LABEL = "I've already had allergy testing";
+const TESTING_YEAR_LABEL = "What year did you have your allergy testing done?";
+const TESTING_LOCATION_LABEL = "Where did you have your allergy testing done?";
+const TESTING_ALLERGENS_LABEL = "What Allergens Did You React To?";
+
+function renderPart7(answers: QuizAnswers, onAnswerChange: (...args: unknown[]) => void = vi.fn()) {
+  const utils = render(
+    React.createElement(QuizPartRenderer, { items: PART_7_ITEMS, answers, onAnswerChange })
   );
   return { onAnswerChange, ...utils };
 }
@@ -215,5 +234,123 @@ describe("Info block collects no answer (D-11)", () => {
     expect(within(note).queryAllByRole("textbox").length).toBe(0);
     expect(note.querySelectorAll("input, textarea, select, button").length).toBe(0);
     expect(onAnswerChange).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Part 7 (04-07). TEST-01: exactly two options, gated Next. TEST-02: the needs_testing branch
+ * collects nothing beyond the choice itself. TEST-03: year/location/allergens are reachable and
+ * capturable on the had_testing branch. All against the REAL PART_7_ITEMS through the REAL
+ * renderer, per this file's stated purpose.
+ */
+describe("Part 7 item list sanity (non-vacuity control)", () => {
+  it("itemsForPart(QUIZ_PARTS, 6) is non-empty and contains the known Part 7 item IDs", () => {
+    expect(PART_7_ITEMS.length).toBeGreaterThan(0);
+    const ids = PART_7_ITEMS.map((item) => item.id);
+    expect(ids).toContain("testing_status");
+    expect(ids).toContain("testing_year");
+    expect(ids).toContain("testing_location");
+    expect(ids).toContain("testing_allergens");
+  });
+});
+
+describe("TEST-01 — testing_status renders exactly two options and nothing else before a choice", () => {
+  it("renders exactly two radio inputs with the two locked-verbatim accessible labels, and no skip control", () => {
+    renderPart7({});
+    const radios = screen.getAllByRole("radio") as HTMLInputElement[];
+    expect(radios.length).toBe(2);
+
+    // Verbatim accessible-label assertions, including the apostrophe in the second label.
+    expect(screen.getByText(NEEDS_TESTING_LABEL)).toBeTruthy();
+    expect(screen.getByText(HAD_TESTING_LABEL)).toBeTruthy();
+
+    // No third option, no skip/button control anywhere in the render.
+    expect(screen.queryAllByRole("checkbox").length).toBe(0);
+    expect(screen.queryAllByRole("button").length).toBe(0);
+  });
+
+  it("renders no text input or textarea before a choice is made", () => {
+    renderPart7({});
+    expect(screen.queryAllByRole("textbox").length).toBe(0);
+  });
+});
+
+describe("TEST-02 — needs_testing branch collects nothing beyond the choice itself", () => {
+  it("shows zero text inputs/textareas when testing_status is 'needs_testing'", () => {
+    renderPart7({ testing_status: "needs_testing" });
+    expect(screen.queryAllByRole("textbox").length).toBe(0);
+    expect(screen.queryByText(TESTING_YEAR_LABEL)).toBeNull();
+    expect(screen.queryByText(TESTING_LOCATION_LABEL)).toBeNull();
+    expect(screen.queryByText(TESTING_ALLERGENS_LABEL)).toBeNull();
+  });
+});
+
+describe("TEST-03 — had_testing branch reveals year, location, and allergens", () => {
+  it("renders all three additional controls, matched by their visible question text", () => {
+    renderPart7({ testing_status: "had_testing" });
+    expect(screen.getByText(TESTING_YEAR_LABEL, { exact: false })).toBeTruthy();
+    expect(screen.getByText(TESTING_LOCATION_LABEL, { exact: false })).toBeTruthy();
+    // Locked verbatim copy — asserted exactly, not a substring match.
+    expect(screen.getByText(TESTING_ALLERGENS_LABEL)).toBeTruthy();
+
+    const textboxes = screen.getAllByRole("textbox");
+    expect(textboxes.length).toBe(3);
+  });
+
+  it("fires onAnswerChange('testing_year', <typed value>) when the year field is typed into", () => {
+    const onAnswerChange = vi.fn();
+    renderPart7({ testing_status: "had_testing" }, onAnswerChange);
+    const yearLabel = screen.getByText(TESTING_YEAR_LABEL, { exact: false });
+    const yearInput = yearLabel.closest("div")?.querySelector("input, textarea");
+    expect(yearInput).not.toBeNull();
+    fireEvent.change(yearInput as Element, { target: { value: "2019" } });
+    expect(onAnswerChange).toHaveBeenCalledWith("testing_year", "2019");
+  });
+
+  it("fires onAnswerChange('testing_status', 'had_testing') when that radio is selected", () => {
+    const onAnswerChange = vi.fn();
+    renderPart7({}, onAnswerChange);
+    const hadTestingLabel = screen.getByText(HAD_TESTING_LABEL).closest("label");
+    expect(hadTestingLabel).not.toBeNull();
+    const radio = hadTestingLabel!.querySelector('input[type="radio"]');
+    expect(radio).not.toBeNull();
+    fireEvent.click(radio as Element);
+    expect(onAnswerChange).toHaveBeenCalledWith("testing_status", "had_testing");
+  });
+});
+
+describe("Part 7 gating — the real isPartComplete, imported from the renderer module", () => {
+  it("is incomplete with no answers", () => {
+    expect(isPartComplete(PART_7_ITEMS, {})).toBe(false);
+  });
+
+  it("is complete once testing_status is 'needs_testing' — no children to satisfy", () => {
+    expect(isPartComplete(PART_7_ITEMS, { testing_status: "needs_testing" })).toBe(true);
+  });
+
+  it("is incomplete on 'had_testing' alone, before the three revealed fields are filled", () => {
+    expect(isPartComplete(PART_7_ITEMS, { testing_status: "had_testing" })).toBe(false);
+  });
+
+  it("is complete once all three revealed fields are filled with non-whitespace text", () => {
+    expect(
+      isPartComplete(PART_7_ITEMS, {
+        testing_status: "had_testing",
+        testing_year: "2019",
+        testing_location: "X",
+        testing_allergens: "Y",
+      })
+    ).toBe(true);
+  });
+
+  it("is incomplete when a revealed field is whitespace-only (T-4-23's trim() guard)", () => {
+    expect(
+      isPartComplete(PART_7_ITEMS, {
+        testing_status: "had_testing",
+        testing_year: "  ",
+        testing_location: "X",
+        testing_allergens: "Y",
+      })
+    ).toBe(false);
   });
 });
