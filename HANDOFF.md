@@ -1,18 +1,124 @@
-# Handoff — AlleDrops quiz app (2026-08-10 session 34)
+# Handoff — AlleDrops quiz app (2026-08-10 session 35)
 
-### Status: **GSD Phase 4 built end to end — 18/19 plans, 75 commits, [PR #20](https://github.com/askinne2/alle-drops-quiz-app/pull/20) OPEN and unmerged.** Suite **361 → 545 tests / 36 files**, typecheck clean, build clean, theme bundle byte-identical after independent rebuild. Branch `phase-4-mandatory-allergy-testing`, pushed. **Nothing was deployed and no DDL was executed** — plan 04-19 was deliberately not run. Two new phases were spec'd this session: **4.1 (testing-first order)** and **4.2 (browser-local resume)**, both unblocked and needing nothing from anyone.
+### Status: **Phase 4 is COMPLETE, MERGED, and DEPLOYED. 19/19 plans.** PR #20 merged (`ea3dd26`), Fly **v51**, Shopify **alledrops-quiz-production-22**, migration 004 executed. Suite **545 → 558 tests / 37 files**, typecheck clean, build clean, theme bundle byte-identical. **The GCP ADC credential gap that blocked plan 04-19 is CLOSED** and proven with a live upload from the Fly VM. Full binary-PHI path verified end to end in production: upload → GCS staging → promotion → `submission_files` row → admin PDF with the image embedded (**316,771 bytes** vs 3,457 before). `main` @ `86dd829`, clean tree, **no open PRs, no branches other than `main`**.
 
 ### Start here (fresh session)
 
-Nothing is half-finished. Nothing is waiting on a build. In order:
+Nothing is half-finished. Nothing is waiting on a build or a person.
 
-1. **`/gsd:plan-phase 4.1`** — testing-first quiz order, ~half a day, unblocked. Moves the testing split + required upload to the front of the quiz so a patient who can't produce results loses seconds instead of a completed ten-minute intake.
+1. **`/gsd:plan-phase 4.1`** — testing-first quiz order, ~half a day, unblocked.
 2. **`/gsd:plan-phase 4.2`** — browser-local resume, ~1–2 days, unblocked.
-3. **Review and merge PR #20** when ready. Andrew merges, not Claude.
 
-**Do not attempt `/gsd:execute-phase 4` again.** Plans 04-01…04-18 are complete with SUMMARY files. Only 04-19 remains, and it is blocked on a real technical gap (below), not on sequencing.
+**Decide `PENDING_OLM_AGE_DAYS` across both phases at once.** It is `2` today (applied to `gs://alledrops-quiz-uploads-dev`, documented in `docs/gcs-lifecycle-and-retention.md`). 4.1 wants it shorter — after the reorder every abandoner leaves an orphaned staged file. 4.2 wants it longer — a resuming patient must still find their upload. `ROADMAP.md` says neither phase may tune it alone.
 
-Optional cleanup, carried from session 33: `/gsd:verify-work 3` was never run.
+**Do not attempt `/gsd:execute-phase 4`.** It is done and deployed.
+
+Carried and still genuinely open: `/gsd:verify-work 3` was never run (since session 33).
+
+---
+
+## Session 35 (2026-08-10) — Phase 4 shipped; the credential gap closed
+
+Started as "what's still open?" and became the session that finished Phase 4.
+
+### The blocker that had stopped everything, and what it actually was
+
+`app/lib/storage/gcs.ts` called `new Storage({ projectId })` with no credential, relying on **Application Default Credentials**. ADC searches exactly three places: `GOOGLE_APPLICATION_CREDENTIALS`, local `gcloud` user credentials, and the GCE metadata server at `169.254.169.254`. **A Fly VM satisfies none of them** — Fly is not Google infrastructure, so there is no metadata server to ask. Every GCS call would have 500'd in production while working perfectly on a laptop via `gcloud`. Plans 04-13 and 04-17 both found it, neither owned it, and it was deferred to the AOD cutover.
+
+**Fixed** by reading a full service-account key document from the `GCP_SA_KEY` Fly secret and passing it explicitly, falling back to ADC when absent so local dev and tests need no key. Commit `7c9d260`. Runbook: `docs/gcs-credentials.md`.
+
+Infrastructure created (dev, outside the repo):
+
+- SA `alledrops-quiz-app@alledrops-quiz.iam.gserviceaccount.com`
+- `roles/storage.objectAdmin` on `gs://alledrops-quiz-uploads-dev` **only**, not project-wide
+- `roles/cloudsql.client` on the project — **local-dev only**, see the trap below
+- `roles/iam.serviceAccountTokenCreator` for `andrew@21adsmedia.com` on that SA, so local ADC can impersonate it
+- Key never touched disk beyond a scratchpad; pushed to Fly via stdin, then `rm -P`. **It does not expire and nothing reminds you to rotate it.**
+
+### The local-database bug that ate two prior sessions
+
+`HANDOFF.md` said "the local `DATABASE_URL` password is stale — local submit fails with `28P01`." **Wrong, and wrong when written.** Port 5433 is **`fieldflow-sync-db`, an unrelated project's `postgres:16` container**, and it binds `0.0.0.0:5433` *and* `[::]:5433`, so the old "use `127.0.0.1`, Docker only holds `::1`" workaround stopped avoiding it. The Cloud SQL Auth Proxy was never running. The app was authenticating against a different project's database, which rejected `alledrops_app` because that role does not exist there — a **wrong-database error presenting as a wrong-password error**.
+
+Fixed by running the proxy on **5436** and creating a local-only `alledrops_dev` role, so local work never touches the credential Fly runs on. Retracted in place in this file. Documented in `docs/local-dev-database.md` and `.env.example`, both new (`195dc12`).
+
+### UAT defect #6 — the sixth caught by a human, missed by a green suite
+
+The progress counter read "Step 1 of 9" and "Step 2 of 9" on the intro screens, then switched **both the noun and the denominator** to "Part 1 of 7" for the quiz parts. Both numbers were internally correct — 9 counted intro screens plus 7 parts, 7 counted parts alone — but under a continuous progress bar "Step" and "Part" scan as the same word. The total was short by one either way: consent has been mandatory since D-09 and was never counted.
+
+Replaced with one continuous counter, `Step 1 of 10` … `Step 10 of 10`, extracted into `quizFlowProgress()` in `app/lib/quiz/schema.ts` so the arithmetic is unit-testable without rendering. Consent now shows a progress bar for the first time. `4a42bd7`. Four of the eight new assertions proven RED against the old shape first.
+
+### Migration 004, executed
+
+Backup **`1786361850289`** ON_DEMAND SUCCESSFUL, read back via `gcloud sql backups list` rather than trusted from the create command's exit code. Two deviations, both recorded in the migration file header:
+
+1. **Ran ahead of the Fly deploy**, against the file's own precondition. That precondition guards Phase 3's `DROP`-before-code failure mode; 004 is additive in the opposite direction (`CREATE TABLE IF NOT EXISTS`, two indexes, a CHECK **widened** 3→4 values). v50 never referenced the new table and its existing writes stayed valid. Leaving the DB ahead of the code is the safe direction — it is what made the deploy boring.
+2. **Split roles.** `submissions` is owned by `alledrops_app`, `submission_access_log` by `postgres`, so no single role can run the file. Ran as postgres in one transaction with `SET ROLE alledrops_app` for the table, `RESET ROLE` for the ALTER.
+
+Verified by query result: owner `alledrops_app`, 3 indexes, FK present, CHECK now `('list','detail','pdf','file')`, `submissions` unchanged. Write path proven with an INSERT as `alledrops_app` inside a transaction, rolled back.
+
+### Deploy, verified on served bytes
+
+| | v50 | v51 |
+|---|---|---|
+| served `/quiz-bundle-js` | 186,738 B | **195,102 B**, byte-identical to the committed artifact |
+| `fileUpload__dropzone` | 0 | **9** |
+| `testing_status` | 0 | **7** |
+| `testing_files` | 0 | **1** |
+| `Step ` / `Part ` | 2 / 1 | **1 / 0** |
+
+`/health` 200. A live `POST /api/quiz/upload` against production returned 200 with a staging token and the object was confirmed in the bucket — **the first proof the Fly VM can authenticate to GCS at all**. Andrew ran `shopify app deploy` himself (Claude cannot — the OAuth session is in the macOS keychain); active version is `alledrops-quiz-production-22`, up from `-21` on 2026-07-30.
+
+### What worked
+
+- **Paired non-vacuity controls for credentials.** The key-present run passed and the key-absent run under an isolated `HOME` failed with `Could not load the default credentials` — the Fly failure reproduced locally. Without the paired control, a passing run only proves your laptop's `gcloud` works.
+- **`docker ps` before assuming a port is yours.** One command would have saved two sessions.
+- **Reading the backup back from GCP** instead of trusting the create command's exit code.
+- **Impersonated ADC instead of a key on disk** for local dev: `gcloud auth application-default login --impersonate-service-account=…`. v4 signing needs a service-account private key, so plain user credentials cannot sign — uploads work and every download fails with `Cannot sign data without 'client_email'`.
+- **Reading the log the user pasted rather than the log they described.** The "failed" UAT run had `[upload:ok] staged` in it — the upload had worked; only the DB insert failed.
+
+### What didn't work
+
+- **A wrong diagnosis propagating for two sessions.** "Stale password" was recorded once and inherited twice without anyone checking the port. Reproducible error, plausible story, wrong cause.
+- **`CLOUDSDK_CONFIG` does not suppress ADC** for the well-known credentials file — google-auth-library reads `$HOME/.config/gcloud` directly. Overriding `HOME` is what isolates it, but that also breaks `npx` (it re-downloads into the fake home). Resolve the binary path first, then override `HOME`.
+- **ADC impersonation bleeds into every tool.** After setting it for GCS signing, `cloud-sql-proxy` authenticated as that SA and 403'd until it was granted `roles/cloudsql.client`. Any other local project using ADC will now also authenticate as this SA — run plain `gcloud auth application-default login` to undo.
+- **Admin surfaces cannot be tested locally.** The Shopify embedded admin loads from `alle-drops-quiz-app.fly.dev`, so it always exercises *deployed* code. A PDF downloaded from it before the deploy was a valid Phase-3 document for a Phase-4 submission — 3,457 bytes, no attachment, no error. Both apps read the same Cloud SQL instance, which made it convincing.
+- **`gcloud` and ADC reauth expire mid-session** (`invalid_rapt`). They are separate credentials: `gcloud auth login` fixes one, `gcloud auth application-default login` the other.
+- **zsh does not word-split an unquoted variable**, so `PSQL="psql -h …"; $PSQL -c …` fails with "no such file or directory" while an `echo` after it still prints success. Call the binary directly.
+
+### Deliberately skipped, at Andrew's direction
+
+- **The human browser pass.** "I don't care about locally testable validation. move forward." The flow checks in `04-VALIDATION.md` are unrun. Given five of the six defects on this project were found exactly this way, this is a real gap, not a closed item.
+- **The William message.** Paused. Six items, all still owed: upload reversal + pricing, storefront copy (`04-STOREFRONT-COPY-DRAFT.md`), interim consent copy (still UNCONFIRMED in `ConsentStep.tsx`), HIST-03's third label, DIAG-01 scope, domain spelling.
+
+### Untested branches of the upload path
+
+Proven: single JPEG, upload → promote → link → embed. **Not proven:** HEIC conversion, multi-file upload, the size caps (15 MB/file, 50 MB total, 10 files), the required-gate when a patient has no file, and the patient ledger download via `/api/me/*`.
+
+### Housekeeping
+
+- `.planning/STATE.md` and `ROADMAP.md` reconciled to reality (PR #21). Four stale claims fixed: the 04-13/04-17 "credential gap unsolved" entries marked SUPERSEDED in place, `DEC-testing-results-by-email-not-upload` struck through, Phase 4.2's roadmap line corrected from the dropped server-draft design to browser-local, and the standing-risk tally updated to six.
+- **All 15 branches deleted**, local and remote. Three carried unmerged commits — all May 7 `quiz-history` attempts superseded by the Preact rewrite already on main. Restore with `git push origin <sha>:refs/heads/<name>`: `ee02ab1` `fix/extend-on-main`, `03d6e31` `fix/extension-preact-rewrite`, `8866d1f` `thread-a2-a3-ledger-and-account-ext`.
+- Two business PDFs (contractor agreement, project quote) moved out of the repo root to `~/Documents/Claude/Projects/AoD/contracts/`.
+- 4.1 and 4.2 phase directories now tracked (`.gitkeep` each).
+
+### Resume context
+
+- **Branch:** `main` @ `86dd829`, in sync with origin, clean tree. No other branches exist. No open PRs.
+- **How to verify:** `npm run typecheck && npm test && npm run build` → **558 passing / 37 files**. Theme bundle: `npm run build:theme`, then confirm `git diff --stat public/` is empty.
+- **Local dev — read `docs/local-dev-database.md` before touching the database.** In one terminal: `cloud-sql-proxy --port 5436 alledrops-quiz:us-east1:alledrops-quiz-data`. In another: `SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev` — **no path on that env var**, a path causes `Received invalid shop argument`. `npm run dev` does not work (it is `shopify app dev` and blocks on a store prompt).
+- **Local GCS:** ADC must impersonate the service account, or downloads fail while uploads succeed. See `docs/gcs-credentials.md`.
+- **Key files:**
+  - `app/lib/storage/gcs.ts` — the credential fix; `readServiceAccountCredentials` explains why ADC cannot work on Fly
+  - `app/lib/quiz/schema.ts` — `quizFlowProgress()`, the step counter, plus the pure evaluator
+  - `docs/gcs-credentials.md` and `docs/local-dev-database.md` — both new, both prevent a re-derivation
+  - `migrations/004_create_submission_files.sql` — executed; header records backup ID and both deviations
+  - `.env.example` — new; the two GCS vars and why `GCP_SA_KEY` must not be set locally
+- **Blockers / open questions:**
+  - **Fly.io BAA** and the **AOD GCP cutover** — both still open, both Phase 8 gates. No real patient PHI may use the upload path until they clear. `submissions` is test data only; Andrew's standing instruction is "EVERYTHING IS TEST DATA until i say otherwise."
+  - **`GCP_SA_KEY` never expires.** Rotation is manual and unprompted. Rotate at the cutover regardless.
+  - **`roles/cloudsql.client` on the SA is a local-dev convenience.** Do not replicate it in AOD's project.
+  - **Appointly** still loads 15× on the PHI quiz page (`staq-cdn.com` / `staqlab.com`, outside the BAA). Still needs an explicit keep/disable decision.
+  - **`npm audit`** — one moderate transitive finding (`uuid <11.1.1` via `@google-cloud/storage`). Only remedy is a breaking downgrade.
 
 ---
 
@@ -20,7 +126,9 @@ Optional cleanup, carried from session 33: `/gsd:verify-work 3` was never run.
 
 Very long session. Ran `/gsd:discuss-phase 4` → `/gsd:ui-phase 4` → `/gsd:plan-phase 4` → `/gsd:execute-phase 4` (18 of 19 plans), then spec'd Phases 4.1 and 4.2.
 
-### The blocker that stopped 04-19 — read this before attempting a deploy
+### ~~The blocker that stopped 04-19 — read this before attempting a deploy~~ — **CLOSED 2026-08-10 (session 35)**
+
+**Do not act on this section.** The gap it describes was real and is now fixed — `GCP_SA_KEY` supplies explicit service-account credentials, proven with a live upload from the deployed VM. See session 35 above and `docs/gcs-credentials.md`. Retained because the *diagnosis* below is still the clearest explanation of why ADC cannot work on Fly, and because anyone who read the original needs to see the retraction.
 
 **`app/lib/storage/gcs.ts` authenticates via Application Default Credentials, and the Fly VM cannot satisfy ADC.** Plan 04-13 discovered it; 04-17 confirmed it and correctly refused to improvise a fix, since credential wiring is an architectural decision. **No plan owns this.**
 
