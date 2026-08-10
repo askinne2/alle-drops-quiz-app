@@ -7,6 +7,9 @@ import {
   ALL_SCORED_QUESTIONS,
   ALL_ITEMS,
   PART6_MEDICAL_HISTORY,
+  PART7_ALLERGY_TESTING,
+  QUIZ_PARTS,
+  getQuestionById,
 } from "../app/lib/quiz/questions";
 import { calculateTotalScore } from "../app/lib/quiz/scoring";
 import { isAnswered } from "../app/lib/quiz/schema";
@@ -70,11 +73,35 @@ describe("quiz schema type guarantees (D-09)", () => {
     expect(hasRequired).toBeUndefined();
   });
 
-  it("keeps every ALL_SCORED_QUESTIONS member kind: question, and ALL_ITEMS covers parts 1-6", () => {
+  it("keeps every ALL_SCORED_QUESTIONS member kind: question, and ALL_ITEMS covers parts 1-7", () => {
     for (const question of ALL_SCORED_QUESTIONS) {
       expect(question.kind).toBe("question");
     }
-    expect(ALL_ITEMS.length).toBe(ALL_SCORED_QUESTIONS.length + PART6_MEDICAL_HISTORY.length);
+    expect(ALL_ITEMS.length).toBe(
+      ALL_SCORED_QUESTIONS.length + PART6_MEDICAL_HISTORY.length + PART7_ALLERGY_TESTING.length
+    );
+  });
+
+  // Phase 4 (04-06) — Part 7's shape and the scoring boundary it must not cross.
+  it("QUIZ_PARTS has exactly 7 parts", () => {
+    expect(QUIZ_PARTS.length).toBe(7);
+  });
+
+  it("no ALL_SCORED_QUESTIONS member has part === 7 — the scoring boundary held", () => {
+    expect(ALL_SCORED_QUESTIONS.some((q) => q.part === 7)).toBe(false);
+  });
+
+  it("getQuestionById resolves both testing_status and testing_year — proving the spread widening took effect", () => {
+    expect(getQuestionById("testing_status")).toBeDefined();
+    expect(getQuestionById("testing_year")).toBeDefined();
+  });
+
+  it("exactly three Part 7 items carry showIf, all pointing at testing_status — a flat gate, no chaining", () => {
+    const gated = PART7_ALLERGY_TESTING.filter((i) => i.showIf);
+    expect(gated.length).toBe(3);
+    for (const item of gated) {
+      expect(item.showIf?.questionId).toBe("testing_status");
+    }
   });
 
   // Non-vacuous positive control (Phase 3, Task 3): the old Part 6 content had zero info blocks,
