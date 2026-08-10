@@ -237,15 +237,28 @@ Rationale: William took the custom architecture off the table himself — "I don
 bunch of extra things that would mean we need to pay you more or redo our agreement."
 </decision>
 
-<decision id="DEC-medical-history-before-testing-split" status="LOCKED" date="2026-07-29" source="docs/REQUIREMENTS-AND-GAPS-2026-07-29.md (R3, CALL OVERRIDE — position)">
-The medical history section moves before the allergy-testing split, into the main `QUIZ_PARTS`
-array. Every patient supplies a medical history regardless of path, including telehealth-only
+<decision id="DEC-medical-history-before-testing-split" status="AMENDED" date="2026-07-29" amended="2026-08-10" amended_by="04.1-CONTEXT.md D-01" source="docs/REQUIREMENTS-AND-GAPS-2026-07-29.md (R3, CALL OVERRIDE — position)">
+~~The medical history section moves before the allergy-testing split, into the main `QUIZ_PARTS`
+array.~~ Every patient supplies a medical history regardless of path, including telehealth-only
 patients. Medical history must not affect the score.
 Rationale: even a patient who books a consult directly still needs history on file for Dr. Sullivan.
-Hard sequencing consequence: `setStep("medical_history")` (`QuizContainer.tsx:243`) is currently the
+~~Hard sequencing consequence: `setStep("medical_history")` (`QuizContainer.tsx:243`) is currently the
 only entry point to the section, and it is reached exclusively through the now-forbidden
 proceed-without-testing flow. The reorder must land BEFORE the no-testing deletions or medical
-history becomes dead code.
+history becomes dead code.~~
+
+**AMENDED 2026-08-10.** Phase 4.1 moves the allergy-testing split (`PART7_ALLERGY_TESTING`) to the
+front of `QUIZ_PARTS`, so medical history now sits last, immediately before consent — superseding
+the position clause above. The clinical rationale survives unchanged: "even a patient who books a
+consult directly still needs history on file for Dr. Sullivan" is a statement about every patient
+REACHING medical history, not about where it sits in the flow, and that remains true — Part 6 is
+still in `QUIZ_PARTS` and still reached by 100% of patients regardless of where the testing split
+sits (`03-CONTEXT.md D-13`). The struck "Hard sequencing consequence" paragraph is obsolete because
+Phase 3's D-11 deleted the proceed-without-testing bypass that made `setStep("medical_history")` the
+only entry point to the section; it now protects against a failure mode that no longer exists. The
+reorder happened because a patient who cannot supply allergy test results should hit that wall in
+seconds, not after a completed ten-minute clinical intake.
+Source: `.planning/phases/04.1-testing-first-quiz-order/04.1-CONTEXT.md` §`<decisions>` D-01.
 </decision>
 
 <decision id="DEC-testing-results-by-email-not-upload" status="RETRACTED" date="2026-07-29" retracted="2026-08-09" retracted_by="04-CONTEXT.md D-01" source="docs/REQUIREMENTS-AND-GAPS-2026-07-29.md (R5)">
