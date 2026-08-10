@@ -120,3 +120,92 @@ describe("public/quiz-bundle.js carries Phase 3 (mandatory-medical-history) cont
     expect(count(needle)).toBe(0);
   });
 });
+
+/**
+ * Phase 4 (mandatory-allergy-testing) rebuild — plan 04-09.
+ *
+ * Rebuilt 2026-08-10 via `npm run build:theme`, folding in the unblocked track's five plans
+ * (04-02 schema, 04-03 consent copy, 04-06 Part 7 data, 04-07 render branches, 04-08 flow
+ * rewiring). Committed bundle byte size moved 186764 -> 185946 bytes (-818; net decrease because
+ * 04-08's deletions of the auto-submit chain and three bypass handlers outweigh the additions
+ * from the other four plans). Determinism was verified by running `npm run build:theme` twice in
+ * a row and confirming byte-identical SHA-256 hashes
+ * (`12cab4a52c7d549e4cd9117d89b14e2309b8f97bbf5b274d4bb965fc0faa4f0e`) before any marker below was
+ * trusted, per this file's own documented "grep -c is vacuous" trap — every count here was
+ * produced with `SOURCE.split(needle).length - 1`, never `grep -c`.
+ *
+ * The Phase 2/Phase 3 markers above CANNOT detect Phase 4 staleness — all of them were already
+ * true of the Phase-4-stale bundle measured at the start of this plan.
+ */
+describe("public/quiz-bundle.js carries Phase 4 (mandatory-allergy-testing) content — the unblocked track's consent-first flow, Part 7, and its two render branches", () => {
+  it('contains the "had_testing" Part 7 option value at least once — proves the had-testing branch of HIST-05/TEST-02 is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 6 occurrences. A quoted option value, so it survives minification verbatim.
+    const needle = "had_testing";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the locked "I\'ve already had allergy testing" option label at least once — proves the exact clinical copy shipped, not a placeholder', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 2 occurrences.
+    const needle = "I've already had allergy testing";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the quoted "radio_single" QuestionType at least once — proves 04-07\'s new render branch is compiled into the renderer switch', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 3 occurrences. esbuild does not mangle quoted string literals used as
+    // discriminant values in a switch, only local identifiers.
+    const needle = "radio_single";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the quoted "text_input_short" QuestionType at least once — proves 04-07\'s second new render branch is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 4 occurrences.
+    const needle = "text_input_short";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the locked "Schedule Allergy Testing" results CTA at least once — proves 04-08\'s terminal ResultsDisplay action area is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "Schedule Allergy Testing";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "Your responses have been submitted." results confirmation line at least once — proves the post-consent terminal results screen (04-08) is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "Your responses have been submitted.";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the D-11 interim consent copy fragment "insurance coverage is not guaranteed" at least once — proves 04-03\'s consent copy shipped, not a placeholder', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "insurance coverage is not guaranteed";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('has zero occurrences of the deleted "See results" terminal-part button label — 04-08 renamed it to "Continue" (the button now leads to consent, not results)', () => {
+    // Measured against the pre-rebuild committed bundle: 1 occurrence. Measured against the
+    // fresh rebuild: 0 occurrences. Fragment-assembled so this test's own prose cannot self-match.
+    const needle = "See res" + "ults";
+    expect(count(needle)).toBe(0);
+  });
+
+  it('has zero occurrences of the deleted "Continue to Purchase AlleDrops" button — 04-08 deleted the 3-6 bracket\'s purchase-bypass handler and its button', () => {
+    // Measured against the pre-rebuild committed bundle: 1 occurrence. Measured against the
+    // fresh rebuild: 0 occurrences. Fragment-assembled so this test's own prose cannot self-match.
+    const needle = "Continue to Purchase " + "AlleDrops";
+    expect(count(needle)).toBe(0);
+  });
+
+  it('has zero occurrences of the deleted "We recommend proceeding with allergy testing" 7+ bracket clause — 04-08 (D-10) removed the last no-testing bypass copy', () => {
+    // Measured against the pre-rebuild committed bundle: 1 occurrence. Measured against the
+    // fresh rebuild: 0 occurrences.
+    const needle = "We recommend proceeding with allergy testing";
+    expect(count(needle)).toBe(0);
+  });
+});
