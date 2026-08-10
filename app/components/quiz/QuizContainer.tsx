@@ -19,7 +19,7 @@ import {
   generateSymptomProfileId,
   type ScoreBracket,
 } from "../../lib/quiz/scoring";
-import { visibleAnswers, itemsForPart } from "../../lib/quiz/schema";
+import { visibleAnswers, itemsForPart, quizFlowProgress } from "../../lib/quiz/schema";
 import { type QuizAnswers } from "../../lib/quiz/types";
 import { CONSENT_VERSION } from "../../lib/consent-version";
 import styles from "../../styles/quiz.module.css";
@@ -187,20 +187,21 @@ export function QuizContainer() {
   const currentPartItems = itemsForPart(QUIZ_PARTS, currentPartIndex);
   const quizPartsTotal = QUIZ_PARTS.length;
 
-  // Overall flow: state_gate (1) + patient_info (2) + 5 quiz parts (3-7) = 7 steps
-  const TOTAL_FLOW_STEPS = 2 + quizPartsTotal;
-  const progressInfo: { fillPct: number; label: string } | null = (() => {
-    if (step === "state_gate")
-      return { fillPct: 0, label: `Step 1 of ${TOTAL_FLOW_STEPS}` };
-    if (step === "patient_info")
-      return { fillPct: Math.round((1 / TOTAL_FLOW_STEPS) * 100), label: `Step 2 of ${TOTAL_FLOW_STEPS}` };
-    if (step === "quiz_parts")
-      return {
-        fillPct: Math.round(((2 + currentPartIndex) / TOTAL_FLOW_STEPS) * 100),
-        label: `Part ${currentPartIndex + 1} of ${quizPartsTotal}`,
-      };
-    return null;
-  })();
+  // ONE continuous counter across the whole flow. All arithmetic and copy live in the pure
+  // evaluator (quizFlowProgress) so they are testable without rendering — this component only
+  // maps its FlowStep onto the evaluator's input. See schema.ts for the UAT defect this fixes.
+  const progressInfo = quizFlowProgress(
+    step === "state_gate"
+      ? { kind: "state_gate" }
+      : step === "patient_info"
+        ? { kind: "patient_info" }
+        : step === "quiz_parts"
+          ? { kind: "quiz_part", index: currentPartIndex }
+          : step === "consent"
+            ? { kind: "consent" }
+            : null,
+    quizPartsTotal
+  );
 
   const renderNavRow = (children: ReactNode) => (
     <div className={styles.quizNavigation} style={{ marginTop: "1.5rem" }}>
