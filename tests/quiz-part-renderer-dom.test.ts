@@ -2,8 +2,9 @@
 /**
  * tests/quiz-part-renderer-dom.test.ts
  *
- * FIRST DOM-RENDERING TEST IN THIS REPOSITORY. Renders the REAL `itemsForPart(QUIZ_PARTS, 5)`
- * (Part 6, medical history) through the REAL `QuizPartRenderer` and queries the resulting DOM
+ * FIRST DOM-RENDERING TEST IN THIS REPOSITORY. Renders the REAL `itemsForPart(QUIZ_PARTS, 6)`
+ * (Part 6, medical history — reindexed from 5 to 6 by the Phase 4.1 reorder) through the REAL
+ * `QuizPartRenderer` and queries the resulting DOM
  * with `@testing-library/react` + `jsdom` — both added as devDependencies ONLY, per
  * `03-04-PLAN.md`'s `<dom_test_infra_decision>`. Task 1's package-legitimacy checkpoint was
  * presented to Andrew and explicitly approved in-session on 2026-08-09 before this file or the
@@ -50,7 +51,7 @@ afterEach(() => {
 
 // The REAL Part 6 items — reproduces the QUIZ_PARTS -> itemsForPart -> renderer seam that
 // failed in session 32, where the container dropped info blocks before the renderer saw them.
-const PART_6_ITEMS = itemsForPart(QUIZ_PARTS, 5);
+const PART_6_ITEMS = itemsForPart(QUIZ_PARTS, 6);
 
 const NO_PCP_SENTENCE =
   "We recommend that you establish with a primary care physician before beginning SLIT.";
@@ -70,7 +71,7 @@ function renderPart6(answers: QuizAnswers, onAnswerChange: (...args: unknown[]) 
 // split: a required radio_single gate (testing_status) plus three showIf-gated required
 // text_input_short/text_input children, all declared in questions.ts (04-06), rendered here
 // through the real QuizPartRenderer (04-07 Task 1) with no synthetic question array.
-const PART_7_ITEMS = itemsForPart(QUIZ_PARTS, 6);
+const PART_7_ITEMS = itemsForPart(QUIZ_PARTS, 0);
 
 const NEEDS_TESTING_LABEL = "I need allergy testing";
 const HAD_TESTING_LABEL = "I've already had allergy testing";
@@ -86,7 +87,7 @@ function renderPart7(answers: QuizAnswers, onAnswerChange: (...args: unknown[]) 
 }
 
 describe("Part 6 item list sanity (non-vacuity control)", () => {
-  it("itemsForPart(QUIZ_PARTS, 5) is non-empty and contains the known HIST item IDs", () => {
+  it("itemsForPart(QUIZ_PARTS, 6) is non-empty and contains the known HIST item IDs", () => {
     expect(PART_6_ITEMS.length).toBeGreaterThan(0);
     const ids = PART_6_ITEMS.map((item) => item.id);
     expect(ids).toContain("history_comorbidities");
@@ -244,7 +245,7 @@ describe("Info block collects no answer (D-11)", () => {
  * renderer, per this file's stated purpose.
  */
 describe("Part 7 item list sanity (non-vacuity control)", () => {
-  it("itemsForPart(QUIZ_PARTS, 6) is non-empty and contains the known Part 7 item IDs", () => {
+  it("itemsForPart(QUIZ_PARTS, 0) is non-empty and contains the known Part 7 item IDs", () => {
     expect(PART_7_ITEMS.length).toBeGreaterThan(0);
     const ids = PART_7_ITEMS.map((item) => item.id);
     expect(ids).toContain("testing_status");

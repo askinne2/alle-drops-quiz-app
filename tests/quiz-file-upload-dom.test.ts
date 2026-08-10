@@ -30,7 +30,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const PART_7_ITEMS = itemsForPart(QUIZ_PARTS, 6);
+const PART_7_ITEMS = itemsForPart(QUIZ_PARTS, 0);
 const UPLOAD_LABEL = "Upload allergy test results";
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -84,7 +84,7 @@ function makeFile(name: string, content = "file bytes", type = "application/pdf"
 }
 
 describe("file_multi item list sanity (non-vacuity control)", () => {
-  it("itemsForPart(QUIZ_PARTS, 6) contains testing_files, gated on had_testing", () => {
+  it("itemsForPart(QUIZ_PARTS, 0) contains testing_files, gated on had_testing", () => {
     const testingFiles = PART_7_ITEMS.find((item) => item.id === "testing_files");
     expect(testingFiles).toBeDefined();
     expect(testingFiles?.kind).toBe("question");

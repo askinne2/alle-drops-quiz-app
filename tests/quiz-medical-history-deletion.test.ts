@@ -137,7 +137,7 @@ describe("QuizContainer.tsx has no remaining medical_history FlowStep or D-11 by
     expect(count(QUIZ_CONTAINER_SOURCE, "itemsForPart")).toBeGreaterThan(0);
   });
 
-  it("still reads QUIZ_PARTS (now six entries, including medical history as QUIZ_PARTS[5])", () => {
+  it("still reads QUIZ_PARTS (now seven entries, including medical history as QUIZ_PARTS[6])", () => {
     expect(count(QUIZ_CONTAINER_SOURCE, "QUIZ_PARTS")).toBeGreaterThan(0);
   });
 
