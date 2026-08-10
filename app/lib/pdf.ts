@@ -1,7 +1,7 @@
 import PDFDocument from 'pdfkit'
 import { PDFDocument as PdfLibDocument, StandardFonts, type PDFFont, type PDFImage } from 'pdf-lib'
 import type { SubmissionFullRow } from './submissions'
-import { capitalize, formatDate, formatAnswerValue, getAnswerLabel } from './format'
+import { capitalize, formatDate, formatAnswerValue, getAnswerLabel, partitionAnswers } from './format'
 import { listFilesForSubmission } from './submission-files'
 import type { SubmissionFileRow } from './submission-files'
 import { readObjectBytes } from './storage/gcs'
@@ -11,8 +11,6 @@ const BRACKET_LABELS: Record<string, string> = {
   '3-6': '3–6 (Moderate)',
   '7+':  '7+ (High)',
 }
-
-const TESTING_ANSWER_KEYS = ['testing_status', 'testing_year', 'testing_location', 'testing_allergens']
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—'
@@ -27,6 +25,11 @@ function formatDateTime(iso: string | null): string {
  * Base clinical document — pdfkit only. Unchanged in shape from the pre-04-15 version except for
  * the new "Test Results" section (Part 7 answers, same getAnswerLabel/labelValue pattern as every
  * other section). This function makes zero network calls and reads no external data beyond `row`.
+ *
+ * "Test Results" is now the SOLE render site for Part 7 keys (testing_status/testing_year/
+ * testing_location/testing_allergens) — both sections are driven by one partitionAnswers(answers)
+ * call, closing a pre-existing Phase 4 defect where these keys printed twice (once here, once in
+ * Test Results). See 04.1-CONTEXT.md D-05.
  */
 function generateBasePdf(row: SubmissionFullRow): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -84,26 +87,25 @@ function generateBasePdf(row: SubmissionFullRow): Promise<Buffer> {
     // ── Symptom responses ────────────────────────────────────────────────────
     sectionHeader('Symptom Responses')
     const answers = row.answers_json ?? {}
-    const answerEntries = Object.entries(answers)
-    if (answerEntries.length === 0) {
+    const { symptomEntries, testingEntries } = partitionAnswers(answers)
+    if (symptomEntries.length === 0) {
       doc.fontSize(10).font('Helvetica').text('No responses recorded.')
     } else {
-      for (const [key, val] of answerEntries) {
+      for (const [key, val] of symptomEntries) {
         labelValue(getAnswerLabel(key), formatAnswerValue(val))
       }
     }
     doc.moveDown(0.8)
 
     // ── Test Results (Part 7 — TEST-01..TEST-03) ─────────────────────────────
+    // Sole render site for Part 7 keys (D-05). Closes the pre-existing Phase 4 duplication where
+    // testing answers printed both here and in Symptom Responses above — see 04.1-CONTEXT.md D-05.
     sectionHeader('Test Results')
-    const hasTestingAnswers = TESTING_ANSWER_KEYS.some((key) => key in answers)
-    if (!hasTestingAnswers) {
+    if (testingEntries.length === 0) {
       doc.fontSize(10).font('Helvetica').text('No testing information recorded.')
     } else {
-      for (const key of TESTING_ANSWER_KEYS) {
-        if (key in answers) {
-          labelValue(getAnswerLabel(key), formatAnswerValue(answers[key]))
-        }
+      for (const [key, val] of testingEntries) {
+        labelValue(getAnswerLabel(key), formatAnswerValue(val))
       }
     }
     doc.moveDown(0.8)
