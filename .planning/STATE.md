@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-12-PLAN.md
-last_updated: "2026-08-10T01:17:51.996Z"
+stopped_at: Completed 04-13-PLAN.md
+last_updated: "2026-08-10T01:37:32.972Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 36
-  completed_plans: 29
+  completed_plans: 30
   percent: 38
 ---
 
@@ -27,14 +27,14 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 04 (mandatory-allergy-testing) — EXECUTING
-Plan: 12 of 19
+Plan: 13 of 19
 Status: Ready to execute
   proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
   from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
   at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
 Last activity: 2026-08-10
 
-Progress: [████████░░] 81%
+Progress: [████████░░] 83%
 
 Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
 27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
@@ -84,6 +84,7 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 04 P10 | 20min | 3 tasks | 2 files |
 | Phase 04 P11 | 10min | 3 tasks | 3 files |
 | Phase 04-mandatory-allergy-testing P12 | 25min | 3 tasks | 6 files |
+| Phase 04-mandatory-allergy-testing P13 | 15min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -140,6 +141,9 @@ Affecting current work:
 - [Phase 04-mandatory-allergy-testing]: 04-12: app/lib/storage/gcs.ts, upload-validation.ts, heic.ts added — env-driven GCS client (GCS_BUCKET_NAME/GCS_PROJECT_ID, never hardcoded), magic-byte sniffType allowlist (PDF/JPEG/PNG/HEIC), and a non-throwing heic-convert wrapper; all three tested entirely against mocks, zero real GCS/heic-convert calls made. Suite 434/29 -> 467/31.
 - [Phase 04-mandatory-allergy-testing]: 04-12: heic-convert ships no TypeScript types; added a minimal ambient app/lib/storage/heic-convert.d.ts covering only the single-image conversion signature this app uses.
 - [Phase 04-mandatory-allergy-testing]: 04-12: No live network capture against @google-cloud/storage was run in this plan (04-RESEARCH.md Assumption A3 still open) — threat T-4-57 explicitly assigns that capture to plan 04-13, the first plan making a real (non-mocked) GCS call. Do not mark TEST-04 complete; that remains plan 04-19's bookkeeping.
+- [Phase 04-mandatory-allergy-testing]: 04-13: Fixed parseFormData's argument order from the plan's own interfaces snippet (real 0.17.4 signature is request, options, uploadHandler) — verified against installed source before writing the route
+- [Phase 04-mandatory-allergy-testing]: 04-13: Created gs://alledrops-quiz-uploads-dev (alledrops-quiz project) and ran a real network capture for T-4-64 — only storage.googleapis.com and www.googleapis.com contacted, confirming no third-party telemetry; temporary service account deleted after use
+- [Phase 04-mandatory-allergy-testing]: 04-13: Fly runtime GCP credential wiring is unsolved — gcs.ts relies on ADC which the Fly VM has no way to satisfy; staged (not deployed) GCS_BUCKET_NAME/GCS_PROJECT_ID Fly secrets only. Flagged for 04-19's deploy authorization step.
 
 ### Pending Todos
 
@@ -348,6 +352,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T01:17:51.990Z
-Stopped at: Completed 04-12-PLAN.md
+Last session: 2026-08-10T01:37:32.965Z
+Stopped at: Completed 04-13-PLAN.md
 Resume file: None
