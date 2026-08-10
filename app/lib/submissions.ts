@@ -268,7 +268,7 @@ export async function logSubmissionAccess({
 }: {
   submission_id: string | null
   actor_shop: string
-  action: 'list' | 'detail' | 'pdf'
+  action: 'list' | 'detail' | 'pdf' | 'file'
 }): Promise<void> {
   const pool = getPool();
   await pool.query(
