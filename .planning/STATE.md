@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-16-PLAN.md
-last_updated: "2026-08-10T02:22:54.153Z"
+stopped_at: Completed 04-17-PLAN.md
+last_updated: "2026-08-10T02:34:13.422Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 36
-  completed_plans: 33
+  completed_plans: 34
   percent: 38
 ---
 
@@ -27,14 +27,14 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 04 (mandatory-allergy-testing) — EXECUTING
-Plan: 16 of 19
+Plan: 17 of 19
 Status: Ready to execute
   proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
   from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
   at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
 Last activity: 2026-08-10
 
-Progress: [█████████░] 92%
+Progress: [█████████░] 94%
 
 Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
 27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
@@ -88,6 +88,7 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 04 P14 | 20min | 3 tasks | 8 files |
 | Phase 04 P15 | 20min | 2 tasks | 2 files |
 | Phase 04-mandatory-allergy-testing P16 | 55min | 3 tasks | 5 files |
+| Phase 04-mandatory-allergy-testing P17 | 35min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -154,6 +155,10 @@ Affecting current work:
 - [Phase 04-mandatory-allergy-testing]: 04-16: Widened PART7_ALLERGY_TESTING from QuizQuestion[] to QuizItem[] to hold testing_upload_requirements' info block alongside testing_files
 - [Phase 04-mandatory-allergy-testing]: 04-16: 'Required-but-empty' file_multi error is triggered on the file input losing focus while still required-and-empty, not a literal Next-button click — QuizContainer.tsx's real Next button was out of this plan's scope and stays silently disabled while the part is incomplete
 - [Phase 04-mandatory-allergy-testing]: 04-16: Retry action shown only for the generic network/500 failure class, never for wrong-type/too-large/total-exceeded, matching the Copywriting Contract which names Retry only on the 'didn't upload' string
+- [Phase 04-mandatory-allergy-testing]: 04-17: Promotion reads staged pending/ objects by GCS prefix listing (getBucket().getFiles({prefix: pending/token/})), not via buildPendingKey(token, filename) — the upload route never returns the filename to the client, so there is nothing to reconstruct a pending key from
+- [Phase 04-mandatory-allergy-testing]: 04-17: Promotion failure policy — the submission is authoritative; a copyObject, insertSubmissionFiles, or deleteObject rejection at any point still returns the route's normal success response and never rolls back insertSubmission, costing a reconciliation task instead
+- [Phase 04-mandatory-allergy-testing]: 04-17: Applied a single Delete lifecycle rule (age:2, matchesPrefix:[pending/]) to the real dev bucket gs://alledrops-quiz-uploads-dev and empirically proved the scoping against three real probe objects (read back via gcloud, not asserted from docs); fly.toml [[vm]] memory raised 1gb->2gb as the sole attributable VM change
+- [Phase 04-mandatory-allergy-testing]: 04-17: CRITICAL — the Fly-runtime GCP ADC credential gap from 04-13 remains UNSOLVED; gcs.ts is not in this plan's files_modified and credential wiring is an architectural decision left explicitly flagged for plan 04-19, not improvised mid-execution
 
 ### Pending Todos
 
@@ -362,6 +367,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T02:22:54.147Z
-Stopped at: Completed 04-16-PLAN.md
+Last session: 2026-08-10T02:34:13.417Z
+Stopped at: Completed 04-17-PLAN.md
 Resume file: None
