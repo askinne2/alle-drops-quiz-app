@@ -120,3 +120,170 @@ describe("public/quiz-bundle.js carries Phase 3 (mandatory-medical-history) cont
     expect(count(needle)).toBe(0);
   });
 });
+
+/**
+ * Phase 4 (mandatory-allergy-testing) rebuild — plan 04-09.
+ *
+ * Rebuilt 2026-08-10 via `npm run build:theme`, folding in the unblocked track's five plans
+ * (04-02 schema, 04-03 consent copy, 04-06 Part 7 data, 04-07 render branches, 04-08 flow
+ * rewiring). Committed bundle byte size moved 186764 -> 185946 bytes (-818; net decrease because
+ * 04-08's deletions of the auto-submit chain and three bypass handlers outweigh the additions
+ * from the other four plans). Determinism was verified by running `npm run build:theme` twice in
+ * a row and confirming byte-identical SHA-256 hashes
+ * (`12cab4a52c7d549e4cd9117d89b14e2309b8f97bbf5b274d4bb965fc0faa4f0e`) before any marker below was
+ * trusted, per this file's own documented "grep -c is vacuous" trap — every count here was
+ * produced with `SOURCE.split(needle).length - 1`, never `grep -c`.
+ *
+ * The Phase 2/Phase 3 markers above CANNOT detect Phase 4 staleness — all of them were already
+ * true of the Phase-4-stale bundle measured at the start of this plan.
+ */
+describe("public/quiz-bundle.js carries Phase 4 (mandatory-allergy-testing) content — the unblocked track's consent-first flow, Part 7, and its two render branches", () => {
+  it('contains the "had_testing" Part 7 option value at least once — proves the had-testing branch of HIST-05/TEST-02 is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 6 occurrences. A quoted option value, so it survives minification verbatim.
+    const needle = "had_testing";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the locked "I\'ve already had allergy testing" option label at least once — proves the exact clinical copy shipped, not a placeholder', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 2 occurrences.
+    const needle = "I've already had allergy testing";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the quoted "radio_single" QuestionType at least once — proves 04-07\'s new render branch is compiled into the renderer switch', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 3 occurrences. esbuild does not mangle quoted string literals used as
+    // discriminant values in a switch, only local identifiers.
+    const needle = "radio_single";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the quoted "text_input_short" QuestionType at least once — proves 04-07\'s second new render branch is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 4 occurrences.
+    const needle = "text_input_short";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the locked "Schedule Allergy Testing" results CTA at least once — proves 04-08\'s terminal ResultsDisplay action area is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "Schedule Allergy Testing";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "Your responses have been submitted." results confirmation line at least once — proves the post-consent terminal results screen (04-08) is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "Your responses have been submitted.";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the D-11 interim consent copy fragment "insurance coverage is not guaranteed" at least once — proves 04-03\'s consent copy shipped, not a placeholder', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "insurance coverage is not guaranteed";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('has zero occurrences of the deleted "See results" terminal-part button label — 04-08 renamed it to "Continue" (the button now leads to consent, not results)', () => {
+    // Measured against the pre-rebuild committed bundle: 1 occurrence. Measured against the
+    // fresh rebuild: 0 occurrences. Fragment-assembled so this test's own prose cannot self-match.
+    const needle = "See res" + "ults";
+    expect(count(needle)).toBe(0);
+  });
+
+  it('has zero occurrences of the deleted "Continue to Purchase AlleDrops" button — 04-08 deleted the 3-6 bracket\'s purchase-bypass handler and its button', () => {
+    // Measured against the pre-rebuild committed bundle: 1 occurrence. Measured against the
+    // fresh rebuild: 0 occurrences. Fragment-assembled so this test's own prose cannot self-match.
+    const needle = "Continue to Purchase " + "AlleDrops";
+    expect(count(needle)).toBe(0);
+  });
+
+  it('has zero occurrences of the deleted "We recommend proceeding with allergy testing" 7+ bracket clause — 04-08 (D-10) removed the last no-testing bypass copy', () => {
+    // Measured against the pre-rebuild committed bundle: 1 occurrence. Measured against the
+    // fresh rebuild: 0 occurrences.
+    const needle = "We recommend proceeding with allergy testing";
+    expect(count(needle)).toBe(0);
+  });
+});
+
+/**
+ * Phase 4 upload-track rebuild — plan 04-18.
+ *
+ * Rebuilt 2026-08-09 via `npm run build:theme`, folding in plan 04-16's multi-file upload widget
+ * (`file_multi` question type, `testing_files` question, its dropzone UI, empty/required-empty
+ * copy, and its `POST /api/quiz/upload` client) — plan 04-17's promotion/lifecycle/VM-sizing work
+ * touched only server-side and infra files, so it contributes no new client-bundle markers.
+ * Committed bundle byte size moved 185946 -> 194939 bytes (+8993). Determinism was re-verified
+ * (not inherited from 04-09) by running `npm run build:theme` twice in a row and confirming
+ * byte-identical SHA-256 hashes
+ * (`2e9bfd714bf191b4c2c067d0b2725cbb2e34569e7ec6ae39f53333d911d08655`) before any marker below was
+ * trusted. Every count below uses `SOURCE.split(needle).length - 1`, never `grep -c`.
+ *
+ * `file_multi` was measured as a candidate marker (it is this plan's own suggested list) but
+ * REJECTED and replaced: it counted 1 against the pre-rebuild committed bundle — not 0 — because
+ * `app/lib/quiz/schema.ts`'s `case "file_multi":` switch arm (needed for showIf/scoring
+ * compatibility, unrelated to the widget's rendered UI) was already compiled in as of 04-09's
+ * rebuild, before the widget itself existed. A marker that is already nonzero before the change
+ * it is meant to detect cannot prove staleness, so per this plan's own governing rule ("must be
+ * replaced") it was swapped for `fileUpload__dropzone`, a CSS Modules class name that exists only
+ * in the widget's actual rendered markup (`QuizPartRenderer.tsx`'s `case "file_multi":` render
+ * branch, not the schema switch) — measured 0 before, 9 after.
+ *
+ * The Phase 2/Phase 3/plan-04-09 markers above CANNOT detect this staleness — the upload widget
+ * did not exist when those markers were chosen.
+ */
+describe("public/quiz-bundle.js carries Phase 4's file-upload widget (plan 04-16) — the testing_files question and its multi-file dropzone", () => {
+  it('contains the "testing_files" question id at least once — proves the file_multi upload question (TEST-04) is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle (04-09's output, 185946 bytes): 0
+    // occurrences. Measured against the fresh rebuild (194939 bytes): 1 occurrence.
+    const needle = "testing_files";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "fileUpload__dropzone" CSS class at least once — proves the widget\'s rendered dropzone markup (QuizPartRenderer.tsx\'s file_multi render branch) is compiled in, where the raw "file_multi" string alone cannot (see header note)', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 9 occurrences (the class family applied across the dropzone markup plus its
+    // CSS Modules-generated selector names).
+    const needle = "fileUpload__dropzone";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "Add files" dropzone label at least once', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "Add files";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "No files added yet." empty-state copy at least once', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "No files added yet.";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "Add at least one file to continue." required-but-empty error at least once', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "Add at least one file to continue.";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "Upload allergy test results" file input\'s aria-label at least once', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "Upload allergy test results";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "/api/quiz/upload" endpoint path at least once — proves the widget\'s upload POST target (plan 04-13\'s contract) is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "/api/quiz/upload";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+});

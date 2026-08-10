@@ -69,6 +69,14 @@ function QuizHistory() {
             <s-link href={`${FLY_BASE}/api/me/assessment/${a.id}/pdf?token=${encodeURIComponent(token)}`}>
               Download PDF
             </s-link>
+            {(a.files || []).map(f => (
+              <s-link
+                key={f.id}
+                href={`${FLY_BASE}/api/me/assessment/${a.id}/files/${f.id}?token=${encodeURIComponent(token)}`}
+              >
+                {f.filename}
+              </s-link>
+            ))}
           </s-stack>
         ))}
       </s-stack>

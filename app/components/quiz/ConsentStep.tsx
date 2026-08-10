@@ -43,9 +43,13 @@ export function ConsentStep({ checked, onCheckedChange, disabled = false }: Cons
         </section>
         <section>
           <h3>4. Laboratory Testing Authorization</h3>
+          {/* UNCONFIRMED interim copy — awaiting William/counsel approval, owned by LAUNCH-03.
+              Replaced the prior bracketed treatment-policy-page placeholder per 04-CONTEXT.md
+              D-11. See 04-UI-SPEC.md "Interim consent copy (D-11)". */}
           <p>
-            Provider may recommend IgE testing via Labcorp or Quest. Billed separately by lab. Insurance may not
-            cover. [PENDING — Treatment policy page language]
+            Provider may recommend IgE testing via Labcorp or Quest. This testing is billed separately by
+            the lab, and insurance coverage is not guaranteed. You are responsible for reviewing your
+            insurance benefits and any out-of-pocket costs before scheduling recommended testing.
           </p>
         </section>
         <section>

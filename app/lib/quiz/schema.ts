@@ -61,8 +61,10 @@ export function isAnswered(
   switch (question.type) {
     case "checkbox_multi":
     case "radio_multi":
+    case "file_multi":
       return Array.isArray(value) && value.length > 0;
     case "text_input":
+    case "text_input_short":
       return typeof value === "string" && value.trim().length > 0;
     case "severity_0_3":
     case "frequency_0_4":
@@ -71,6 +73,7 @@ export function isAnswered(
     case "yesno":
       return value === "yes" || value === "no";
     case "control_0_3":
+    case "radio_single":
       return typeof value === "string" && value.length > 0;
     default:
       return false;
@@ -231,3 +234,51 @@ export function toggleOption(question: QuizQuestion, current: string[], clickedV
  * Do not reintroduce it. If exclusivity needs a visual signal, express it in the option's copy or
  * styling — never by making the alternative unclickable.
  */
+
+/** The screens the progress counter numbers, in the order a patient meets them. */
+export type FlowProgressStep =
+  | { kind: "state_gate" }
+  | { kind: "patient_info" }
+  | { kind: "quiz_part"; index: number }
+  | { kind: "consent" };
+
+/**
+ * ONE continuous counter across the whole intake: state_gate, patient_info, every quiz part, and
+ * consent. Returns null for screens that carry no progress bar (results, errors, the ineligible
+ * message, the submitting spinner).
+ *
+ * UAT DEFECT THIS FIXES (session 35, the sixth found by a human and missed by a green suite):
+ * the counter used to render "Step 2 of 9" on the intro screens and then switch BOTH the noun and
+ * the denominator to "Part 1 of 7" for the quiz parts. Both numbers were internally right — 9
+ * counted intro screens plus parts, 7 counted parts alone — but side by side they read as a
+ * contradiction, because "Step" and "Part" scan as the same word under a continuous progress bar.
+ * The old total also omitted consent, which D-09 made mandatory for every bracket, so it was short
+ * by one no matter which reading you took.
+ *
+ * `totalParts` is passed in (rather than importing QUIZ_PARTS) to keep this module free of
+ * content imports, consistent with the rest of the evaluator.
+ */
+export function quizFlowProgress(
+  step: FlowProgressStep | null,
+  totalParts: number
+): { fillPct: number; label: string } | null {
+  if (step === null) return null;
+
+  const NON_PART_STEPS = 3; // state_gate, patient_info, consent
+  const total = totalParts + NON_PART_STEPS;
+  const at = (stepNumber: number) => ({
+    fillPct: Math.round(((stepNumber - 1) / total) * 100),
+    label: `Step ${stepNumber} of ${total}`,
+  });
+
+  switch (step.kind) {
+    case "state_gate":
+      return at(1);
+    case "patient_info":
+      return at(2);
+    case "quiz_part":
+      return at(3 + step.index);
+    case "consent":
+      return at(total);
+  }
+}

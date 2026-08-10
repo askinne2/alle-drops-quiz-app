@@ -1,15 +1,109 @@
-# Handoff — AlleDrops quiz app (2026-08-09 session 33)
+# Handoff — AlleDrops quiz app (2026-08-10 session 34)
 
-### Status: **GSD Phase 3 (Mandatory Medical History) COMPLETE — 7/7 plans, merged ([PR #19](https://github.com/askinne2/alle-drops-quiz-app/pull/19)), deployed Fly `v50`, DDL applied.** Suite **282 → 361 tests / 27 files**, typecheck clean, both builds clean, `main` clean. Phase 2's UAT defect was also fixed and shipped earlier the same session (PR #18, v49). **Phase 4 is BLOCKED on William** — Andrew reversed a LOCKED client decision and now wants test-result upload, which needs his sign-off and pricing before Phase 4 can be planned. **Phase 1's live exposures are still open — Klaviyo loads 10× on the quiz page and the live clinical intake carries no medical disclaimer.**
+### Status: **GSD Phase 4 built end to end — 18/19 plans, 75 commits, [PR #20](https://github.com/askinne2/alle-drops-quiz-app/pull/20) OPEN and unmerged.** Suite **361 → 545 tests / 36 files**, typecheck clean, build clean, theme bundle byte-identical after independent rebuild. Branch `phase-4-mandatory-allergy-testing`, pushed. **Nothing was deployed and no DDL was executed** — plan 04-19 was deliberately not run. Two new phases were spec'd this session: **4.1 (testing-first order)** and **4.2 (browser-local resume)**, both unblocked and needing nothing from anyone.
 
 ### Start here (fresh session)
 
-Nothing is half-finished and nothing is waiting on a build. Two things, in order:
+Nothing is half-finished. Nothing is waiting on a build. In order:
 
-1. **Draft the William message.** It is the actual blocker on Phase 4 and now carries five items — see "The William message" below. Andrew already said yes to drafting it.
-2. Then `/gsd:discuss-phase 4` — but **do not plan Phase 4 until William answers on upload**, because TEST-04 has to be rewritten first and Phase 4's estimate changes with it.
+1. **`/gsd:plan-phase 4.1`** — testing-first quiz order, ~half a day, unblocked. Moves the testing split + required upload to the front of the quiz so a patient who can't produce results loses seconds instead of a completed ten-minute intake.
+2. **`/gsd:plan-phase 4.2`** — browser-local resume, ~1–2 days, unblocked.
+3. **Review and merge PR #20** when ready. Andrew merges, not Claude.
 
-Optional cleanup: `/gsd:verify-work 3` was never run — Phase 3 was closed by plan 03-07's own verification rather than the verifier agent.
+**Do not attempt `/gsd:execute-phase 4` again.** Plans 04-01…04-18 are complete with SUMMARY files. Only 04-19 remains, and it is blocked on a real technical gap (below), not on sequencing.
+
+Optional cleanup, carried from session 33: `/gsd:verify-work 3` was never run.
+
+---
+
+## Session 34 (2026-08-09/10) — Phase 4 built, two phases added
+
+Very long session. Ran `/gsd:discuss-phase 4` → `/gsd:ui-phase 4` → `/gsd:plan-phase 4` → `/gsd:execute-phase 4` (18 of 19 plans), then spec'd Phases 4.1 and 4.2.
+
+### The blocker that stopped 04-19 — read this before attempting a deploy
+
+**`app/lib/storage/gcs.ts` authenticates via Application Default Credentials, and the Fly VM cannot satisfy ADC.** Plan 04-13 discovered it; 04-17 confirmed it and correctly refused to improvise a fix, since credential wiring is an architectural decision. **No plan owns this.**
+
+Deploying as-is returns **500 on every upload and promotion**. The code would go from untested to visibly broken in production.
+
+Andrew's decision: **defer credential wiring to the AOD GCP cutover**, when the real project and bucket get decided anyway. Options when it is picked up: a service-account JSON key as a Fly secret passed explicitly via the `Storage` constructor's `credentials` option (fastest, works today), or Workload Identity Federation (better posture, more setup, worth doing once against AOD's project rather than twice).
+
+### What shipped in Phase 4
+
+- **Part 7 allergy-testing split** — two options, no skip. `had_testing` reveals year, location, allergens, and a **required** multi-file upload. Three new `QuestionType`s (`radio_single`, `text_input_short`, `file_multi`) merged into `isAnswered`'s existing behavioral groups — single-hunk diff.
+- **A live production defect fixed.** A 0–2 bracket patient was auto-submitting with `consent_version` stamped **while never seeing `ConsentStep`** (`QuizContainer.tsx:205-219`) — recording consent the patient did not give. TEST-07 was violated in production. Consent is now the single mandatory step between the last part and results, for every bracket.
+- **Both no-testing bypasses deleted.** `ResultsDisplay` is terminal, data-only props, one conditional `<a href>` CTA routed through the existing anchor interceptor at `quiz-embed.tsx:76`.
+- **The `symptom_profile_id` double-submit defect** from `STATE.md` §Deferred Items resolved for free — verified by enumerating every `setStep()` call site, not assumed.
+- **Upload path** — streaming size caps (15 MB/file, 50 MB total, 10 files), magic-byte validation, GCS `pending/` staging with prefix-scoped lifecycle, promotion at submit.
+- **Retrieval on all three surfaces** — admin download (audit-logged), patient ledger via `/api/me/*`, and inline PDF embedding via `pdf-lib`. All ownership-bounded.
+- **Theme repo reconciled and pushed** (`allergist-on-demand` `9c36e0f`). Klaviyo disarmed.
+
+### Three findings that changed the phase
+
+**1. `quiz-history` was never broken.** `04-CONTEXT.md`, `CLAUDE.md`, and this handoff all carried a claim that the extension "still reads deleted PHI metafields and renders empty state." **False, and false when written.** `extensions/quiz-history/src/` has **zero** `metafield` or `alledrops.` references and already calls `/api/me/assessments` with a Bearer token; the refactor landed `ca3c3f4` → `f762aaa` on 2026-05-08 and `REQUIREMENTS.md:30` records it as DONE-07. This killed a phantom fourth blocker. Retracted in place in `04-CONTEXT.md`, `04-UI-SPEC.md`, `04-RESEARCH.md`; `CLAUDE.md` fixed by plan 04-01. **What is still unverified is whether it *renders* in a live customer-account session — a 10-minute check, not a refactor.**
+
+**2. TEST-06 is not in either repo, so it moved to Phase 8.** The "no longer a need for needles or allergy tests" clause does **not exist in the theme repo** — zero hits. Both surfaces render Shopify **Admin**-managed content (`{{ product.description }}` at `sections/main-product.liquid:197`, `{{ page.content }}` at `sections/main-page.liquid:22`). Proof: the clause count stayed at **5 before and after the theme push**. Fixing it is an Admin edit. Draft replacement copy is in `04-STOREFRONT-COPY-DRAFT.md`, UNCONFIRMED, awaiting William/counsel.
+
+**3. The Fly app already has Tigris object storage attached** (`AWS_ENDPOINT_URL_S3`, `BUCKET_NAME`, `AWS_ACCESS_KEY_ID/SECRET` are live secrets). Neither the researcher nor the pattern mapper checked `fly secrets list`. Andrew chose **GCS anyway**, so storage lands in the cloud AOD is migrating to. **Ignore the `AWS_*` secrets** — they are not part of this design.
+
+### What worked
+
+- **Running executors sequentially instead of in worktrees.** `node_modules` **and** `package-lock.json` are both gitignored (`.gitignore:2`, `:3`), so every worktree agent would have needed an **unpinned `npm install`** with no lockfile before any verify command could run — non-deterministic dependency resolution on a HIPAA codebase, in a phase whose entire point was vetting four new packages. Same call Phase 3 made.
+- **Suppressing the schema-push gate on evidence.** The detector matches `prisma/schema.prisma` and would have injected `npx prisma db push`. That file is `provider = "sqlite"` with one `Session` model — the session store, not the PHI database. Pushing it targets the wrong database entirely.
+- **Executors overriding their own plans when they had measured evidence.** 04-13 found the plan's `parseFormData(request, uploadHandler, options)` signature was wrong and verified the real `(request, options, uploadHandler)` against `node_modules` source. 04-18 measured the plan's suggested `file_multi` freshness marker at **1-before**, rejected it as vacuous, and substituted `fileUpload__dropzone` (0→9).
+- **Running the network capture for real rather than asserting it.** 04-13 created a temporary narrowly-scoped service account, ran a live upload/download/delete cycle against `gs://alledrops-quiz-uploads-dev`, captured every outbound host (only `storage.googleapis.com` and `www.googleapis.com`), then deleted the account. Closed RESEARCH Assumption A3 with evidence.
+- **Proving guards RED before trusting them.** 04-08's deletion guard was proven RED at **18/24 failing** before the deletions, green after. 04-11 proved its ownership-boundary test non-vacuous by mutating the source, confirming failure, then restoring.
+
+### What didn't work
+
+- **An executor marked TEST-04 complete after merely installing its dependencies** (plan 04-10). No upload route, no storage module, no migration existed. That is a false compliance record in a HIPAA-tracked document. **Reverted in `00bafa1`.** Four other executors hit the same fork and correctly declined. Watch for this — the pattern is an executor treating "my plan's requirements field lists X" as "X is done."
+- **`slopcheck install <pkgs>` actually runs `npm install`** — not a dry run. Also, the published registry version (0.2.0) has no `install` subcommand at all, unlike the v0.6.1 the research documented. Use `npx -y slopcheck` in scan mode.
+- **A control-character regex round-tripped as literal raw control bytes** through file-write tooling in 04-12's `sanitizeObjectName` — visually identical to `\x00-\x1f\x7f` in a terminal, but not the same source bytes. Caught only by `od -c`. That is a path-traversal guard that would have silently not worked.
+- **A real `pdf-lib` bug**, found by 04-15: `embedJpg`/`embedPng` read `imageData.buffer` through a `DataView` while ignoring `byteOffset`, so a pooled or sliced Node `Buffer` misparses as corrupt. Patched with a defensive zero-offset copy.
+- **`npm audit --omit=dev`** reports one moderate finding transitive via `@google-cloud/storage` (`uuid <11.1.1`). Not fixed — the only remediation is a breaking downgrade.
+
+### Two phases added this session
+
+**Phase 4.1 — Testing-First Quiz Order** (`~half a day, unblocked`). Move the testing split and its required upload to the front. Cheap because Phase 2 made part order *data*: `QUIZ_PARTS` is an array and the renderer has zero question-ID literals. The widget, endpoint, staging, and retrieval surfaces do not move.
+
+**Phase 4.2 — Resume In-Progress Intake** (`~1–2 days, unblocked`). **Browser-local `localStorage` only**, deliberately. The draft never leaves the patient's device, so it is the patient's own copy of their own data — no draft table, no email provider, no token system, **no BAA implication**. The server-side cross-device version (draft PHI table + emailed magic link, ~1+ week) was scoped and dropped.
+
+Scope reversal recorded properly: `PROJECT.md` carried resume under Out of Scope with the source directive *"Do not let this get promised casually."* It is **partially** retracted in place — browser-local is committed, cross-device stays out of scope.
+
+**⚠️ These two phases fight over one number.** `PENDING_OLM_AGE_DAYS` is `2` (applied to `gs://alledrops-quiz-uploads-dev`, documented in `docs/gcs-lifecycle-and-retention.md`). 4.1 wants it shorter — after the reorder every abandoner leaves an orphaned staged file that can never be reclaimed. 4.2 wants it longer — a resuming patient must still find their upload. **Neither phase may tune it alone.** Also: 4.2's resume flow **must detect a staged file that no longer exists and re-prompt**, rather than carrying a dead reference into submit.
+
+### Verification
+
+```
+npm run typecheck    clean
+npm test             545 passed / 36 files
+npm run build        clean
+npm run build:theme  byte-identical to the committed artifacts
+```
+
+**The human browser pass has NOT been run.** Five defects have shipped past a fully green suite on this project, all caught by a person clicking. Three were wiring bugs closed by Phase 3's DOM infra; two were judgment failures no structural test catches. Phase 4 puts a **required file upload on the highest-abandonment step in the flow** — the same shape as the last of those, with a worse cost. Checks are in `04-VALIDATION.md`. **Run local, not production — a full run writes a PHI row.**
+
+### Resume context
+
+- **Branch:** `phase-4-mandatory-allergy-testing` @ `505ec3d`, pushed, tracking origin. **PR #20 open, unmerged.** `main` is untouched.
+- **How to verify:** `npm run typecheck && npm test && npm run build` → expect **545 passing / 36 files**. For the theme bundle: `npm run build:theme`, then confirm `git diff --stat public/quiz-bundle.js` is empty.
+- **`npm run dev` does not work** — it is `shopify app dev` and blocks on an interactive store prompt. Use `SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev` (port 3000, **no path** on that env var). The page nests an iframe — query `document.querySelector('iframe').contentDocument`, not the top document.
+- **GCS:** bucket `gs://alledrops-quiz-uploads-dev` in project `alledrops-quiz` (created by plan 04-13). **`gcloud` needs `--project=alledrops-quiz` explicitly** — the active project is `smart-rope-305817`.
+- **Reaching Cloud SQL:** this machine's IP is not on the authorized-networks list; the Fly app is. Use `fly ssh console -a alle-drops-quiz-app -C "sh -c \"echo <base64> | base64 -d > /tmp/q.cjs && cd /app && node /tmp/q.cjs\""` with `require('/app/node_modules/pg')` and `ssl: { rejectUnauthorized: false }`. **Not Prisma** — that is the SQLite session store.
+- **Key files:**
+  - `.planning/phases/04-mandatory-allergy-testing/` — CONTEXT (14 decisions), UI-SPEC, RESEARCH, VALIDATION, PATTERNS, UPLOAD-DECISIONS, 19 plans, 18 summaries
+  - `.planning/phases/04.1-testing-first-quiz-order/` and `04.2-resume-in-progress-intake/` — spec'd in `ROADMAP.md`, no plans yet
+  - `app/lib/storage/gcs.ts` — **the ADC credential gap lives here**
+  - `app/routes/api.quiz.upload.tsx` — streaming upload, size caps, magic-byte validation
+  - `migrations/004_create_submission_files.sql` — **authored, committed alone, NOT executed**
+  - `docs/gcs-lifecycle-and-retention.md` — the `pending/` rule 4.1 and 4.2 must set together
+- **Blockers / open questions:**
+  - **GCP credentials on Fly** — deferred to the AOD cutover. Blocks the 04-19 deploy, nothing else.
+  - **Fly.io BAA** and **AOD GCP cutover** still open. No real patient PHI may transit the upload path until both clear — a Phase 8 gate.
+  - **Virus scanning** deferred with documented risk acceptance. Compensating controls that shipped: magic-byte validation, MIME allowlist, size caps, no execution path for uploaded bytes.
+  - **For counsel:** is an *abandoned* partial intake a medical record under 6-year retention? Only matters if server-side resume is ever revived; browser-local sidesteps it.
+  - **William list:** upload reversal, storefront copy (`04-STOREFRONT-COPY-DRAFT.md`), interim consent copy (marked UNCONFIRMED in `ConsentStep.tsx`), HIST-03's third label, HIST-02's medications gate copy, DIAG-01 scope, domain spelling.
+  - **Appointly** still loads 15× on the PHI quiz page (`staq-cdn.com` / `staqlab.com`, outside the BAA). Deliberately left on — Phase 7 may need booking. Needs an explicit keep/disable decision.
 
 ---
 
@@ -90,15 +184,38 @@ Full record in `.planning/phases/03-mandatory-medical-history/03-05-SUMMARY.md`.
 - **Long `await` loops inside one `javascript_tool` call** — exceeded the 45s CDP budget twice and returned a timeout while the page was fine. One part per call.
 - **`resize_window` to 375px** did not produce a 375px iframe viewport (got 477). Setting the iframe's own `style.width` did.
 - **`slopcheck install <pkgs>` actually runs `npm install`** — it is not a dry run. It briefly modified `package.json` during research; caught via `git status` and reverted. `slopcheck scan` is the dry-run-safe alternative.
-- **The local `DATABASE_URL` password is stale** — a local submit fails with Postgres `28P01`. Environmental, not a Phase 3 defect; a broken INSERT from this phase's column changes would surface as `42703`. Fly's credential is fine.
+- ~~**The local `DATABASE_URL` password is stale** — a local submit fails with Postgres `28P01`.~~
+  **RETRACTED 2026-08-10 (session 35) — the password was never the problem.** The `28P01` was real
+  and reproducible, and the diagnosis was wrong; it then rode along in this file for two sessions.
+  **Port 5433 is not the Cloud SQL Auth Proxy. It is `fieldflow-sync-db`, an unrelated project's
+  `postgres:16` container**, and it binds `0.0.0.0:5433` *and* `[::]:5433`, so the old
+  "use `127.0.0.1`, Docker only holds `::1`" workaround below no longer avoids it. The proxy was
+  not running at all. The app was authenticating against a different project's database, which
+  rejected `alledrops_app` because that role does not exist there — a wrong-database error that
+  presents as a wrong-password error. Fly's credential was always fine, which is the one part of
+  the original entry that held up. Fixed by running the proxy on **5436** and adding a
+  local-only `alledrops_dev` role; see `docs/local-dev-database.md`. Retained struck through so
+  the retraction is visible to anyone who read the original.
 - **`.env` still carries `GOOGLE_SHEETS_WEB_APP_URL`** — the code is dead (`google-sheets.ts` throws) but it is a `CLAUDE.md` rule 3 surface sitting in a config file. Worth deleting the line.
 
-### Next steps
+### ~~Next steps~~ — SUPERSEDED by session 34
 
-1. **Draft the William message** (five items above). Blocks Phase 4.
-2. **Before planning Phase 4:** rewrite TEST-04 from email-only to upload, retract `DEC-testing-results-by-email-not-upload` **in place** in `PROJECT.md` so the retraction is visible to anyone who read the original, and update the Phase 4 ROADMAP block — new dependencies (**Fly.io BAA**, **AOD GCP cutover**), revised estimate, and a note that **half of TEST-05 already landed in Phase 3**. Use `/gsd:phase`, do not hand-edit.
-3. Optional: `/gsd:verify-work 3` to close Phase 3 through the verifier agent.
-4. **Still open from Phase 1, unchanged:** Klaviyo 10× on `/pages/allergy-quiz`; no medical disclaimer on the live intake; the Apntly/`appointly` embed (measured at **15** occurrences on the served quiz page) needs a keep/disable decision.
+All of items 1, 2, and 4 were consumed or overtaken in session 34. Use the Session 34 section at the
+top of this file instead. Specifically:
+
+- **Item 2 is DONE.** TEST-04 was rewritten from email-only to required upload,
+  `DEC-testing-results-by-email-not-upload` is retracted in place in `PROJECT.md` with
+  `status="RETRACTED"`, and the Phase 4 ROADMAP block was updated (plan 04-01).
+- **Item 1 is partly overtaken.** Andrew cleared the upload blocker himself in-session
+  (*"Execute all waves no William blocker"*), so Phase 4 was built without waiting. The message still
+  has items — see the William list in session 34's Resume context, now including storefront copy and
+  the interim consent paragraph.
+- **Item 4:** Klaviyo is **CLOSED** — disabled in the theme editor and now reconciled in the theme
+  repo too (`9c36e0f`), verified at 0 across 9 needles × 4 surfaces × 2 fetches. The medical
+  disclaimer and the Appointly decision are still open.
+- **Item 3 (`/gsd:verify-work 3`) is still genuinely open** and is the only item here worth carrying.
+
+Kept for the record because the five UAT-defect lessons above remain load-bearing.
 
 ### Resume context
 
@@ -789,24 +906,36 @@ All three landed via PR #13 (`fix-security-findings` @ `596210e`, merged into `m
 
 ### How to run it
 
-1. **Cloud SQL Auth Proxy** on port 5433:
+**UPDATED 2026-08-10 (session 35).** Port and role both changed — see
+`docs/local-dev-database.md` for the full setup and the reasoning.
+
+1. **Cloud SQL Auth Proxy** on port **5436** (NOT 5433 — that port belongs to another project's
+   Docker container, see gotchas):
    ```bash
-   /opt/homebrew/share/google-cloud-sdk/bin/cloud-sql-proxy \
-     alledrops-quiz:us-east1:alledrops-quiz-data \
-     --port=5433
+   cloud-sql-proxy --port 5436 alledrops-quiz:us-east1:alledrops-quiz-data
    ```
-2. `.env` — use `127.0.0.1` not `localhost` (Docker occupies `::1:5433`):
+2. `.env` — use the local-only `alledrops_dev` role, not `alledrops_app`:
    ```
-   DATABASE_URL=postgresql://alledrops_app:<password>@127.0.0.1:5433/alledrops_quiz_dev?sslmode=disable
+   DATABASE_URL="postgresql://alledrops_dev:<password>@127.0.0.1:5436/alledrops_quiz_dev?sslmode=disable"
+   GCS_BUCKET_NAME=alledrops-quiz-uploads-dev
+   GCS_PROJECT_ID=alledrops-quiz
    SHOPIFY_API_SECRET=<from shopify app env pull>
    SHOPIFY_API_KEY=<from shopify app env pull>
    ```
-   Get the current password from Fly: `fly ssh console -a alle-drops-quiz-app -C "printenv DATABASE_URL"`
+   `alledrops_dev` exists so local work never touches the credential Fly runs on. If you do need
+   Fly's: `fly ssh console -a alle-drops-quiz-app -C "printenv DATABASE_URL"`.
 3. Run: `npx tsx scripts/e2e-test.ts`
 
 ### Known gotchas
 
-- **Docker on localhost:5433** — Docker binds `::1:5433` (IPv6); proxy is on `127.0.0.1:5433` (IPv4). Always use `127.0.0.1` in local DATABASE_URL.
+- **Port 5433 is NOT the proxy.** It is `fieldflow-sync-db` (`postgres:16`), an unrelated project's
+  container, and it binds both `0.0.0.0:5433` and `[::]:5433`. Connecting there yields
+  `28P01 password authentication failed for user "alledrops_app"` — a *wrong database*, not a wrong
+  password. Two sessions were lost to that. Use 5436. Check with
+  `docker ps --format "{{.Names}} {{.Ports}}"` before assuming any port is yours.
+- ~~**Docker on localhost:5433** — Docker binds `::1:5433` (IPv6); proxy is on `127.0.0.1:5433`
+  (IPv4). Always use `127.0.0.1` in local DATABASE_URL.~~ **OBSOLETE 2026-08-10** — the container
+  now occupying 5433 binds IPv4 as well, so `127.0.0.1` no longer routes around it.
 - **Fly DATABASE_URL** must use the Cloud SQL public IP `34.139.97.17:5432` with `sslmode=no-verify` — not `localhost`.
 - **pg URL parser** mangles special chars in passwords. Script uses `new URL()` to parse explicitly — this is intentional, don't revert.
 - **Auth on `/api/me/*`** is JWT Bearer (HS256, `SHOPIFY_API_SECRET`), not HMAC. The script mints a JWT with a fake customer GID and stamps it on test rows via SQL.

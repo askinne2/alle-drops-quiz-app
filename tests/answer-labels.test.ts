@@ -28,6 +28,20 @@ describe('getAnswerLabel', () => {
     expect(getAnswerLabel('foo')).toBe(capitalize('foo'))
   })
 
+  it('returns the mapped clinical label for each Phase 4 Part 7 key', () => {
+    expect(getAnswerLabel('testing_status')).toBe('Allergy testing status')
+    expect(getAnswerLabel('testing_year')).toBe('Year of prior allergy testing')
+    expect(getAnswerLabel('testing_location')).toBe('Where prior allergy testing was done')
+    expect(getAnswerLabel('testing_allergens')).toBe('Allergens reacted to on prior testing')
+  })
+
+  // Non-vacuity control: proves the fallback path is still intact for a key nobody mapped, so a
+  // future refactor that breaks getAnswerLabel's default branch fails here rather than silently
+  // regressing every unmapped ID in the clinical PDF and admin modal.
+  it('an unmapped key still falls back to capitalize-and-underscore-replace', () => {
+    expect(getAnswerLabel('made_up_key')).toBe('Made up key')
+  })
+
   // Non-vacuity control: every ID in ANSWER_LABELS must resolve to a real question via
   // getQuestionById. A map entry for a question ID that does not exist is dead weight that
   // will silently rot. This assertion depends on plan 03-01's content having landed.
@@ -54,6 +68,10 @@ describe('getAnswerLabel', () => {
       'med_list',
       'med_control',
       'bother_overall',
+      'testing_status',
+      'testing_year',
+      'testing_location',
+      'testing_allergens',
     ]
     for (const key of mappedKeys) {
       expect(getQuestionById(key), `expected getQuestionById("${key}") to resolve to a real question`).toBeDefined()

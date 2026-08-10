@@ -451,6 +451,113 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
   },
 ];
 
+// ─────────────────────────────────────────────
+// PART 7 — Allergy Testing Split (mandatory, no score)
+// Every patient passes through this part before consent (D-06/D-07). Nothing here is scored —
+// ALL_SCORED_QUESTIONS stays Parts 1-5 only (D-04's guarantee, unchanged by Phase 4). The required
+// `file_multi` upload question (testing_files) plus its guidance info block
+// (testing_upload_requirements) were appended by plan 04-16 once Blockers 1-3 cleared — see
+// 04-UPLOAD-DECISIONS.md §Ratified for the size caps substituted into their copy below. Widened
+// from QuizQuestion[] to QuizItem[] (same widening PART6_MEDICAL_HISTORY already needed) so the
+// info block can share this array.
+// ─────────────────────────────────────────────
+
+export const PART7_ALLERGY_TESTING: QuizItem[] = [
+  {
+    kind: "question",
+    id: "testing_status",
+    type: "radio_single",
+    part: 7,
+    // UNCONFIRMED proposed copy — 04-UI-SPEC.md "Proposed copy" table, not yet confirmed with
+    // William. The two option labels below ARE locked verbatim (quoted identically in ROADMAP.md
+    // and REQUIREMENTS.md TEST-02/TEST-03) and must not be reworded alongside this text.
+    text: "Have you already had allergy testing?",
+    subtitle:
+      'If you choose "I\'ve already had allergy testing," you\'ll be asked to upload a copy of your results (PDF or photo) to continue.',
+    options: [
+      { value: "needs_testing", label: "I need allergy testing" },
+      { value: "had_testing", label: "I've already had allergy testing" },
+    ],
+    order: 70,
+    // required omitted — defaults to true (Phase 2 D-05). Exactly two options, no skip option.
+    //
+    // D-08: this choice is honor-system, recorded in answers_json, and NEVER enforced. Nothing
+    // prevents a patient from picking "needs_testing" to dodge the required upload — that is an
+    // accepted, named tradeoff (T-4-19), not a bug. Do NOT add an account flag, a server-side
+    // gate, or any mechanism that treats this value as authoritative beyond intake-record-keeping.
+  },
+  {
+    kind: "question",
+    id: "testing_year",
+    type: "text_input_short",
+    part: 7,
+    // UNCONFIRMED proposed copy — 04-UI-SPEC.md "Proposed copy" table.
+    text: "What year did you have your allergy testing done?",
+    order: 71,
+    // Flat showIf pointing directly at testing_status — evaluateShowIf is non-transitive by
+    // design (Phase 2 D-04/HIST-02 gate comment above); do NOT chain this through another Part 7
+    // child.
+    showIf: { questionId: "testing_status", equals: "had_testing" },
+    // required omitted — defaults to true. All three had_testing children are required once
+    // revealed (D-02), which is why Part 7 is deliberately excluded from the HIST-03
+    // gate/reveal-fusion CSS treatment — see 04-UI-SPEC.md Component Inventory §4.
+  },
+  {
+    kind: "question",
+    id: "testing_location",
+    type: "text_input_short",
+    part: 7,
+    // UNCONFIRMED proposed copy — 04-UI-SPEC.md "Proposed copy" table.
+    text: "Where did you have your allergy testing done? (Clinic or lab name and city)",
+    order: 72,
+    showIf: { questionId: "testing_status", equals: "had_testing" },
+    // required omitted — defaults to true.
+  },
+  {
+    kind: "question",
+    id: "testing_allergens",
+    type: "text_input",
+    part: 7,
+    // LOCKED copy, verbatim, title case exactly as written — REQUIREMENTS.md TEST-03.
+    text: "What Allergens Did You React To?",
+    order: 73,
+    showIf: { questionId: "testing_status", equals: "had_testing" },
+    // required omitted — defaults to true.
+  },
+  {
+    kind: "info",
+    id: "testing_upload_requirements",
+    // UNCONFIRMED proposed copy — 04-UI-SPEC.md "Proposed copy" table, not yet confirmed with
+    // William. Same UNCONFIRMED comment convention Phase 3 used for its own proposed copy.
+    // Paragraph 2 is the escape-hatch copy — the named mitigation for the abandonment risk D-02
+    // accepts (a patient without their results can still finish today via needs_testing). Do not
+    // trim it.
+    heading: "Uploading Your Results",
+    paragraphs: [
+      "Upload a photo or PDF of your allergy test results below. We accept PDF, JPEG, PNG, and HEIC files — add more than one if your results are multiple pages. This is required to continue.",
+      'Don\'t have your results with you right now? Go back and choose "I need allergy testing" instead so you can finish today — you can always follow up with your results once you\'re tested.',
+    ],
+    order: 74,
+    part: 7,
+    showIf: { questionId: "testing_status", equals: "had_testing" },
+  },
+  {
+    kind: "question",
+    id: "testing_files",
+    type: "file_multi",
+    part: 7,
+    // UNCONFIRMED proposed copy — 04-UI-SPEC.md "Proposed copy" table.
+    text: "Upload your allergy test results",
+    // Requirements line, ratified caps substituted (04-UPLOAD-DECISIONS.md §Ratified:
+    // MAX_FILE_BYTES = 15 MB, MAX_TOTAL_BYTES = 50 MB). No placeholder braces reach this copy.
+    subtitle: "PDF, JPEG, PNG, or HEIC · up to 15 MB per file, 50 MB total.",
+    order: 75,
+    showIf: { questionId: "testing_status", equals: "had_testing" },
+    // required omitted — defaults to true (D-02). Only successfully-uploaded files' tokens ever
+    // reach this answer — see QuizPartRenderer.tsx's file_multi branch.
+  },
+];
+
 // All questions for parts 1-5 (used in scoring and main flow)
 export const ALL_SCORED_QUESTIONS: QuizQuestion[] = [
   ...PART1_SYMPTOM_CHECKLIST,
@@ -465,14 +572,15 @@ export const ALL_SCORED_QUESTIONS: QuizQuestion[] = [
 // file, so an import in the other direction would be circular. Do not "simplify" this into an
 // isQuestion import.
 export function getQuestionById(id: string): QuizQuestion | undefined {
-  return [...ALL_SCORED_QUESTIONS, ...PART6_MEDICAL_HISTORY]
+  return [...ALL_SCORED_QUESTIONS, ...PART6_MEDICAL_HISTORY, ...PART7_ALLERGY_TESTING]
     .filter((item): item is QuizQuestion => item.kind === "question")
     .find((q) => q.id === id);
 }
 
-/** Ordered parts 1–6 for the main quiz flow. QuizItem[][] so a part can hold an info block (Part
- *  6's no_pcp_recommendation) without a further type change. Part 6 (medical history) is reached
- *  by 100% of patients — see 03-CONTEXT.md D-13. */
+/** Ordered parts 1–7 for the main quiz flow. QuizItem[][] so a part can hold an info block (Part
+ *  6's no_pcp_recommendation) without a further type change. Parts 6 and 7 (medical history and
+ *  the allergy-testing split) are each reached by 100% of patients — see 03-CONTEXT.md D-13 and
+ *  04-CONTEXT.md D-06/D-07. */
 export const QUIZ_PARTS: QuizItem[][] = [
   PART1_SYMPTOM_CHECKLIST,
   PART2_TIMING_TRIGGERS,
@@ -480,6 +588,7 @@ export const QUIZ_PARTS: QuizItem[][] = [
   PART4_IMPACT,
   PART5_TREATMENT,
   PART6_MEDICAL_HISTORY,
+  PART7_ALLERGY_TESTING,
 ];
 
 // Derived from QUIZ_PARTS so a new part can never be omitted from the payload boundary by

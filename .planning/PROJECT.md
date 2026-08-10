@@ -82,11 +82,33 @@ Full checkable list with IDs: `.planning/REQUIREMENTS.md`. Grouped summary:
 
 ### Out of Scope
 
-- **Resume / edit an in-progress submission** — 1+ week and architecturally hard. Quiz state is
+- ~~**Resume / edit an in-progress submission** — 1+ week and architecturally hard. Quiz state is
   React `useState` only; nothing persists until the terminal POST; there is no draft table, no
   `updateSubmission`, and `symptom_profile_id` is `NOT NULL UNIQUE`. It was implied by what the
   client was told on the call but never committed. Source directive: *"Do not let this get promised
-  casually."* **Carried as an explicit risk, not a phase** — see Risks below.
+  casually."* **Carried as an explicit risk, not a phase** — see Risks below.~~
+
+  ⚠️ **PARTIALLY RETRACTED 2026-08-09.** It is now **Phase 4.2 — Resume In-Progress Intake**,
+  scoped to **browser-local (`localStorage`) resume only**. The original is kept struck through so
+  anyone who read it sees that it changed and why (same convention as
+  `DEC-testing-results-by-email-not-upload` and the `injectIframe` correction).
+
+  **The original's cost analysis was never disproven — it was routed around.** The 1+ week estimate,
+  the absent draft table, the missing `updateSubmission`, and the `NOT NULL UNIQUE` constraint on
+  `symptom_profile_id` all still hold *for the server-side design*. Two further gaps were measured
+  on 2026-08-09: the app has **no email infrastructure of any kind** (zero occurrences of
+  `nodemailer`/`resend`/`sendgrid`/`postmark`/`mailgun`/`sendEmail` across `app/` and
+  `package.json`), and a server draft would be a **second PHI store** needing its own access
+  controls, breach-runbook coverage, and retention policy — plus an open counsel question about
+  whether an abandoned partial intake is a medical record under 6-year retention at all.
+
+  **Browser-local sidesteps all of it.** The draft never leaves the patient's device, so it is the
+  patient's own copy of their own information — not something the covered entity holds. No draft
+  table, no email provider, no token system, no new BAA surface. ~1–2 days instead of ~1 week.
+
+  **STILL OUT OF SCOPE, and the original warning still applies to it:** cross-device resume, and any
+  "you left something unfinished" follow-up. Both require the server-side draft and its BAA chain,
+  and neither has been priced.
 - **Account-flag gating, Shopify Functions, real-time checkout blocking, mandatory accounts,
   manual clinical unlock, `orders/create` auto-cancel backstop, Locksmith-style gating apps,
   `tagsAdd` approval flow** — all removed by `DEC-purchase-gating-is-honor-system`. AOD is on
@@ -226,15 +248,24 @@ proceed-without-testing flow. The reorder must land BEFORE the no-testing deleti
 history becomes dead code.
 </decision>
 
-<decision id="DEC-testing-results-by-email-not-upload" status="LOCKED" date="2026-07-29" source="docs/REQUIREMENTS-AND-GAPS-2026-07-29.md (R5)">
-File upload for allergy test results is dropped. Patients email results to
+<decision id="DEC-testing-results-by-email-not-upload" status="RETRACTED" date="2026-07-29" retracted="2026-08-09" retracted_by="04-CONTEXT.md D-01" source="docs/REQUIREMENTS-AND-GAPS-2026-07-29.md (R5)">
+~~File upload for allergy test results is dropped. Patients email results to
 `testing@alledrops.com` using the same email address they used on the quiz. William: "it's fine if
 they just want to email it directly to us."
 Consequence: no new PHI file-handling infrastructure — no file input, no multipart parsing, no
 object storage, no upload column, no PHI storage decision. Removes the single most expensive item
 on the 6/27 list (3–4 days → ~1 day of static copy and three text fields).
 Note: the email address itself is baked into locked copy and therefore depends on the unresolved
-domain-spelling question.
+domain-spelling question.~~
+
+**RETRACTED 2026-08-09.** Andrew reversed this decision in the Phase 4 discussion. Test-result
+upload is now IN Phase 4 and required on the `had_testing` branch, per D-01 and D-02. This reversal
+re-adds the 3–4 day estimate this decision had removed. It also introduces three client-side
+blockers: **William** needs to agree to upload and price it, the **Fly.io BAA** needs to be signed,
+and the **AOD GCP** cutover needs to land before object storage can move out of Andrew's dev
+project. The `testing@alledrops.com` email address disappears from the copy entirely, so the
+unresolved domain-spelling question no longer gates Phase 4 (it still gates LAUNCH-07). Source:
+`.planning/phases/04-mandatory-allergy-testing/04-CONTEXT.md` §`<decisions>` D-01.
 </decision>
 
 <decision id="DEC-no-approval-promise-copy" status="LOCKED" date="2026-07-29" source="docs/REQUIREMENTS-AND-GAPS-2026-07-29.md (R4, CONFLICT — email copy that is now wrong)">
@@ -310,8 +341,14 @@ answer the registration question.
 
 - **Abandonment loses everything.** Nothing persists until the terminal POST. A patient who
   abandons at the newly-mandatory testing split loses the entire questionnaire, not just their
-  place. Making testing mandatory makes that abandonment point *more* likely, not less. Resume is
-  out of scope for v1.0 — this risk ships with the milestone unless the client funds it.
+  place. Making testing mandatory makes that abandonment point *more* likely, not less.
+  ~~Resume is out of scope for v1.0 — this risk ships with the milestone unless the client funds
+  it.~~ **UPDATED 2026-08-09:** two phases now address this — **Phase 4.1** moves the testing split
+  and its required upload to the FRONT so hitting the wall costs seconds rather than ten minutes,
+  and **Phase 4.2** adds browser-local (`localStorage`) resume. Both are unblocked; neither needs a
+  BAA. **Residual risk after both ship:** browser-local resume does not survive a cache clear,
+  private browsing, or a switch to another device — a patient who starts on a laptop and returns on
+  a phone still loses everything. Cross-device resume remains out of scope and unpriced.
 - **Klaviyo on a PHI-collecting page.** `/pages/allergy-quiz` was observed loading
   `static.klaviyo.com` and `static-tracking.klaviyo.com`. Zero references in this repo, so it is
   theme or Shopify-app level. This is a PHI disclosure to a vendor with no BAA and a reportable

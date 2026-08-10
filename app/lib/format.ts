@@ -46,6 +46,11 @@ const ANSWER_LABELS: Record<string, string> = {
   med_list: 'Current allergy medications and dosages',
   med_control: 'Symptom control on current treatment',
   bother_overall: 'Overall bother',
+  // Phase 4 allergy-testing split (TEST-01..TEST-03) — consumed by the same two PHI renderers.
+  testing_status: 'Allergy testing status',
+  testing_year: 'Year of prior allergy testing',
+  testing_location: 'Where prior allergy testing was done',
+  testing_allergens: 'Allergens reacted to on prior testing',
 }
 
 export function getAnswerLabel(key: string): string {

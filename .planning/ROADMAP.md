@@ -24,6 +24,8 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - [x] **Phase 2: Quiz Schema Foundation** - `required`, `showIf`, and static-info question types (completed 2026-08-09)
 - [x] **Phase 3: Mandatory Medical History** - Rebuilt history section every patient passes through (completed 2026-08-09)
 - [ ] **Phase 4: Mandatory Allergy Testing** - Two-option testing split; both bypasses deleted
+- [ ] **Phase 4.1: Testing-First Quiz Order** *(INSERTED)* - Move the testing split + required upload to the front so abandonment costs seconds, not ten minutes
+- [ ] **Phase 4.2: Resume In-Progress Intake** *(INSERTED)* - Browser-local (localStorage) resume so a closed tab does not lose a completed intake. No draft PHI store, no BAA needed
 - [ ] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale
 - [ ] **Phase 6: Purchase Prerequisites** - Honor-system checkboxes and returning-patient state
 - [ ] **Phase 7: Telehealth Intake Path** - Booking-capable consult page and telehealth branching
@@ -210,6 +212,16 @@ special case as part of this phase.
 
 **Goal**: No patient — and no storefront page — can reach purchase without allergy testing
 **Depends on**: Phase 3 (hard: deleting the bypasses first would orphan medical history)
+**Blocked on** (client-side, see `.planning/phases/04-mandatory-allergy-testing/04-CONTEXT.md`):
+
+  1. **William agrees to test-result upload, and it is priced** — reverses his own 2026-07-29 LOCKED
+     decision (`DEC-testing-results-by-email-not-upload`, retracted in place by D-01). Blocks all of
+     D-01…D-05. Owner: William / Andrew.
+  2. **Fly.io BAA signed** — patient-uploaded test results are PHI in a file and cannot transit or
+     land on Fly without it. Owner: Andrew.
+  3. **Production cutover to AOD's Google Cloud project** — object storage belongs under AOD's BAA,
+     not Andrew's `alledrops-quiz` dev project. Owner: William / AOD.
+
 **Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05, TEST-06, TEST-07
 **Success Criteria** (what must be TRUE):
 
@@ -219,8 +231,13 @@ special case as part of this phase.
   2. "I need allergy testing" takes the patient to the storefront testing-options page; "I've
      already had allergy testing" collects year, location, and reacted-to allergens
 
-  3. A patient with existing results is told to email them to the testing address using the same
-     email address they used on the quiz — and no file upload exists anywhere
+  3. A patient with existing results must upload them — PDF, JPEG, PNG, or HEIC, multiple files
+     allowed — before they can continue, and those files are retrievable from the embedded admin,
+     the patient ledger, and inline in the clinical PDF, never touching Shopify or leaving the BAA
+     chain. ~~A patient with existing results is told to email them to the testing address using the
+     same email address they used on the quiz — and no file upload exists anywhere~~ **REVERSED
+     2026-08-09 by 04-CONTEXT.md D-01.** Retained struck through so the reversal is visible to
+     anyone who read the original.
 
   4. No surface, in the quiz or on the storefront, offers or implies a path to purchase without
      testing: both code bypasses are gone, `ResultsDisplay` is terminal, and the product-page and
@@ -228,14 +245,198 @@ special case as part of this phase.
 
   5. Every completed submission has passed through consent with a recorded `consent_version`
 
-**Plans**: TBD
+**Plans**: 19 plans in 11 waves
 **UI hint**: yes
-**Notes**: ~1 day for the new step plus 2–3 h for the deletions. Two bypasses must go, not one — the
-`3–6` "Continue to Purchase AlleDrops" route was never mentioned on the call and is the bigger
-problem, since it jumps straight to consent and skips medical history entirely. `ResultsDisplay`
-loses all four callback props. The new branch fields extend `answers`, not the top-level payload
-schema. TEST-04's email address depends on the unresolved domain spelling — use the confirmed
-spelling or hold the copy string.
+**Notes**: **No longer ~1 day.** D-01 put test-result upload back in scope, restoring the 3–4 day
+estimate that decision had removed, and adding the app's first binary PHI handling: a streaming
+size-capped upload endpoint, GCS staging with prefix-scoped lifecycle cleanup, magic-byte content
+validation, HEIC→JPEG conversion, a `submission_files` join table, and PDF embedding. **Half of
+TEST-05 already shipped in Phase 3** (D-11 deleted the `7+` proceed-without-testing chain and the
+`"medical_history"` FlowStep); what remains is the `3–6` "Continue to Purchase AlleDrops" jump and
+making `ResultsDisplay` terminal with zero callback props. D-09 additionally moves consent onto a
+single path for every bracket, closing a live TEST-07 defect where 0–2 patients auto-submit with a
+`consent_version` they never saw. TEST-04's email address no longer appears in any copy, so the
+unresolved domain-spelling decision no longer gates this phase (it still gates LAUNCH-07). Waves 1–5
+(plans 04-01…04-09) are the unblocked set and could ship alone; waves 6–11 (plans 04-10…04-19) are
+gated on the three blockers above. Splitting was offered and declined — the wave structure keeps the
+option open without re-proposing it.
+
+Plans:
+**Wave 1**
+
+- [x] 04-01-PLAN.md — Retract the email-not-upload decision in place, rewrite TEST-04, add uploaded filenames to CLAUDE.md's PHI list
+- [x] 04-02-PLAN.md — Three new QuestionTypes (radio_single, text_input_short, file_multi) and their isAnswered groups
+- [x] 04-03-PLAN.md — Placeholder-free interim consent copy (D-11) and the CONSENT_VERSION bump
+- [x] 04-04-PLAN.md — Reconcile the theme repo against live, delete the no-testing clauses, draft the replacement (blocking checkpoint)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 04-05-PLAN.md — Push the reconciled theme and prove TEST-06 on authenticated cache-busted served bytes
+- [x] 04-06-PLAN.md — Part 7 question set (testing_status + year/location/allergens) and its clinical labels
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 04-07-PLAN.md — radio_single and text_input_short render branches plus Part 7 DOM coverage
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [x] 04-08-PLAN.md — D-09 flow rewiring: deletion guard proven RED, terminal ResultsDisplay, consent-first QuizContainer
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [x] 04-09-PLAN.md — Rebuild the theme bundle and add measured Phase 4 freshness markers
+
+**Wave 6** *(BLOCKED on William, the Fly BAA, and the GCP cutover)*
+
+- [x] 04-10-PLAN.md — Blocker clearance, size caps, upload architecture, dev storage target, and the package legitimacy gate
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [x] 04-11-PLAN.md — Migration 004 (own commit, no DDL executed) and the ownership-bounded submission_files data layer
+- [x] 04-12-PLAN.md — Storage primitives: GCS client, magic-byte validation, HEIC conversion
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
+- [x] 04-13-PLAN.md — POST /api/quiz/upload: streaming, size-capped, magic-byte-validated staging
+- [x] 04-14-PLAN.md — Patient and admin file retrieval routes plus the read-only testing-status column
+- [x] 04-15-PLAN.md — Embed uploaded files inline in the clinical PDF via pdf-lib
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
+- [x] 04-16-PLAN.md — The file_multi upload widget, its CSS family, and the required-gate DOM coverage
+- [x] 04-17-PLAN.md — Promotion step, prefix-scoped lifecycle rule, retention doc, and the Fly VM bump
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
+- [x] 04-18-PLAN.md — Patient ledger file links and the second theme-bundle rebuild
+
+**Wave 11** *(blocked on Wave 10 completion)*
+
+- [ ] 04-19-PLAN.md — Human browser pass, migration execution, William message, merge and deploy authorization
+
+### Phase 04.2: Resume In-Progress Intake (INSERTED)
+
+**Goal**: A patient who closes the tab mid-intake can come back to the same browser and pick up
+where they left off, instead of starting a ten-minute clinical questionnaire over
+**Depends on**: Phase 4 (the flow must be settled first). **Not gated on any BAA** — see below
+**Requirements**: RESUME-01 … RESUME-04 (to be written into REQUIREMENTS.md during planning)
+**Success Criteria** (what must be TRUE):
+
+  1. A patient who closes the tab mid-intake and returns to the quiz page on the same browser is
+     offered their prior answers, and can either resume or start fresh
+
+  2. Nothing is written to the draft until the patient has actually begun — an untouched page load
+     leaves no trace
+
+  3. The draft is cleared on successful submission, and an explicit "start over" control clears it
+     on demand
+
+  4. A stale draft expires on its own, so a shared or family device does not surface one patient's
+     name, DOB, and symptoms to the next person
+
+  5. The score and submitted payload are identical whether an intake was completed in one sitting or
+     resumed — resume changes persistence only, never clinical data
+
+**Plans:** TBD
+**UI hint**: yes
+
+**Notes**: **~1–2 days. Browser-local only, deliberately.** Quiz state persists to `localStorage` as
+the patient answers; returning to the page offers to restore it.
+
+**Why this has no BAA implication.** The draft never leaves the patient's device. It is the
+patient's own copy of their own information, which is categorically different from the clinic
+storing it — HIPAA governs what the covered entity holds, not what a patient keeps in their own
+browser. **No draft table, no email provider, no token system, no new PHI store, no new vendor.**
+This is the whole reason the browser-local route was chosen over a server draft.
+
+**Scope reversal recorded.** `PROJECT.md` carried resume under Out of Scope with the source directive
+quoted verbatim: *"Do not let this get promised casually."* Andrew committed it on 2026-08-09; the
+original is retracted in place there rather than deleted. The **server-side, cross-device** version
+(draft PHI table + emailed magic link, ~1+ week, gated on the Fly.io BAA and an email provider BAA)
+was scoped and then deliberately dropped — see `<deferred>` below. Browser-local is explicitly
+"good enough for now," not a first increment toward the server version.
+
+**What this deliberately does NOT do:**
+
+- **No cross-device resume.** Start on a laptop, finish on a phone — not supported. This is the
+  accepted trade.
+- **Does not survive a cache clear, private browsing, or a different browser on the same machine.**
+- **Does not resurrect a patient who never came back.** There is no server-side record of an
+  abandoned intake, and therefore no follow-up capability. If AOD ever wants "you left something
+  unfinished" outreach, that requires the server version and its BAA chain.
+
+**The shared-device case is the one real risk, and it is a design requirement not a footnote.** A
+patient completing an intake on a family iPad, a library machine, or a clinic kiosk leaves name,
+DOB, email, phone, and symptom answers in that browser. Success criteria 3 and 4 exist for exactly
+this. Expiry, clear-on-submit, and a visible "start over" control are mitigations, not optional
+polish. The threat model should say so plainly.
+
+**Interaction with Phase 4.1 — smaller than the server version, but not zero.** After 4.1 the upload
+comes first, so a resuming patient has already staged a file server-side under `pending/`, which
+expires at `PENDING_OLM_AGE_DAYS` = `2`. A patient who resumes on day 3 gets their answers back but
+their upload is gone. **The resume flow must detect a staged file that no longer exists and re-prompt
+for it, rather than silently carrying a dead reference into submit.** That is a concrete plan
+requirement, not a nice-to-have — a submission that references a deleted object is a broken clinical
+record.
+
+**Sequencing:** 4.1 first (half a day, self-contained). 4.2 is now also unblocked and can follow
+immediately — neither waits on the BAA chain, credentials, or William.
+
+### Phase 04.1: Testing-First Quiz Order (INSERTED)
+
+**Goal**: A patient who cannot supply allergy test results finds that out in the first thirty
+seconds, not after completing a ten-minute clinical questionnaire
+**Depends on**: Phase 4 (the testing part, upload widget, and storage path must exist before they
+can be moved)
+**Requirements**: TEST-01, TEST-04 (re-verified in the new position — no new requirement IDs)
+**Success Criteria** (what must be TRUE):
+
+  1. The allergy-testing split is the FIRST quiz part a patient sees after the state gate and
+     patient-info step — before any scored symptom question
+
+  2. A patient who selects "I've already had allergy testing" and cannot produce a file discovers
+     the hard requirement having invested seconds, not the full questionnaire
+
+  3. The score is byte-identical to Phase 4's for the same answers — reordering the parts array
+     changes presentation only. `ALL_SCORED_QUESTIONS` still excludes the testing part
+
+  4. Consent still sits between the final part and the results screen, on one path for every
+     bracket — the D-09 invariant survives the reorder
+
+  5. `public/quiz-bundle.js` is rebuilt in the same commit, with markers measured 0-before/≥1-after
+
+**Plans:** TBD
+**UI hint**: yes
+
+**Notes**: ~half a day. This is deliberately cheap because Phase 2 made part order *data*:
+`QUIZ_PARTS` is an array and the renderer carries zero question-ID literals. The upload widget,
+`/api/quiz/upload`, GCS staging, promotion, and all three retrieval surfaces are position-independent
+and are not touched.
+
+**Why this phase exists.** Phase 4 put a REQUIRED file upload at the end of the flow. Nothing
+persists until the terminal POST, so a patient who cannot produce their results loses a completed
+ten-minute clinical intake. That is the same defect shape as session 33's HIST-02 finding — a
+required field with a plausible "I'm stuck" case — one step further along and with a far worse cost.
+Moving it to the front does not remove the wall; it moves the wall to where hitting it is cheap.
+
+**Two things the reorder actually changes, both real:**
+
+1. **Orphaned staged uploads increase materially.** Today a patient must reach the last part to leave
+   a file in `pending/`. After the reorder, *every* patient who abandons anywhere leaves one. Because
+   nothing persists client-side, an abandoned upload is orphaned the moment the tab closes — the
+   patient can never return to claim it. **Revisit `PENDING_OLM_AGE_DAYS`** (currently `2`, applied to
+   `gs://alledrops-quiz-uploads-dev` and documented in `docs/gcs-lifecycle-and-retention.md`): a
+   shorter window buys strictly less PHI at rest and costs nothing, *unless* Phase 4.2's resume
+   capability lands, in which case a resuming patient must still find their file. **These two phases
+   set that value together — do not tune it in isolation.**
+
+2. **`generateSymptomProfileId()` timing is unaffected** — it is called on leaving `patient_info`,
+   which still precedes the first quiz part. Verified, not assumed.
+
+**Interaction with Phase 4.2 (Resume).** If resume ships, abandonment stops being fatal and this
+phase's headline rationale weakens — but does not disappear. Hitting a hard upload requirement early
+is still better UX than hitting it late, and at half a day this is cheap enough to do regardless.
+Sequence 4.1 first: it is small, self-contained, and does not depend on any resume decision.
 
 ### Phase 5: Preliminary Score Page
 
@@ -392,15 +593,34 @@ transcript, before anyone registers or configures anything.**
 2. What is the full text of the third medical-history free-text field? Truncated in the source
    email; probable: "Please list any other medical conditions that you have." — gates HIST-03
 
-3. Is resume/edit of an in-progress submission expected? It does not exist, is 1+ week of work, and
-   was implied on the call but never committed. — **out of scope for v1.0, recorded as a risk**
+3. ~~Is resume/edit of an in-progress submission expected? It does not exist, is 1+ week of work, and
+   was implied on the call but never committed. — **out of scope for v1.0, recorded as a risk**~~
+   **ANSWERED 2026-08-09 — Andrew committed it to scope as Phase 4.2.** No longer an open question,
+   but it becomes a William item rather than closing one: it was never priced, and the source
+   directive was "do not let this get promised casually."
 
 ## Known Risk Shipping With This Milestone
 
 **Abandonment loses the entire questionnaire.** Nothing persists until the terminal POST — no draft
 table, no localStorage, no `updateSubmission`, and `symptom_profile_id` is `NOT NULL UNIQUE`. Making
-testing mandatory (Phase 4) adds a new, likelier abandonment point. Resume/edit persistence is
-explicitly not committed for v1.0. Do not let it get promised casually.
+testing mandatory (Phase 4) adds a new, likelier abandonment point.
+
+~~Resume/edit persistence is explicitly not committed for v1.0. Do not let it get promised
+casually.~~ **RETRACTED 2026-08-09 — Andrew committed it.** Two phases now attack this risk from
+different directions:
+
+- **Phase 4.1** moves the testing split and its required upload to the front, so a patient who
+  cannot produce results loses seconds instead of a completed intake. Half a day, unblocked.
+- **Phase 4.2** adds browser-local resume (`localStorage`). ~1–2 days, **unblocked** — no draft PHI
+  store, no email provider, no BAA implication, because the draft never leaves the patient's device.
+
+**The risk is reduced, not eliminated, and the residue is specific:** browser-local resume does not
+survive a cache clear, private browsing, a different browser, or a switch to another device. A
+patient who starts on a laptop and returns on a phone still loses everything. Cross-device resume
+requires the server-side draft + magic-link design, which was scoped and deliberately dropped
+(~1+ week, and it would put a partial clinical record in a new PHI table plus an email provider —
+two more BAA surfaces). If AOD later wants cross-device resume or "you left something unfinished"
+outreach, that is a new phase and a priced conversation.
 
 ## Progress
 
@@ -414,7 +634,7 @@ exposures today.
 | 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
 | 2. Quiz Schema Foundation | 4/4 | Complete    | 2026-08-09 |
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
-| 4. Mandatory Allergy Testing | 0/TBD | Not started | - |
+| 4. Mandatory Allergy Testing | 17/19 | In Progress|  |
 | 5. Preliminary Score Page | 0/TBD | Not started | - |
 | 6. Purchase Prerequisites | 0/TBD | Not started | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |

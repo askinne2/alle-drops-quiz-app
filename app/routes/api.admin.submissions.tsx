@@ -24,12 +24,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const from = url.searchParams.get('from') || null
   const to = url.searchParams.get('to') || null
   const q = url.searchParams.get('q') || null
+  const testing_status = url.searchParams.get('testing_status') || null
   const cursor = url.searchParams.get('cursor') || null
 
   // 3. Fetch
   let page: AdminSubmissionsPage
   try {
-    page = await listAdminSubmissions({ state, score_bracket, from, to, q, cursor, limit: 50 })
+    page = await listAdminSubmissions({
+      state,
+      score_bracket,
+      from,
+      to,
+      q,
+      testing_status,
+      cursor,
+      limit: 50,
+    })
   } catch {
     return new Response(JSON.stringify({ error: 'Service unavailable' }), {
       status: 503,

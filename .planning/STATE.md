@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-07-PLAN.md — Phase 3 (mandatory-medical-history) complete
-last_updated: "2026-08-09T20:27:03.343Z"
-last_activity: 2026-08-09
+stopped_at: "Phase 4: 18/19 plans executed, PR #20 open. 04-19 (DDL + deploy + UAT) DEFERRED — GCP ADC credentials cannot work on Fly; Andrew deferred credential wiring to the AOD GCP cutover. Migration 004 authored, unrun."
+last_updated: "2026-08-10T10:14:10.760Z"
+last_activity: 2026-08-10
 progress:
-  total_phases: 8
+  total_phases: 10
   completed_phases: 3
-  total_plans: 17
-  completed_plans: 17
-  percent: 38
+  total_plans: 36
+  completed_plans: 35
+  percent: 30
 ---
 
 # Project State
@@ -22,19 +22,19 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 03 — mandatory-medical-history
+**Current focus:** Phase 04 — mandatory-allergy-testing
 
 ## Current Position
 
-Phase: 03 (mandatory-medical-history) — **COMPLETE** (all 7 plans executed, merged, deployed, verified)
-Plan: 7 of 7 — COMPLETE
-Status: Phase 3 fully shipped. PR #19 merged to `main` (`ac40f09`), deployed to Fly (release v50,
+Phase: 04 (mandatory-allergy-testing) — EXECUTING
+Plan: 18 of 19
+Status: Ready to execute
   proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
   from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
   at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
-Last activity: 2026-08-09
+Last activity: 2026-08-10
 
-Progress: [██████████] 100%
+Progress: [██████████] 97%
 
 Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
 27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
@@ -73,8 +73,30 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 03 P05 (Tasks 1-2 only; Task 3 checkpoint outstanding) | 35min | 2 tasks | 3 files |
 | Phase 03 P06 | 15min | 2 tasks | 1 files |
 | Phase 03 P07 | 20min | 3 tasks | 0 files |
+| Phase 04 P01 | 5min | 3 tasks | 3 files |
+| Phase 04 P02 | 12min | 3 tasks | 3 files |
+| Phase 04 P03 | 6min | 2 tasks | 3 files |
+| Phase 04-mandatory-allergy-testing P05 | 11min | 2 tasks | 4 files |
+| Phase 04-mandatory-allergy-testing P06 | 20min | 3 tasks | 4 files |
+| Phase 04 P07 | 10min | 2 tasks | 2 files |
+| Phase 04 P08 | 35min | 3 tasks | 4 files |
+| Phase 04-mandatory-allergy-testing P09 | 20min | 2 tasks | 2 files |
+| Phase 04 P10 | 20min | 3 tasks | 2 files |
+| Phase 04 P11 | 10min | 3 tasks | 3 files |
+| Phase 04-mandatory-allergy-testing P12 | 25min | 3 tasks | 6 files |
+| Phase 04-mandatory-allergy-testing P13 | 15min | 3 tasks | 2 files |
+| Phase 04 P14 | 20min | 3 tasks | 8 files |
+| Phase 04 P15 | 20min | 2 tasks | 2 files |
+| Phase 04-mandatory-allergy-testing P16 | 55min | 3 tasks | 5 files |
+| Phase 04-mandatory-allergy-testing P17 | 35min | 3 tasks | 6 files |
+| Phase 04-mandatory-allergy-testing P18 | 20min | 2 tasks | 7 files |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 04.1 inserted after Phase 4: Testing-First Quiz Order — move the allergy-testing split and required upload to the front of the quiz so abandonment costs 30 seconds, not 10 minutes (URGENT)
+- Phase 04.2 inserted after Phase 4: Resume In-Progress Intake — server draft store + emailed magic link; reverses the recorded out-of-scope decision on resume (URGENT)
 
 ### Decisions
 
@@ -105,6 +127,47 @@ Affecting current work:
 - [Phase 03]: 03-06: migrations/003_drop_medical_history_legacy_columns.sql authored and committed alone (D-01 non-negotiable) — no DDL executed, plan 03-07 runs it after app code is confirmed live on Fly
 - [Phase 03-mandatory-medical-history]: 03-07: PR #19 merged to main (ac40f09) by Claude under Andrew's explicit in-session authorization ('keep moving forward'), overriding CLAUDE.md's default merge rule the same way as PR #16-18
 - [Phase 03-mandatory-medical-history]: 03-07: DROP COLUMN executed against alledrops_quiz_dev only after re-verifying all four preconditions independently (backup SUCCESSFUL, merge on main, Fly v50 live on served bytes, fresh 42/18 pre-DDL count); row count held at 42 before/after, both columns confirmed gone, post-DDL synthetic POST proved the write path survived
+- [Phase 04]: Retracted DEC-testing-results-by-email-not-upload in place in PROJECT.md, REQUIREMENTS.md TEST-04, and CLAUDE.md per 04-CONTEXT.md D-01 — upload is now required, not email-only
+- [Phase 04]: 04-02: file_multi stays a normal QuizQuestion (string[] answer shape), not a new QuizItem union member, per 04-UI-SPEC.md Component Inventory §1
+- [Phase 04]: 04-02: all three new question types (radio_single, text_input_short, file_multi) merged into isAnswered's existing five behavioral groups rather than new return expressions — zero new code outside isAnswered, single hunk diff on schema.ts
+- [Phase 04]: 04-03: Replacement consent text copied verbatim from 04-UI-SPEC.md D-11 interim copy; CONSENT_VERSION bumped to draft-2026-08-09 in the same plan so the stored version identifies the text a patient actually agreed to
+- [Phase 04]: 04-03: UNCONFIRMED JSX comment paraphrases the removed [PENDING] placeholder rather than quoting it literally, so the comment itself doesn't reintroduce the occurrence the automated guard checks for
+- [Phase 04]: 04-05: Theme push authorized and executed — commit 9c36e0f pushed to live Sense theme (135799767246); Klaviyo disabled: true, orphaned page.testing-options.json removed, redirect URLs confirmed already correct
+- [Phase 04]: 04-05: TEST-06 reassigned to Phase 8 (from Phase 4) — measured on live served bytes that both target surfaces (product pages, /pages/test-options) render Shopify Admin content (product.description, page.content), not theme-repo source; no theme push can close it. Not marked complete.
+- [Phase 04]: 04-05: Non-vacuity control corrected from plan's literal data-alledrops-quiz needle (0 occurrences, does not exist in current markup) to id="alledrops-quiz plus the appointly control, both nonzero on all fetches
+- [Phase 04]: 04-06: PART7_ALLERGY_TESTING added to QUIZ_PARTS as 7th part (radio_single testing_status gate + 3 required showIf-gated text fields), zero score contribution; getQuestionById widened to resolve Part 7 IDs
+- [Phase 04]: 04-06: Part 7 banner comment in questions.ts describes the deferred file_multi upload question without the literal substring testing_files, since the plan's own acceptance check requires zero occurrences of that string in questions.ts until plan 04-16 adds it
+- [Phase 04]: 04-07: radio_single shares its block with control_0_3 via case-label fallthrough (not duplication); text_input_short is a duplicated block from text_input since the two differ in control element
+- [Phase 04]: 04-07: Part 7 DOM coverage added (TEST-01/02/03) through the real QUIZ_PARTS -> itemsForPart -> QuizPartRenderer seam and the real isPartComplete export; suite now 392/27
+- [Phase 04]: Closed the live TEST-07 defect: deleted the 0-2 auto-submit chain; every bracket now routes through ConsentStep before submit (D-09)
+- [Phase 04]: Resolved the symptom_profile_id double-submit defect for free by deleting the multi-exit pre-consent outcome screen; verified there is exactly one submitPayload() call site
+- [Phase 04]: 04-09: public/quiz-bundle.js rebuilt (186764 -> 185946 bytes), folding in plans 04-02/04-03/04-06/04-07/04-08; theme build proven deterministic across two consecutive builds (identical SHA-256); freshness guard extended with 10 Phase-4 markers (7 presence, 3 absence), each independently measured 0-before/>=1-after (or reverse). Full suite 426/28, typecheck clean, both builds clean.
+- [Phase 04]: 04-09: file_multi measured (0 before, 1 after) but deliberately withheld from the freshness guard since its upload widget ships in plan 04-16; text_input_short used instead for the 04-02 schema marker slot.
+- [Phase 04]: 04-10: Blocker 1 (William agreement + pricing) treated as CLEARED per Andrew's explicit in-session authorization ('Execute all waves no William blocker')
+- [Phase 04]: 04-10: Blockers 2 (Fly.io BAA) and 3 (AOD GCP cutover) remain OPEN; Andrew authorized building against dev GCS in alledrops-quiz now (env-var-driven GCS_BUCKET_NAME/GCS_PROJECT_ID), mirroring the Cloud SQL dev precedent. No real patient PHI may use this path until Phase 8 closes both blockers.
+- [Phase 04]: 04-10: Upload track ratified: MAX_FILE_BYTES=15MB / MAX_TOTAL_BYTES=50MB / MAX_FILES=10, Fly-proxied architecture (not direct-to-GCS signed PUT), virus scanning deferred to Phase 8 with magic-byte allowlist + size caps as compensating controls. Recorded in 04-UPLOAD-DECISIONS.md, the single source of truth for plans 04-11 through 04-19.
+- [Phase 04]: 04-10: Four upload-track packages installed (@remix-run/form-data-parser@0.17.4, @google-cloud/storage@7.21.0, heic-convert@2.1.0, pdf-lib@1.17.1) after slopcheck scan + live registry audit + Andrew's per-package review; zero postinstall scripts confirmed pre- and post-install. npm audit surfaced one new moderate transitive finding (uuid <11.1.1 via @google-cloud/storage's gaxios/teeny-request chain) — documented, not auto-fixed, since the only remediation is a breaking downgrade to @google-cloud/storage@5.18.3.
+- [Phase 04]: 04-11: submission_files migration authored and committed alone (D-01); zero DDL executed. Data-access layer's insertSubmissionFiles introduces the codebase's first client-level pool.connect()/BEGIN/COMMIT/ROLLBACK transaction. Ownership boundary proven non-vacuous by direct source mutation (predicates removed, test failed RED, file restored).
+- [Phase 04-mandatory-allergy-testing]: 04-12: app/lib/storage/gcs.ts, upload-validation.ts, heic.ts added — env-driven GCS client (GCS_BUCKET_NAME/GCS_PROJECT_ID, never hardcoded), magic-byte sniffType allowlist (PDF/JPEG/PNG/HEIC), and a non-throwing heic-convert wrapper; all three tested entirely against mocks, zero real GCS/heic-convert calls made. Suite 434/29 -> 467/31.
+- [Phase 04-mandatory-allergy-testing]: 04-12: heic-convert ships no TypeScript types; added a minimal ambient app/lib/storage/heic-convert.d.ts covering only the single-image conversion signature this app uses.
+- [Phase 04-mandatory-allergy-testing]: 04-12: No live network capture against @google-cloud/storage was run in this plan (04-RESEARCH.md Assumption A3 still open) — threat T-4-57 explicitly assigns that capture to plan 04-13, the first plan making a real (non-mocked) GCS call. Do not mark TEST-04 complete; that remains plan 04-19's bookkeeping.
+- [Phase 04-mandatory-allergy-testing]: 04-13: Fixed parseFormData's argument order from the plan's own interfaces snippet (real 0.17.4 signature is request, options, uploadHandler) — verified against installed source before writing the route
+- [Phase 04-mandatory-allergy-testing]: 04-13: Created gs://alledrops-quiz-uploads-dev (alledrops-quiz project) and ran a real network capture for T-4-64 — only storage.googleapis.com and www.googleapis.com contacted, confirming no third-party telemetry; temporary service account deleted after use
+- [Phase 04-mandatory-allergy-testing]: 04-13: Fly runtime GCP credential wiring is unsolved — gcs.ts relies on ADC which the Fly VM has no way to satisfy; staged (not deployed) GCS_BUCKET_NAME/GCS_PROJECT_ID Fly secrets only. Flagged for 04-19's deploy authorization step.
+- [Phase 04]: Patient file route (04-14) supports both Authorization: Bearer and ?token= query-param token sources, and both JSON {url} and 302-redirect response shapes — Resolves the quiz-history extension's flagged <s-link href> shape mismatch in one route rather than a client-side rewrite
+- [Phase 04]: Admin testing-status column (D-08) is read-only, derived from answers_json via a parameterized JSONB accessor — No new column, no PATCH endpoint, no UPDATE against submissions — the provider-review-checkbox scope was explicitly reversed earlier in the phase discussion
+- [Phase 04-mandatory-allergy-testing]: 04-15: generateVisitSummaryPdf now embeds uploaded test-result files via pdf-lib post-processing of pdfkit's output (copyPages for donor PDFs, embedJpg/embedPng for images); zero files still returns the base pdfkit bytes unchanged, and any per-file failure degrades to a note page (file id + byte size, never filename) rather than failing the download
+- [Phase 04-mandatory-allergy-testing]: 04-15: Fixed a pdf-lib bug where embedJpg/embedPng read imageData.buffer directly via DataView, ignoring byteOffset — added a zero-offset Uint8Array copy defensively in production code before every image embed call
+- [Phase 04-mandatory-allergy-testing]: 04-16: Widened PART7_ALLERGY_TESTING from QuizQuestion[] to QuizItem[] to hold testing_upload_requirements' info block alongside testing_files
+- [Phase 04-mandatory-allergy-testing]: 04-16: 'Required-but-empty' file_multi error is triggered on the file input losing focus while still required-and-empty, not a literal Next-button click — QuizContainer.tsx's real Next button was out of this plan's scope and stays silently disabled while the part is incomplete
+- [Phase 04-mandatory-allergy-testing]: 04-16: Retry action shown only for the generic network/500 failure class, never for wrong-type/too-large/total-exceeded, matching the Copywriting Contract which names Retry only on the 'didn't upload' string
+- [Phase 04-mandatory-allergy-testing]: 04-17: Promotion reads staged pending/ objects by GCS prefix listing (getBucket().getFiles({prefix: pending/token/})), not via buildPendingKey(token, filename) — the upload route never returns the filename to the client, so there is nothing to reconstruct a pending key from
+- [Phase 04-mandatory-allergy-testing]: 04-17: Promotion failure policy — the submission is authoritative; a copyObject, insertSubmissionFiles, or deleteObject rejection at any point still returns the route's normal success response and never rolls back insertSubmission, costing a reconciliation task instead
+- [Phase 04-mandatory-allergy-testing]: 04-17: Applied a single Delete lifecycle rule (age:2, matchesPrefix:[pending/]) to the real dev bucket gs://alledrops-quiz-uploads-dev and empirically proved the scoping against three real probe objects (read back via gcloud, not asserted from docs); fly.toml [[vm]] memory raised 1gb->2gb as the sole attributable VM change
+- [Phase 04-mandatory-allergy-testing]: 04-17: CRITICAL — the Fly-runtime GCP ADC credential gap from 04-13 remains UNSOLVED; gcs.ts is not in this plan's files_modified and credential wiring is an architectural decision left explicitly flagged for plan 04-19, not improvised mid-execution
+- [Phase 04-mandatory-allergy-testing]: 04-18: QuizHistoryBlock.js confirmed orphaned (not referenced by shopify.extension.toml, not a dist build input) but updated in parallel with QuizHistoryBlock.jsx's file-link change to stay in sync
+- [Phase 04-mandatory-allergy-testing]: 04-18: file_multi rejected as a bundle freshness marker (measured 1-before, not 0, since schema.ts's showIf/scoring switch arm predates the widget); replaced with fileUpload__dropzone, unique to QuizPartRenderer.tsx's actual render branch
+- [Phase 04-mandatory-allergy-testing]: 04-18: public/quiz-bundle.css committed alongside public/quiz-bundle.js in the same commit even though only the .js file was named in files_modified — both come from the same build:theme invocation and the widget's fileUpload__* CSS Modules classes only ship if both move together
 
 ### Pending Todos
 
@@ -307,12 +370,12 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 | Storefront | `/pages/our-team` decision, remaining May 8 content items | v2 | 2026-07-29 |
 | Security | `Content-Security-Policy: frame-ancestors *` on `/quiz-embed` lets any site frame the PHI-collecting quiz. Clickjacking exposure. Plan 03's `e.origin` guard narrows what a hostile framer can *cause* but does not prevent the framing itself. (T-1-09, accept) | Phase 8 candidate | 2026-07-30 |
 | Deploy provenance | Neither bundle route emits `ETag` or `Last-Modified`, which is why deploy verification is a string-counting exercise. Worse, `app/routes/quiz-bundle.js.tsx` and `app/routes/quiz-bundle-js.tsx` serve the same file with disagreeing `max-age` (3600 vs 300). A content-hash ETag is ~3 lines and converts every future verification into one conditional request. All Phase 1 gates deliberately assert against `/quiz-bundle-js`, the 300s variant, because that is the route `quiz-embed.tsx` references. | Phase 8 candidate | 2026-07-30 |
-| Latent defect | Double-submit on the `3-6` bracket: a patient can click "Schedule a Telehealth Appointment" (submits), navigate back, then take "Continue to Purchase" through consent and submit again — violating the `NOT NULL UNIQUE` constraint on `submissions.symptom_profile_id`, because `generateSymptomProfileId()` returns `AOD_${Date.now()}` and is called once per session. Real and patient-facing. Phase 4 (TEST-05) deletes the `3-6` purchase jump entirely and removes it for free, so no separate fix is needed — but reproducing it during verification would otherwise look like a Phase 1 regression. | Resolved for free by Phase 4 / TEST-05; record only | 2026-07-30 |
+| Latent defect | Double-submit on the `3-6` bracket: a patient can click "Schedule a Telehealth Appointment" (submits), navigate back, then take "Continue to Purchase" through consent and submit again — violating the `NOT NULL UNIQUE` constraint on `submissions.symptom_profile_id`, because `generateSymptomProfileId()` returns `AOD_${Date.now()}` and is called once per session. Real and patient-facing. Phase 4 Plan 08 (TEST-05, D-09) deleted the `3-6` purchase jump, `handleScheduleConsult`/`handleTestFirst`, and the entire multi-exit pre-consent `"outcome"` screen, leaving exactly one `submitPayload()` call site (`handleConsentSubmit`) reachable through exactly one entry into consent — verified by enumerating every `setStep(...)` call site in `QuizContainer.tsx` (04-08-SUMMARY.md "Reachability Verification"). | **CLOSED — resolved by 04-08, verified unreachable** | 2026-07-30 |
 | ~~Dead code~~ **RETRACTED — this entry was wrong and the code was live** | `app/entry.theme.tsx`'s `injectIframe()` handler was recorded here as unreachable dead code, on Plan 01-04's measurement that the installed Liquid block loads the bundle on zero parent pages. That measurement was correct **about the storefront only**. `/quiz-embed` itself renders a `data-alledrops-quiz` container AND loads the bundle, and `initQuiz()` selects `injectIframe` whenever `window.self === window.top` — so opening the public `/quiz-embed` URL top-level ran this handler on a PHI page. It was confirmed exploitable against production (navigated the live page to a foreign origin) and fixed in `14e13ff`. **Do not restore the "dead code" reading.** Full analysis above; `tests/entry-theme-contract.test.ts` now guards it. Retained here only so the retraction is visible to anyone who read the original entry. | **CLOSED — fixed and deployed** | 2026-07-30 |
 | Theme config | The sticky-header scroll offset is hardcoded at `scroll-margin-top: 100px` in the Liquid block's `{%- style -%}` region rather than exposed as a `range` setting, because whether a newly added non-`product` schema setting receives its default on an **already-placed** block is unverified. If tuning it ever requires a deploy, verify that behavior first, then promote it to a setting. | Phase 8 candidate | 2026-07-30 |
 
 ## Session Continuity
 
-Last session: 2026-08-09T20:27:03.337Z
-Stopped at: Completed 03-07-PLAN.md — Phase 3 (mandatory-medical-history) complete
-Resume file: None
+Last session: 2026-08-10T09:48:13.119Z
+Stopped at: Phase 4: 18/19 plans executed, PR #20 open. 04-19 (DDL + deploy + UAT) DEFERRED — GCP ADC credentials cannot work on Fly; Andrew deferred credential wiring to the AOD GCP cutover. Migration 004 authored, unrun.
+Resume file: .planning/phases/04-mandatory-allergy-testing/04-19-PLAN.md

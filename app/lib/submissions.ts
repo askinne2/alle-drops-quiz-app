@@ -185,6 +185,16 @@ export interface AdminSubmissionListRow {
   quiz_score: number;
   created_at: string;
   customer_id_shopify: string | null;
+  /**
+   * READ-ONLY (D-08), derived at read time from answers_json.testing_status via a JSONB
+   * accessor — there is no column and no write path. Legacy rows (every row predating Phase 4)
+   * have neither the key nor a value and come back null; the UI renders that as a neutral dash.
+   * Do NOT add a provider-review timestamp column, a PATCH endpoint, or any write statement
+   * against this table to "complete" this — that scope was explicitly proposed and reversed;
+   * see 04-CONTEXT.md D-08. `submissions` stays insert-only (aside from the pre-existing,
+   * unrelated customer-id backfill).
+   */
+  testing_status?: string | null;
 }
 
 export interface AdminSubmissionsPage {
@@ -200,6 +210,7 @@ export async function listAdminSubmissions(args: {
   from?: string | null;
   to?: string | null;
   q?: string | null;
+  testing_status?: string | null;
   cursor?: string | null;
   limit?: number;
 }): Promise<AdminSubmissionsPage> {
@@ -209,10 +220,14 @@ export async function listAdminSubmissions(args: {
     ? parseInt(Buffer.from(args.cursor, 'base64').toString('utf8'), 10)
     : 0;
 
+  // testing_status (D-08): READ-ONLY, derived at read time via a parameterized JSONB accessor —
+  // never a new column, never a WHERE clause built by string concatenation. No UPDATE exists or
+  // may be added against `submissions` for this column; see AdminSubmissionListRow's comment.
   const sql = `
     SELECT
       id, symptom_profile_id, patient_name, patient_email,
-      patient_state, score_bracket, quiz_score, created_at, customer_id_shopify
+      patient_state, score_bracket, quiz_score, created_at, customer_id_shopify,
+      answers_json ->> 'testing_status' AS testing_status
     FROM submissions
     WHERE
       ($1::text IS NULL OR patient_state = $1)
@@ -224,8 +239,9 @@ export async function listAdminSubmissions(args: {
         OR patient_email ILIKE '%' || $5 || '%'
         OR symptom_profile_id ILIKE '%' || $5 || '%'
       ))
+      AND ($6::text IS NULL OR answers_json ->> 'testing_status' = $6)
     ORDER BY created_at DESC
-    LIMIT $6 OFFSET $7
+    LIMIT $7 OFFSET $8
   `;
 
   const result = await pool.query<AdminSubmissionListRow>(sql, [
@@ -234,6 +250,7 @@ export async function listAdminSubmissions(args: {
     args.from ?? null,
     args.to ?? null,
     args.q ?? null,
+    args.testing_status ?? null,
     limit + 1,   // fetch one extra to detect hasNextPage
     offset,
   ]);
@@ -268,7 +285,7 @@ export async function logSubmissionAccess({
 }: {
   submission_id: string | null
   actor_shop: string
-  action: 'list' | 'detail' | 'pdf'
+  action: 'list' | 'detail' | 'pdf' | 'file'
 }): Promise<void> {
   const pool = getPool();
   await pool.query(

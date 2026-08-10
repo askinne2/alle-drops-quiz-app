@@ -86,25 +86,46 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 
 ### Mandatory Allergy Testing
 
-- [ ] **TEST-01**: Every patient reaches an allergy-testing step before the score page, offering
+- [x] **TEST-01**: Every patient reaches an allergy-testing step before the score page, offering
   exactly two options and no skip (`REQ-mandatory-allergy-testing-split`)
-- [ ] **TEST-02**: "I need allergy testing" takes the patient to the storefront testing-options page
+- [x] **TEST-02**: "I need allergy testing" takes the patient to the storefront testing-options page
   (`REQ-mandatory-allergy-testing-split`)
-- [ ] **TEST-03**: "I've already had allergy testing" collects Year, Location, and "What Allergens
+- [x] **TEST-03**: "I've already had allergy testing" collects Year, Location, and "What Allergens
   Did You React To?", persisted into `answers_json` (`REQ-mandatory-allergy-testing-split`)
-- [ ] **TEST-04**: The results branch instructs the patient to email results to
-  `testing@alledrops.com` using the same email address they used on the quiz — with no file input,
-  multipart parsing, object storage, or upload column introduced
-  (`REQ-testing-results-by-email`) — ⚠ email address depends on the domain-spelling decision
-- [ ] **TEST-05**: Both no-testing bypasses are gone — the `7+` "Proceed Without Testing" chain and
+- [ ] **TEST-04**: The `had_testing` branch requires the patient to upload at least one copy of
+  their allergy test results before they can continue — no optional-with-email-fallback (D-02). The
+  upload allowlist is PDF, JPEG, PNG, and HEIC, with multiple files per submission supported (D-03).
+  Uploaded files never touch Shopify and never leave the BAA chain (D-04). Files must be retrievable
+  from three surfaces: the embedded admin at `/app/quiz-results`, the patient ledger via
+  `/api/me/*`, and inline in the clinical PDF (D-05)
+  (`REQ-testing-results-upload`)
+
+  ~~The results branch instructs the patient to email results to `testing@alledrops.com` using the
+  same email address they used on the quiz — with no file input, multipart parsing, object storage,
+  or upload column introduced (`REQ-testing-results-by-email`) — ⚠ email address depends on the
+  domain-spelling decision~~ — **reversed by `04-CONTEXT.md` D-01 on 2026-08-09.** Original traced
+  to `docs/REQUIREMENTS-AND-GAPS-2026-07-29.md` R5.
+- [x] **TEST-05**: Both no-testing bypasses are gone — the `7+` "Proceed Without Testing" chain and
   the `3–6` "Continue to Purchase AlleDrops" jump — and `ResultsDisplay` is a terminal display
   component with none of its four callback props (`REQ-remove-no-testing-paths`) — **must land AFTER
-  HIST-05**
+  HIST-05**. Phase 3's D-11 already deleted the `7+` proceed-without-testing chain and the
+  `"medical_history"` FlowStep. The remaining Phase 4 work under this requirement is the `3–6`
+  "Continue to Purchase AlleDrops" jump and making `ResultsDisplay` terminal with zero callback
+  props.
 - [ ] **TEST-06**: No storefront surface offers or implies a no-testing path — remove the "no longer
   a need for needles or allergy tests" clause from both product pages and the
   proceed-without-testing content from `/pages/test-options`
-  (`REQ-testing-claims-content-remediation`)
-- [ ] **TEST-07**: The consent step is reachable on every completion path and every submission
+  (`REQ-testing-claims-content-remediation`) — ⚠ **REASSIGNED to Phase 8, 2026-08-09.** Plan 04-05
+  measured both target surfaces on authenticated, cache-busted live served bytes, pre- and post- a
+  `shopify theme push`: the clause is present (`no longer a need` = 5, `needles` = 5) on both
+  `/products/tennessee-alledrops` and `/products/texas-alledrops`, unchanged by the push. Confirmed via
+  repo-wide grep in plan 04-04 and via `sections/main-product.liquid:197` / `sections/main-page.liquid:22`:
+  both surfaces render Shopify Admin content (`{{ product.description }}` / `{{ page.content }}`), not
+  theme-repo source. **No theme push or theme-repo edit can close this requirement.** Replacement copy
+  is drafted and held, UNCONFIRMED, at `04-STOREFRONT-COPY-DRAFT.md`, awaiting William/counsel approval
+  before an Admin-side edit ships it. Joins LAUNCH-01/LAUNCH-02 as Andrew-owned Phase 8 launch
+  readiness.
+- [x] **TEST-07**: The consent step is reachable on every completion path and every submission
   records a `consent_version` (`REQ-consent-step`)
 
 ### Preliminary Score Page
@@ -236,13 +257,13 @@ Acknowledged, not in the v1.0 roadmap.
 | HIST-04 | Phase 3 | Complete |
 | HIST-05 | Phase 3 | Complete |
 | DIAG-01 | Phase 3 | Blocked (William — R6 scope) |
-| TEST-01 | Phase 4 | Pending |
-| TEST-02 | Phase 4 | Pending |
-| TEST-03 | Phase 4 | Pending |
+| TEST-01 | Phase 4 | Complete |
+| TEST-02 | Phase 4 | Complete |
+| TEST-03 | Phase 4 | Complete |
 | TEST-04 | Phase 4 | Pending |
-| TEST-05 | Phase 4 | Pending |
-| TEST-06 | Phase 4 | Pending |
-| TEST-07 | Phase 4 | Pending |
+| TEST-05 | Phase 4 | Complete |
+| TEST-06 | Phase 8 (reassigned 2026-08-09 from Phase 4 — content is Shopify Admin-managed, not in either repo; see requirement note) | Pending |
+| TEST-07 | Phase 4 | Complete |
 | SCORE-01 | Phase 5 | Pending |
 | SCORE-02 | Phase 5 | Blocked (William — score scale) |
 | SCORE-03 | Phase 5 | Blocked (William — score scale) |
