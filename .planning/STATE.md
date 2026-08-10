@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-18-PLAN.md
-last_updated: "2026-08-10T02:44:31.657Z"
+stopped_at: "Phase 4: 18/19 plans executed, PR #20 open. 04-19 (DDL + deploy + UAT) DEFERRED — GCP ADC credentials cannot work on Fly; Andrew deferred credential wiring to the AOD GCP cutover. Migration 004 authored, unrun."
+last_updated: "2026-08-10T09:48:13.126Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 8
@@ -371,6 +371,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T02:44:31.652Z
-Stopped at: Completed 04-18-PLAN.md
-Resume file: None
+Last session: 2026-08-10T09:48:13.119Z
+Stopped at: Phase 4: 18/19 plans executed, PR #20 open. 04-19 (DDL + deploy + UAT) DEFERRED — GCP ADC credentials cannot work on Fly; Andrew deferred credential wiring to the AOD GCP cutover. Migration 004 authored, unrun.
+Resume file: .planning/phases/04-mandatory-allergy-testing/04-19-PLAN.md
