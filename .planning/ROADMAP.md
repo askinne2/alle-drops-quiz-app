@@ -418,9 +418,18 @@ can be moved)
   4. Consent still sits between the final part and the results screen, on one path for every
      bracket — the D-09 invariant survives the reorder
 
-  5. `public/quiz-bundle.js` is rebuilt in the same commit, with markers measured 0-before/≥1-after
+  5. `public/quiz-bundle.js` is rebuilt in the same commit. **Marker technique corrected during planning:** a pure array reorder introduces no new string, and string-literal positions in the minified bundle follow source declaration order in `questions.ts`, not `QUIZ_PARTS` order — measured 2026-08-10, `testing_status` at index 160970 and `symptoms_nasal` at 153560, neither of which moves. Freshness is proven by SHA-256 delta plus two-build determinism; ORDER is proven by extracting the minified `QUIZ_PARTS` element identifiers from the artifact and asserting positional identity. See `04.1-04-PLAN.md` §`<d09_mechanism_correction>`.
 
-**Plans:** TBD
+**Plans:** 6 plans in 4 waves
+
+Plans:
+- [ ] 04.1-01-PLAN.md — Reorder QUIZ_PARTS to [P7, P1-P5, P6], D-06 banner, repoint three coupled index tests, add the order/score/consent guard (D-02, D-06, D-07)
+- [ ] 04.1-02-PLAN.md — Hoist TESTING_ANSWER_KEYS + partitionAnswers to format.ts; add the admin Test Results section BEFORE filtering Symptom Responses in both PHI renderers (D-05, D-05a)
+- [ ] 04.1-03-PLAN.md — Amend DEC-medical-history-before-testing-split in place; record the Phase 4.1 orphan-volume analysis without changing PENDING_OLM_AGE_DAYS (D-01, D-03, D-04)
+- [ ] 04.1-04-PLAN.md — Rebuild and commit quiz-bundle.js + .css together; add the built-artifact part-order guard (D-09, mechanism corrected)
+- [ ] 04.1-05-PLAN.md — Blocking human browser pass over the reordered quiz against provably-fresh served bytes (D-08)
+- [ ] 04.1-06-PLAN.md — Merge, three-channel deploy, served-bytes verification, and the blocking human check of both PHI renderers on the deployed app (D-10, D-05a)
+
 **UI hint**: yes
 
 **Notes**: ~half a day. This is deliberately cheap because Phase 2 made part order *data*:
