@@ -25,6 +25,7 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - [x] **Phase 3: Mandatory Medical History** - Rebuilt history section every patient passes through (completed 2026-08-09)
 - [ ] **Phase 4: Mandatory Allergy Testing** - Two-option testing split; both bypasses deleted
 - [ ] **Phase 4.1: Testing-First Quiz Order** *(INSERTED)* - Move the testing split + required upload to the front so abandonment costs seconds, not ten minutes
+- [ ] **Phase 4.2: Resume In-Progress Intake** *(INSERTED)* - Stop/resume at any point on any device; draft PHI store + emailed magic link. Reverses a recorded out-of-scope decision
 - [ ] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale
 - [ ] **Phase 6: Purchase Prerequisites** - Honor-system checkboxes and returning-patient state
 - [ ] **Phase 7: Telehealth Intake Path** - Booking-capable consult page and telehealth branching
@@ -313,6 +314,70 @@ Plans:
 
 - [ ] 04-19-PLAN.md — Human browser pass, migration execution, William message, merge and deploy authorization
 
+### Phase 04.2: Resume In-Progress Intake (INSERTED)
+
+**Goal**: A patient can stop the intake at any point and pick it up later on any device, so
+abandonment stops losing clinical work
+**Depends on**: Phase 4 (the flow and upload path must be settled first), **the Fly.io BAA**, and
+**the AOD GCP cutover** — this phase creates a second PHI store and the app's first outbound email
+**Requirements**: RESUME-01 … RESUME-05 (to be written into REQUIREMENTS.md during planning)
+**Success Criteria** (what must be TRUE):
+
+  1. A patient who closes the tab mid-intake can return via an emailed link and find every answer
+     they had given, including any uploaded test-result files
+
+  2. Resuming works on a different device from the one that started the intake
+  3. A resume link expires, is single-purpose, and cannot be replayed to read someone else's draft
+  4. A draft that becomes a completed submission leaves no duplicate PHI behind
+  5. No draft is reachable without the token — there is no enumerable draft ID and no listing endpoint
+
+**Plans:** TBD
+**UI hint**: yes
+
+**Notes**: **~1+ week, and it reverses a decision that was deliberately recorded as out of scope.**
+`PROJECT.md` carried this under Out of Scope with the source directive quoted verbatim: *"Do not let
+this get promised casually."* Andrew reversed it on 2026-08-09; the original is retracted in place
+there rather than deleted. **It goes on the William list** — scope that was explicitly not committed
+is now committed, and the 6/27 list is still unpriced with $1,800 unbilled.
+
+**Why it is a week and not a weekend — four things that do not exist today:**
+
+1. **No draft store.** `submissions` is INSERT-ONLY, there is no `updateSubmission`, and
+   `symptom_profile_id` is `NOT NULL UNIQUE`. A draft needs its own table and its own identity; it
+   cannot be a half-written submission row.
+
+2. **No email infrastructure at all.** Measured 2026-08-09: zero occurrences of `nodemailer`,
+   `resend`, `sendgrid`, `postmark`, `mailgun`, or `sendEmail` across `app/` and `package.json`. The
+   app has never sent an email. A magic link means a provider, a BAA with that provider, deliverability
+   on a clinical domain, and the unresolved domain-spelling decision (LAUNCH-07) actually blocking
+   something for the first time.
+
+3. **No token system for this shape.** `customer-auth.ts` does HS256 Bearer verification for
+   logged-in customers. A resume token is different: anonymous, single-purpose, time-boxed, and it
+   grants read/write to a partial clinical record. It must not be reusable and must not be guessable.
+
+4. **A second PHI store, with everything that implies.** A draft holds name, DOB, email, phone, and
+   partial symptom answers. That is PHI at rest under `CLAUDE.md`'s rules: ownership-bounded access
+   only, no PHI in logs, its own entry in `docs/breach-response-runbook.md`, and coverage in
+   `submission_access_log`.
+
+**Open question for counsel, not for engineering (raise before building):** is an *abandoned* partial
+intake a medical record subject to the 6-year HIPAA retention rule, or may it be purged on expiry?
+The answer sets the draft table's deletion policy, and guessing it wrong is a compliance finding in
+either direction — purging a record that must be kept, or hoarding PHI that should have been deleted.
+`CLAUDE.md` already forbids deleting submission data during incident response; whether that extends to
+drafts is genuinely unclear.
+
+**Interaction with Phase 4.1 — these two set one number together.** `PENDING_OLM_AGE_DAYS` is `2`
+today. Phase 4.1 argues for shortening it, because after the reorder every abandoner leaves an
+orphaned staged file that can never be reclaimed. Resume argues for lengthening it, because a patient
+resuming on day 3 must still find their upload. **Neither phase may tune that value alone.** If both
+ship, the draft's own expiry and the `pending/` lifecycle age must be the same number, derived from
+how long a resume link stays valid.
+
+**Sequencing:** 4.1 first — it is half a day, self-contained, and depends on nothing here. 4.2 is
+gated on the same BAA chain as the upload deploy, so it cannot start earlier anyway.
+
 ### Phase 04.1: Testing-First Quiz Order (INSERTED)
 
 **Goal**: A patient who cannot supply allergy test results finds that out in the first thirty
@@ -524,15 +589,30 @@ transcript, before anyone registers or configures anything.**
 2. What is the full text of the third medical-history free-text field? Truncated in the source
    email; probable: "Please list any other medical conditions that you have." — gates HIST-03
 
-3. Is resume/edit of an in-progress submission expected? It does not exist, is 1+ week of work, and
-   was implied on the call but never committed. — **out of scope for v1.0, recorded as a risk**
+3. ~~Is resume/edit of an in-progress submission expected? It does not exist, is 1+ week of work, and
+   was implied on the call but never committed. — **out of scope for v1.0, recorded as a risk**~~
+   **ANSWERED 2026-08-09 — Andrew committed it to scope as Phase 4.2.** No longer an open question,
+   but it becomes a William item rather than closing one: it was never priced, and the source
+   directive was "do not let this get promised casually."
 
 ## Known Risk Shipping With This Milestone
 
 **Abandonment loses the entire questionnaire.** Nothing persists until the terminal POST — no draft
 table, no localStorage, no `updateSubmission`, and `symptom_profile_id` is `NOT NULL UNIQUE`. Making
-testing mandatory (Phase 4) adds a new, likelier abandonment point. Resume/edit persistence is
-explicitly not committed for v1.0. Do not let it get promised casually.
+testing mandatory (Phase 4) adds a new, likelier abandonment point.
+
+~~Resume/edit persistence is explicitly not committed for v1.0. Do not let it get promised
+casually.~~ **RETRACTED 2026-08-09 — Andrew committed it.** Two phases now attack this risk from
+different directions:
+
+- **Phase 4.1** moves the testing split and its required upload to the front, so a patient who
+  cannot produce results loses seconds instead of a completed intake. Half a day, unblocked.
+- **Phase 4.2** adds true resume via a draft PHI store and an emailed magic link. ~1+ week, gated on
+  the Fly.io BAA and the AOD GCP cutover.
+
+**Until 4.2 actually ships, this risk stands exactly as originally written.** And the retracted
+sentence's warning still applies to the *commercial* side: it was never priced, and it is now
+committed scope on a project with $1,800 unbilled and no Phase 2 SOW.
 
 ## Progress
 

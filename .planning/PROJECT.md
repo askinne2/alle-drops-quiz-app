@@ -82,11 +82,30 @@ Full checkable list with IDs: `.planning/REQUIREMENTS.md`. Grouped summary:
 
 ### Out of Scope
 
-- **Resume / edit an in-progress submission** — 1+ week and architecturally hard. Quiz state is
+- ~~**Resume / edit an in-progress submission** — 1+ week and architecturally hard. Quiz state is
   React `useState` only; nothing persists until the terminal POST; there is no draft table, no
   `updateSubmission`, and `symptom_profile_id` is `NOT NULL UNIQUE`. It was implied by what the
   client was told on the call but never committed. Source directive: *"Do not let this get promised
-  casually."* **Carried as an explicit risk, not a phase** — see Risks below.
+  casually."* **Carried as an explicit risk, not a phase** — see Risks below.~~
+
+  ⚠️ **RETRACTED 2026-08-09 — Andrew committed this to scope.** It is now **Phase 4.2 — Resume
+  In-Progress Intake**, specified in `ROADMAP.md`, using a server-side draft store plus an emailed
+  magic link so resume works across devices. The original is kept struck through so anyone who read
+  it sees that it changed and why (same convention as `DEC-testing-results-by-email-not-upload` and
+  the `injectIframe` correction).
+
+  **Everything the original said about the cost remains true and none of it was disproven** — the
+  1+ week estimate, the absent draft table, the missing `updateSubmission`, and the `NOT NULL UNIQUE`
+  constraint on `symptom_profile_id` are all still exactly as described. Two further gaps were
+  measured on 2026-08-09: the app has **no email infrastructure of any kind** (zero occurrences of
+  `nodemailer`/`resend`/`sendgrid`/`postmark`/`mailgun`/`sendEmail` across `app/` and
+  `package.json`), and a draft constitutes a **second PHI store** requiring its own access controls,
+  breach-runbook coverage, and retention policy.
+
+  **Consequence that must not get lost:** the source directive was *"do not let this get promised
+  casually."* Committing it is therefore a client conversation, not just an engineering one — it
+  belongs on the William list alongside the upload reversal, and it is unpriced scope on a project
+  with $1,800 already unbilled and the Phase 2 SOW unwritten since 6/30.
 - **Account-flag gating, Shopify Functions, real-time checkout blocking, mandatory accounts,
   manual clinical unlock, `orders/create` auto-cancel backstop, Locksmith-style gating apps,
   `tagsAdd` approval flow** — all removed by `DEC-purchase-gating-is-honor-system`. AOD is on
@@ -319,8 +338,11 @@ answer the registration question.
 
 - **Abandonment loses everything.** Nothing persists until the terminal POST. A patient who
   abandons at the newly-mandatory testing split loses the entire questionnaire, not just their
-  place. Making testing mandatory makes that abandonment point *more* likely, not less. Resume is
-  out of scope for v1.0 — this risk ships with the milestone unless the client funds it.
+  place. Making testing mandatory makes that abandonment point *more* likely, not less.
+  ~~Resume is out of scope for v1.0 — this risk ships with the milestone unless the client funds
+  it.~~ **UPDATED 2026-08-09:** two phases now address this — **Phase 4.1** moves the testing split
+  and its required upload to the FRONT of the quiz so hitting the wall costs seconds rather than ten
+  minutes, and **Phase 4.2** adds resume. Until 4.2 ships, the risk stands exactly as written.
 - **Klaviyo on a PHI-collecting page.** `/pages/allergy-quiz` was observed loading
   `static.klaviyo.com` and `static-tracking.klaviyo.com`. Zero references in this repo, so it is
   theme or Shopify-app level. This is a PHI disclosure to a vendor with no BAA and a reportable
