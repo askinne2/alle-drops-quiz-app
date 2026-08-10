@@ -31,6 +31,40 @@
 -- Plan 04-19 owns actually executing this file, after independently re-verifying all four
 -- preconditions above. This commit (plan 04-11) authors the file only — no `gcloud sql`
 -- command and no SQL statement in this file has been executed as part of writing it.
+--
+-- ============================================================================================
+-- EXECUTED 2026-08-10 against alledrops_quiz_dev (session 35), ahead of plan 04-19.
+--
+-- Precondition status at execution:
+--   1. Backup: ID 1786361850289, ON_DEMAND, SUCCESSFUL,
+--      description "pre-phase4-create-submission-files". Read back via
+--      `gcloud sql backups list`, not trusted from the create command's exit code.
+--   2. App-code-live-before-DDL: DEVIATED, deliberately. That precondition exists to prevent
+--      Phase 3's failure mode, where a DROP COLUMN ran ahead of the code and would have
+--      hard-failed every INSERT. This migration is additive in the opposite direction —
+--      CREATE TABLE IF NOT EXISTS, two CREATE INDEX IF NOT EXISTS, and a CHECK that WIDENS
+--      from 3 values to 4. Fly v50 never references submission_files, and its existing
+--      'list'/'detail'/'pdf' writes remain valid under the widened constraint. Running ahead
+--      of the deploy is therefore safe; running behind it is what caused the local
+--      "[submission-files] insert failed, rolled back" that prompted this.
+--   3. Fresh pre-migration count: 43 rows, re-read immediately before execution (not a
+--      snapshot from earlier in the session). 43 after. Unchanged, as expected for additive DDL.
+--   4. Test-data-only: confirmed in-session by Andrew — "EVERYTHING IS TEST DATA until i say
+--      otherwise."
+--
+-- Execution deviation from the SQL as written below: the file assumes one role owns
+-- everything. `submissions` is owned by alledrops_app and `submission_access_log` by postgres,
+-- so no single role can run the whole file. Executed as postgres in ONE transaction, with the
+-- CREATE TABLE / indexes / grant under `SET ROLE alledrops_app` (so the new table's owner
+-- matches submissions and production's identity), then `RESET ROLE` for the ALTER TABLE.
+-- A local-only `GRANT ... TO alledrops_dev` was added outside this file; see
+-- docs/local-dev-database.md.
+--
+-- Verified after commit, by query result rather than exit code: table owner alledrops_app,
+-- all 3 indexes present, FK to submissions present, CHECK now ('list','detail','pdf','file'),
+-- submissions still 43. Write path proven by an INSERT executed as alledrops_app inside a
+-- transaction and rolled back — table confirmed back to 0 rows afterwards.
+-- ============================================================================================
 
 CREATE TABLE IF NOT EXISTS submission_files (
   id  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
