@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 04.1 context gathered
-last_updated: "2026-08-10T14:49:21.649Z"
-last_activity: 2026-08-10 -- Phase 04.1 planning complete
+last_updated: "2026-08-10T14:51:04.103Z"
+last_activity: 2026-08-10 -- Phase 04.1 execution started
 progress:
   total_phases: 10
   completed_phases: 3
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 04.1 — testing-first quiz order (Phase 4 shipped 2026-08-10)
+**Current focus:** Phase 04.1 — testing-first-quiz-order
 
 ## Current Position
 
-Phase: 04 (mandatory-allergy-testing) — COMPLETE and DEPLOYED (2026-08-10)
-Plan: 19 of 19
-Status: Ready to execute
-Last activity: 2026-08-10 -- Phase 04.1 planning complete
+Phase: 04.1 (testing-first-quiz-order) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 04.1
+Last activity: 2026-08-10 -- Phase 04.1 execution started
 
 Progress: [██████████] 100% of Phase 4
 
