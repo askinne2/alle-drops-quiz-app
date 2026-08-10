@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-14-PLAN.md
-last_updated: "2026-08-10T01:52:19.446Z"
+stopped_at: Completed 04-15-PLAN.md
+last_updated: "2026-08-10T02:03:09.041Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 36
-  completed_plans: 31
+  completed_plans: 32
   percent: 38
 ---
 
@@ -27,14 +27,14 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 04 (mandatory-allergy-testing) — EXECUTING
-Plan: 14 of 19
+Plan: 15 of 19
 Status: Ready to execute
   proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
   from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
   at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
 Last activity: 2026-08-10
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 89%
 
 Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
 27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
@@ -86,6 +86,7 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 04-mandatory-allergy-testing P12 | 25min | 3 tasks | 6 files |
 | Phase 04-mandatory-allergy-testing P13 | 15min | 3 tasks | 2 files |
 | Phase 04 P14 | 20min | 3 tasks | 8 files |
+| Phase 04 P15 | 20min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -147,6 +148,8 @@ Affecting current work:
 - [Phase 04-mandatory-allergy-testing]: 04-13: Fly runtime GCP credential wiring is unsolved — gcs.ts relies on ADC which the Fly VM has no way to satisfy; staged (not deployed) GCS_BUCKET_NAME/GCS_PROJECT_ID Fly secrets only. Flagged for 04-19's deploy authorization step.
 - [Phase 04]: Patient file route (04-14) supports both Authorization: Bearer and ?token= query-param token sources, and both JSON {url} and 302-redirect response shapes — Resolves the quiz-history extension's flagged <s-link href> shape mismatch in one route rather than a client-side rewrite
 - [Phase 04]: Admin testing-status column (D-08) is read-only, derived from answers_json via a parameterized JSONB accessor — No new column, no PATCH endpoint, no UPDATE against submissions — the provider-review-checkbox scope was explicitly reversed earlier in the phase discussion
+- [Phase 04-mandatory-allergy-testing]: 04-15: generateVisitSummaryPdf now embeds uploaded test-result files via pdf-lib post-processing of pdfkit's output (copyPages for donor PDFs, embedJpg/embedPng for images); zero files still returns the base pdfkit bytes unchanged, and any per-file failure degrades to a note page (file id + byte size, never filename) rather than failing the download
+- [Phase 04-mandatory-allergy-testing]: 04-15: Fixed a pdf-lib bug where embedJpg/embedPng read imageData.buffer directly via DataView, ignoring byteOffset — added a zero-offset Uint8Array copy defensively in production code before every image embed call
 
 ### Pending Todos
 
@@ -355,6 +358,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T01:52:19.441Z
-Stopped at: Completed 04-14-PLAN.md
+Last session: 2026-08-10T02:03:09.036Z
+Stopped at: Completed 04-15-PLAN.md
 Resume file: None
