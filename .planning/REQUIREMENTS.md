@@ -92,7 +92,7 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
   (`REQ-mandatory-allergy-testing-split`)
 - [x] **TEST-03**: "I've already had allergy testing" collects Year, Location, and "What Allergens
   Did You React To?", persisted into `answers_json` (`REQ-mandatory-allergy-testing-split`)
-- [ ] **TEST-04**: The `had_testing` branch requires the patient to upload at least one copy of
+- [x] **TEST-04**: The `had_testing` branch requires the patient to upload at least one copy of
   their allergy test results before they can continue — no optional-with-email-fallback (D-02). The
   upload allowlist is PDF, JPEG, PNG, and HEIC, with multiple files per submission supported (D-03).
   Uploaded files never touch Shopify and never leave the BAA chain (D-04). Files must be retrievable
@@ -260,7 +260,7 @@ Acknowledged, not in the v1.0 roadmap.
 | TEST-01 | Phase 4 | Complete |
 | TEST-02 | Phase 4 | Complete |
 | TEST-03 | Phase 4 | Complete |
-| TEST-04 | Phase 4 | Pending |
+| TEST-04 | Phase 4 | Complete |
 | TEST-05 | Phase 4 | Complete |
 | TEST-06 | Phase 8 (reassigned 2026-08-09 from Phase 4 — content is Shopify Admin-managed, not in either repo; see requirement note) | Pending |
 | TEST-07 | Phase 4 | Complete |

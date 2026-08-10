@@ -286,7 +286,7 @@ Plans:
 
 **Wave 6** *(BLOCKED on William, the Fly BAA, and the GCP cutover)*
 
-- [ ] 04-10-PLAN.md — Blocker clearance, size caps, upload architecture, dev storage target, and the package legitimacy gate
+- [x] 04-10-PLAN.md — Blocker clearance, size caps, upload architecture, dev storage target, and the package legitimacy gate
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
@@ -489,7 +489,7 @@ exposures today.
 | 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
 | 2. Quiz Schema Foundation | 4/4 | Complete    | 2026-08-09 |
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
-| 4. Mandatory Allergy Testing | 9/19 | In Progress|  |
+| 4. Mandatory Allergy Testing | 10/19 | In Progress|  |
 | 5. Preliminary Score Page | 0/TBD | Not started | - |
 | 6. Purchase Prerequisites | 0/TBD | Not started | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |

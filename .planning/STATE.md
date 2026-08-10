@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-09-PLAN.md
-last_updated: "2026-08-10T00:31:41.041Z"
+stopped_at: Completed 04-10-PLAN.md
+last_updated: "2026-08-10T00:58:44.959Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 36
-  completed_plans: 26
+  completed_plans: 27
   percent: 38
 ---
 
@@ -27,14 +27,14 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 04 (mandatory-allergy-testing) — EXECUTING
-Plan: 9 of 19
+Plan: 10 of 19
 Status: Ready to execute
   proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
   from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
   at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
 Last activity: 2026-08-10
 
-Progress: [███████░░░] 72%
+Progress: [████████░░] 75%
 
 Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
 27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
@@ -81,6 +81,7 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 04 P07 | 10min | 2 tasks | 2 files |
 | Phase 04 P08 | 35min | 3 tasks | 4 files |
 | Phase 04-mandatory-allergy-testing P09 | 20min | 2 tasks | 2 files |
+| Phase 04 P10 | 20min | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -129,6 +130,10 @@ Affecting current work:
 - [Phase 04]: Resolved the symptom_profile_id double-submit defect for free by deleting the multi-exit pre-consent outcome screen; verified there is exactly one submitPayload() call site
 - [Phase 04]: 04-09: public/quiz-bundle.js rebuilt (186764 -> 185946 bytes), folding in plans 04-02/04-03/04-06/04-07/04-08; theme build proven deterministic across two consecutive builds (identical SHA-256); freshness guard extended with 10 Phase-4 markers (7 presence, 3 absence), each independently measured 0-before/>=1-after (or reverse). Full suite 426/28, typecheck clean, both builds clean.
 - [Phase 04]: 04-09: file_multi measured (0 before, 1 after) but deliberately withheld from the freshness guard since its upload widget ships in plan 04-16; text_input_short used instead for the 04-02 schema marker slot.
+- [Phase 04]: 04-10: Blocker 1 (William agreement + pricing) treated as CLEARED per Andrew's explicit in-session authorization ('Execute all waves no William blocker')
+- [Phase 04]: 04-10: Blockers 2 (Fly.io BAA) and 3 (AOD GCP cutover) remain OPEN; Andrew authorized building against dev GCS in alledrops-quiz now (env-var-driven GCS_BUCKET_NAME/GCS_PROJECT_ID), mirroring the Cloud SQL dev precedent. No real patient PHI may use this path until Phase 8 closes both blockers.
+- [Phase 04]: 04-10: Upload track ratified: MAX_FILE_BYTES=15MB / MAX_TOTAL_BYTES=50MB / MAX_FILES=10, Fly-proxied architecture (not direct-to-GCS signed PUT), virus scanning deferred to Phase 8 with magic-byte allowlist + size caps as compensating controls. Recorded in 04-UPLOAD-DECISIONS.md, the single source of truth for plans 04-11 through 04-19.
+- [Phase 04]: 04-10: Four upload-track packages installed (@remix-run/form-data-parser@0.17.4, @google-cloud/storage@7.21.0, heic-convert@2.1.0, pdf-lib@1.17.1) after slopcheck scan + live registry audit + Andrew's per-package review; zero postinstall scripts confirmed pre- and post-install. npm audit surfaced one new moderate transitive finding (uuid <11.1.1 via @google-cloud/storage's gaxios/teeny-request chain) — documented, not auto-fixed, since the only remediation is a breaking downgrade to @google-cloud/storage@5.18.3.
 
 ### Pending Todos
 
@@ -337,6 +342,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T00:31:41.036Z
-Stopped at: Completed 04-09-PLAN.md
+Last session: 2026-08-10T00:58:44.953Z
+Stopped at: Completed 04-10-PLAN.md
 Resume file: None
