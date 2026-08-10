@@ -352,7 +352,18 @@ where they left off, instead of starting a ten-minute clinical questionnaire ove
   5. The score and submitted payload are identical whether an intake was completed in one sitting or
      resumed — resume changes persistence only, never clinical data
 
-**Plans:** TBD
+**Plans:** 8 plans
+
+Plans:
+- [ ] 04.2-01-PLAN.md — Write RESUME-01..04 into REQUIREMENTS.md; build `draft-store.ts` (round-trip canary, structural schema fingerprint, 24h expiry with active cleanup, type-driven file-token strip) and its unit proofs (D-01, D-05, D-11)
+- [ ] 04.2-02-PLAN.md — Extract `buildSubmitPayload` into `app/lib/quiz/payload.ts` with the locked three-field exclusion constant, and unit-prove D-10 (D-10)
+- [ ] 04.2-03-PLAN.md — `ResumeOffer.tsx` (offer, in-flow Start over control, shared confirm panel, restoration notice) + four CSS classes + DOM proof of zero identity and the confirm gate (D-06, D-08)
+- [ ] 04.2-04-PLAN.md — QuizContainer read path: `resume_offer` FlowStep, lazy draft read, restore handler with the D-09 landing rule, restoration notice, payload wiring (D-01, D-06, D-09)
+- [ ] 04.2-05-PLAN.md — QuizContainer write path: debounced D-07-gated write, clear-on-successful-submit, in-flow Start over reset, D-09 dropzone copy, and D-11's no-staging-token test (D-07, D-08, D-09, D-11)
+- [ ] 04.2-06-PLAN.md — DOM-level end-to-end D-10 parity proof (the phase's load-bearing deliverable) plus the theme-bundle rebuild with measured Phase 4.2 freshness markers, keeping 04.1's order guard green (D-10)
+- [ ] 04.2-07-PLAN.md — Blocking human browser pass in the third-party-frame condition on provably-fresh served bytes, plus the Safari/WebKit D-03 measurement (D-01, D-03)
+- [ ] 04.2-08-PLAN.md — Ship 04.1 and 04.2 together: merge, three-channel deploy, served-bytes verification, and Phase 4.1's owed D-05a PHI-renderer confirmation
+
 **UI hint**: yes
 
 **Notes**: **~1–2 days. Browser-local only, deliberately.** Quiz state persists to `localStorage` as
