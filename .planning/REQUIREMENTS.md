@@ -105,7 +105,7 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
   or upload column introduced (`REQ-testing-results-by-email`) — ⚠ email address depends on the
   domain-spelling decision~~ — **reversed by `04-CONTEXT.md` D-01 on 2026-08-09.** Original traced
   to `docs/REQUIREMENTS-AND-GAPS-2026-07-29.md` R5.
-- [ ] **TEST-05**: Both no-testing bypasses are gone — the `7+` "Proceed Without Testing" chain and
+- [x] **TEST-05**: Both no-testing bypasses are gone — the `7+` "Proceed Without Testing" chain and
   the `3–6` "Continue to Purchase AlleDrops" jump — and `ResultsDisplay` is a terminal display
   component with none of its four callback props (`REQ-remove-no-testing-paths`) — **must land AFTER
   HIST-05**. Phase 3's D-11 already deleted the `7+` proceed-without-testing chain and the
@@ -125,7 +125,7 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
   is drafted and held, UNCONFIRMED, at `04-STOREFRONT-COPY-DRAFT.md`, awaiting William/counsel approval
   before an Admin-side edit ships it. Joins LAUNCH-01/LAUNCH-02 as Andrew-owned Phase 8 launch
   readiness.
-- [ ] **TEST-07**: The consent step is reachable on every completion path and every submission
+- [x] **TEST-07**: The consent step is reachable on every completion path and every submission
   records a `consent_version` (`REQ-consent-step`)
 
 ### Preliminary Score Page
@@ -261,9 +261,9 @@ Acknowledged, not in the v1.0 roadmap.
 | TEST-02 | Phase 4 | Complete |
 | TEST-03 | Phase 4 | Complete |
 | TEST-04 | Phase 4 | Pending |
-| TEST-05 | Phase 4 | Pending |
+| TEST-05 | Phase 4 | Complete |
 | TEST-06 | Phase 8 (reassigned 2026-08-09 from Phase 4 — content is Shopify Admin-managed, not in either repo; see requirement note) | Pending |
-| TEST-07 | Phase 4 | Pending |
+| TEST-07 | Phase 4 | Complete |
 | SCORE-01 | Phase 5 | Pending |
 | SCORE-02 | Phase 5 | Blocked (William — score scale) |
 | SCORE-03 | Phase 5 | Blocked (William — score scale) |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-07-PLAN.md
-last_updated: "2026-08-10T00:13:21.578Z"
+stopped_at: Completed 04-08-PLAN.md
+last_updated: "2026-08-10T00:25:18.657Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 36
-  completed_plans: 24
+  completed_plans: 25
   percent: 38
 ---
 
@@ -27,14 +27,14 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 04 (mandatory-allergy-testing) — EXECUTING
-Plan: 7 of 19
+Plan: 8 of 19
 Status: Ready to execute
   proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
   from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
   at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
 Last activity: 2026-08-10
 
-Progress: [███████░░░] 67%
+Progress: [███████░░░] 69%
 
 Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
 27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
@@ -79,6 +79,7 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 04-mandatory-allergy-testing P05 | 11min | 2 tasks | 4 files |
 | Phase 04-mandatory-allergy-testing P06 | 20min | 3 tasks | 4 files |
 | Phase 04 P07 | 10min | 2 tasks | 2 files |
+| Phase 04 P08 | 35min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,8 @@ Affecting current work:
 - [Phase 04]: 04-06: Part 7 banner comment in questions.ts describes the deferred file_multi upload question without the literal substring testing_files, since the plan's own acceptance check requires zero occurrences of that string in questions.ts until plan 04-16 adds it
 - [Phase 04]: 04-07: radio_single shares its block with control_0_3 via case-label fallthrough (not duplication); text_input_short is a duplicated block from text_input since the two differ in control element
 - [Phase 04]: 04-07: Part 7 DOM coverage added (TEST-01/02/03) through the real QUIZ_PARTS -> itemsForPart -> QuizPartRenderer seam and the real isPartComplete export; suite now 392/27
+- [Phase 04]: Closed the live TEST-07 defect: deleted the 0-2 auto-submit chain; every bracket now routes through ConsentStep before submit (D-09)
+- [Phase 04]: Resolved the symptom_profile_id double-submit defect for free by deleting the multi-exit pre-consent outcome screen; verified there is exactly one submitPayload() call site
 
 ### Pending Todos
 
@@ -325,12 +328,12 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 | Storefront | `/pages/our-team` decision, remaining May 8 content items | v2 | 2026-07-29 |
 | Security | `Content-Security-Policy: frame-ancestors *` on `/quiz-embed` lets any site frame the PHI-collecting quiz. Clickjacking exposure. Plan 03's `e.origin` guard narrows what a hostile framer can *cause* but does not prevent the framing itself. (T-1-09, accept) | Phase 8 candidate | 2026-07-30 |
 | Deploy provenance | Neither bundle route emits `ETag` or `Last-Modified`, which is why deploy verification is a string-counting exercise. Worse, `app/routes/quiz-bundle.js.tsx` and `app/routes/quiz-bundle-js.tsx` serve the same file with disagreeing `max-age` (3600 vs 300). A content-hash ETag is ~3 lines and converts every future verification into one conditional request. All Phase 1 gates deliberately assert against `/quiz-bundle-js`, the 300s variant, because that is the route `quiz-embed.tsx` references. | Phase 8 candidate | 2026-07-30 |
-| Latent defect | Double-submit on the `3-6` bracket: a patient can click "Schedule a Telehealth Appointment" (submits), navigate back, then take "Continue to Purchase" through consent and submit again — violating the `NOT NULL UNIQUE` constraint on `submissions.symptom_profile_id`, because `generateSymptomProfileId()` returns `AOD_${Date.now()}` and is called once per session. Real and patient-facing. Phase 4 (TEST-05) deletes the `3-6` purchase jump entirely and removes it for free, so no separate fix is needed — but reproducing it during verification would otherwise look like a Phase 1 regression. | Resolved for free by Phase 4 / TEST-05; record only | 2026-07-30 |
+| Latent defect | Double-submit on the `3-6` bracket: a patient can click "Schedule a Telehealth Appointment" (submits), navigate back, then take "Continue to Purchase" through consent and submit again — violating the `NOT NULL UNIQUE` constraint on `submissions.symptom_profile_id`, because `generateSymptomProfileId()` returns `AOD_${Date.now()}` and is called once per session. Real and patient-facing. Phase 4 Plan 08 (TEST-05, D-09) deleted the `3-6` purchase jump, `handleScheduleConsult`/`handleTestFirst`, and the entire multi-exit pre-consent `"outcome"` screen, leaving exactly one `submitPayload()` call site (`handleConsentSubmit`) reachable through exactly one entry into consent — verified by enumerating every `setStep(...)` call site in `QuizContainer.tsx` (04-08-SUMMARY.md "Reachability Verification"). | **CLOSED — resolved by 04-08, verified unreachable** | 2026-07-30 |
 | ~~Dead code~~ **RETRACTED — this entry was wrong and the code was live** | `app/entry.theme.tsx`'s `injectIframe()` handler was recorded here as unreachable dead code, on Plan 01-04's measurement that the installed Liquid block loads the bundle on zero parent pages. That measurement was correct **about the storefront only**. `/quiz-embed` itself renders a `data-alledrops-quiz` container AND loads the bundle, and `initQuiz()` selects `injectIframe` whenever `window.self === window.top` — so opening the public `/quiz-embed` URL top-level ran this handler on a PHI page. It was confirmed exploitable against production (navigated the live page to a foreign origin) and fixed in `14e13ff`. **Do not restore the "dead code" reading.** Full analysis above; `tests/entry-theme-contract.test.ts` now guards it. Retained here only so the retraction is visible to anyone who read the original entry. | **CLOSED — fixed and deployed** | 2026-07-30 |
 | Theme config | The sticky-header scroll offset is hardcoded at `scroll-margin-top: 100px` in the Liquid block's `{%- style -%}` region rather than exposed as a `range` setting, because whether a newly added non-`product` schema setting receives its default on an **already-placed** block is unverified. If tuning it ever requires a deploy, verify that behavior first, then promote it to a setting. | Phase 8 candidate | 2026-07-30 |
 
 ## Session Continuity
 
-Last session: 2026-08-10T00:13:21.573Z
-Stopped at: Completed 04-07-PLAN.md
+Last session: 2026-08-10T00:25:18.652Z
+Stopped at: Completed 04-08-PLAN.md
 Resume file: None
