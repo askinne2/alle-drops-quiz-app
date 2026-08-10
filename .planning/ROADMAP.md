@@ -352,7 +352,7 @@ where they left off, instead of starting a ten-minute clinical questionnaire ove
   5. The score and submitted payload are identical whether an intake was completed in one sitting or
      resumed — resume changes persistence only, never clinical data
 
-**Plans:** 8 plans
+**Plans:** 0/8 plans executed
 
 Plans:
 - [ ] 04.2-01-PLAN.md — Write RESUME-01..04 into REQUIREMENTS.md; build `draft-store.ts` (round-trip canary, structural schema fingerprint, 24h expiry with active cleanup, type-driven file-token strip) and its unit proofs (D-01, D-05, D-11)
