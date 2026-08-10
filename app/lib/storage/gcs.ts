@@ -13,6 +13,12 @@
  *   (Fly.io BAA) and 3 (AOD GCP cutover) are both still OPEN. No real patient PHI may transit this
  *   path until Phase 8 closes both blockers — every plan through 04-19 builds and tests against
  *   dev/test-data only (`submissions` holds TEST DATA ONLY per 04-CONTEXT.md D-01).
+ * - Runtime credentials come from `GCP_SA_KEY` (a full service-account key document, staged as a
+ *   Fly secret). The Fly VM cannot satisfy Application Default Credentials — see
+ *   `readServiceAccountCredentials` below for why. At the AOD cutover this secret is replaced with
+ *   a key from AOD's own BAA-covered project, or with Workload Identity Federation; either way it
+ *   is a config change, not a code change. The key grants `roles/storage.objectAdmin` on the
+ *   uploads bucket ONLY, never project-wide.
  * - Object keys are namespaced under two prefixes: `pending/` (short-lived staging, deleted by an
  *   OLM rule after `PENDING_OLM_AGE_DAYS`) and `submissions/` (permanent, 6-year HIPAA retention —
  *   NEVER deleted by any code path in this file). `deleteObject` below has no prefix restriction of
@@ -44,10 +50,56 @@ export const SIGNED_URL_TTL_SECONDS = 300;
 let _bucket: Bucket | null = null;
 
 /**
+ * Parses the `GCP_SA_KEY` service-account JSON out of the environment, or returns null when the
+ * variable is absent so the caller falls back to Application Default Credentials.
+ *
+ * WHY THIS EXISTS: the Google client's default auth path (ADC) searches, in order, a key file named
+ * by `GOOGLE_APPLICATION_CREDENTIALS`, local `gcloud` user credentials, and the GCE/Cloud Run
+ * metadata server at 169.254.169.254. A Fly.io VM satisfies none of the three — it is not Google
+ * infrastructure, so there is no metadata server to ask — and every GCS call therefore failed at
+ * runtime even though the same code worked on a developer laptop via `gcloud`. Passing the
+ * credential explicitly is what closes that gap. Recorded in 04-13 and 04-17 as the unsolved
+ * "Fly runtime GCP ADC credential gap".
+ *
+ * SECURITY: the parsed object holds a live private key. It is passed straight to the Storage
+ * constructor and never logged, stringified into an error, or returned to a caller. The parse
+ * failure below deliberately reports only that the value is unparseable — never its contents, and
+ * never its length, which would leak key-size information into logs.
+ */
+function readServiceAccountCredentials(): { client_email: string; private_key: string } | null {
+  const raw = process.env.GCP_SA_KEY;
+  if (!raw) return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(
+      "GCP_SA_KEY is set but is not valid JSON. Expected the full service-account key document. " +
+        "Re-stage it with `gcloud iam service-accounts keys create` piped to `fly secrets import`."
+    );
+  }
+
+  const creds = parsed as { client_email?: unknown; private_key?: unknown };
+  if (typeof creds.client_email !== "string" || typeof creds.private_key !== "string") {
+    throw new Error(
+      "GCP_SA_KEY parsed as JSON but is missing `client_email` or `private_key`. " +
+        "Expected a service-account key document, not an OAuth client or an ADC user credential."
+    );
+  }
+
+  return { client_email: creds.client_email, private_key: creds.private_key };
+}
+
+/**
  * Lazy-init, module-level singleton bucket handle. Never connects at import time — mirrors
  * app/lib/db.ts's getPool() shape (env-driven config, thrown config error naming the missing
  * variable, memoized singleton). Do NOT copy pg.Pool's connection-pooling mechanics; GCS's Node
  * client has no pool concept.
+ *
+ * Two credential paths, deliberately: `GCP_SA_KEY` present (Fly runtime — explicit service-account
+ * credentials) and absent (developer laptop — ADC via `gcloud auth application-default login`).
+ * Keeping the ADC fallback is what lets local work and tests run without minting a key per machine.
  */
 export function getBucket(): Bucket {
   if (_bucket) return _bucket;
@@ -68,9 +120,22 @@ export function getBucket(): Bucket {
     );
   }
 
-  const storage = new Storage({ projectId });
+  const credentials = readServiceAccountCredentials();
+  const storage = credentials
+    ? new Storage({ projectId, credentials })
+    : new Storage({ projectId });
+
+  console.log("[storage:gcs] client initialized", {
+    authMode: credentials ? "service-account-key" : "application-default",
+  });
+
   _bucket = storage.bucket(bucketName);
   return _bucket;
+}
+
+/** Test-only: clears the memoized bucket so a test can exercise both credential branches. */
+export function __resetBucketForTests(): void {
+  _bucket = null;
 }
 
 /**
