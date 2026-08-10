@@ -59,7 +59,7 @@ vi.mock("../app/lib/storage/heic", () => ({
 }));
 
 import { action } from "../app/routes/api.quiz.upload";
-import { MAX_FILE_BYTES, MAX_TOTAL_BYTES } from "../app/lib/storage/upload-validation";
+import { MAX_FILE_BYTES, MAX_TOTAL_BYTES, MAX_FILES } from "../app/lib/storage/upload-validation";
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const URL = "https://fly.dev/api/quiz/upload";
@@ -191,6 +191,22 @@ describe("POST /api/quiz/upload", () => {
     expect(body).toEqual({ error: "Total upload size exceeded" });
     expect(mockSave).not.toHaveBeenCalled();
   }, 20000);
+
+  it("bonus case: an 11th tiny file trips MAX_FILES and maps to 413 Too many files", async () => {
+    const fd = new FormData();
+    // Small, non-"file"-named parts — MaxFilesExceededError counts every isFile part in the
+    // request regardless of field name, so this proves the cap independently of our route's own
+    // fieldName === "file" filter.
+    for (let i = 0; i < MAX_FILES + 1; i++) {
+      fd.append(`extra${i}`, new Blob([toBlobPart(Buffer.from("x"))]), `f${i}.bin`);
+    }
+
+    const res = await callAction(makePostRequest(fd));
+    expect(res.status).toBe(413);
+    const body = await res.json();
+    expect(body).toEqual({ error: "Too many files" });
+    expect(mockSave).not.toHaveBeenCalled();
+  });
 
   it("case 8: a GCS write rejection maps to 500 and leaks nothing about the failure", async () => {
     mockSave.mockRejectedValueOnce(
