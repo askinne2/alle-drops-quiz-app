@@ -301,7 +301,7 @@ Plans:
 
 **Wave 9** *(blocked on Wave 8 completion)*
 
-- [ ] 04-16-PLAN.md — The file_multi upload widget, its CSS family, and the required-gate DOM coverage
+- [x] 04-16-PLAN.md — The file_multi upload widget, its CSS family, and the required-gate DOM coverage
 - [ ] 04-17-PLAN.md — Promotion step, prefix-scoped lifecycle rule, retention doc, and the Fly VM bump
 
 **Wave 10** *(blocked on Wave 9 completion)*
@@ -489,7 +489,7 @@ exposures today.
 | 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
 | 2. Quiz Schema Foundation | 4/4 | Complete    | 2026-08-09 |
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
-| 4. Mandatory Allergy Testing | 15/19 | In Progress|  |
+| 4. Mandatory Allergy Testing | 16/19 | In Progress|  |
 | 5. Preliminary Score Page | 0/TBD | Not started | - |
 | 6. Purchase Prerequisites | 0/TBD | Not started | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |
