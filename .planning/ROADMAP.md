@@ -306,7 +306,7 @@ Plans:
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
-- [ ] 04-18-PLAN.md — Patient ledger file links and the second theme-bundle rebuild
+- [x] 04-18-PLAN.md — Patient ledger file links and the second theme-bundle rebuild
 
 **Wave 11** *(blocked on Wave 10 completion)*
 
