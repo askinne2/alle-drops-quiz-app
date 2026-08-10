@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-10-PLAN.md
-last_updated: "2026-08-10T00:58:44.959Z"
+stopped_at: Completed 04-11-PLAN.md
+last_updated: "2026-08-10T01:06:51.812Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 36
-  completed_plans: 27
+  completed_plans: 28
   percent: 38
 ---
 
@@ -27,14 +27,14 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 04 (mandatory-allergy-testing) — EXECUTING
-Plan: 10 of 19
+Plan: 11 of 19
 Status: Ready to execute
   proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
   from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
   at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
 Last activity: 2026-08-10
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 78%
 
 Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
 27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
@@ -82,6 +82,7 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 04 P08 | 35min | 3 tasks | 4 files |
 | Phase 04-mandatory-allergy-testing P09 | 20min | 2 tasks | 2 files |
 | Phase 04 P10 | 20min | 3 tasks | 2 files |
+| Phase 04 P11 | 10min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,7 @@ Affecting current work:
 - [Phase 04]: 04-10: Blockers 2 (Fly.io BAA) and 3 (AOD GCP cutover) remain OPEN; Andrew authorized building against dev GCS in alledrops-quiz now (env-var-driven GCS_BUCKET_NAME/GCS_PROJECT_ID), mirroring the Cloud SQL dev precedent. No real patient PHI may use this path until Phase 8 closes both blockers.
 - [Phase 04]: 04-10: Upload track ratified: MAX_FILE_BYTES=15MB / MAX_TOTAL_BYTES=50MB / MAX_FILES=10, Fly-proxied architecture (not direct-to-GCS signed PUT), virus scanning deferred to Phase 8 with magic-byte allowlist + size caps as compensating controls. Recorded in 04-UPLOAD-DECISIONS.md, the single source of truth for plans 04-11 through 04-19.
 - [Phase 04]: 04-10: Four upload-track packages installed (@remix-run/form-data-parser@0.17.4, @google-cloud/storage@7.21.0, heic-convert@2.1.0, pdf-lib@1.17.1) after slopcheck scan + live registry audit + Andrew's per-package review; zero postinstall scripts confirmed pre- and post-install. npm audit surfaced one new moderate transitive finding (uuid <11.1.1 via @google-cloud/storage's gaxios/teeny-request chain) — documented, not auto-fixed, since the only remediation is a breaking downgrade to @google-cloud/storage@5.18.3.
+- [Phase 04]: 04-11: submission_files migration authored and committed alone (D-01); zero DDL executed. Data-access layer's insertSubmissionFiles introduces the codebase's first client-level pool.connect()/BEGIN/COMMIT/ROLLBACK transaction. Ownership boundary proven non-vacuous by direct source mutation (predicates removed, test failed RED, file restored).
 
 ### Pending Todos
 
@@ -342,6 +344,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T00:58:44.953Z
-Stopped at: Completed 04-10-PLAN.md
+Last session: 2026-08-10T01:06:51.807Z
+Stopped at: Completed 04-11-PLAN.md
 Resume file: None
