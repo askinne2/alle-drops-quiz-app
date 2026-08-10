@@ -26,10 +26,23 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 
 ## Current Position
 
-Phase: 04.1 (testing-first-quiz-order) — EXECUTING
-Plan: 4 of 6 (waves 1–2 complete; wave 3 = plan 04.1-05, a BLOCKING human browser pass)
-Status: Executing Phase 04.1 — awaiting Andrew's browser pass (04.1-05) before waves 3 and 4
-Last activity: 2026-08-10 -- Wave 2 complete (04.1-04 merged); next gate is human, not autonomous
+Phase: 04.1 (testing-first-quiz-order) — CODE-COMPLETE, HELD (not shipped)
+Plan: 6 of 6 executed, but 04.1-06 is PARTIAL (Task 1 only; Tasks 2–3 deferred)
+Status: Awaiting Phase 04.2 — Andrew chose to merge and deploy 04.1 together with 04.2
+Last activity: 2026-08-10 -- PR #22 opened, all gates green, merge + deploy deliberately held
+
+**The reorder is NOT live.** Fly is still on **v51** and Shopify on
+**alledrops-quiz-production-22**, both carrying the OLD part order with allergy testing last.
+PR #22 (https://github.com/askinne2/alle-drops-quiz-app/pull/22) is open and unmerged by choice,
+overriding D-10. See `.planning/phases/04.1-testing-first-quiz-order/04.1-06-SUMMARY.md`.
+
+**⚠ Highest-risk consequence of holding — read before starting Phase 04.2.**
+`public/quiz-bundle.js` is a committed build artifact. If Phase 04.2 branches off `main` and rebuilds
+the theme bundle, the rebuild comes from a source tree that does NOT contain the `QUIZ_PARTS`
+reorder, and the shipped bundle silently reverts to allergy-testing-last while every 04.2 test still
+passes. **Branch 04.2 from `phase-4.1-testing-first-quiz-order`, or merge it in first.** The guard
+`tests/quiz-bundle-freshness.test.ts` (Phase 4.1 block) will catch this if it runs — it asserts the
+built artifact's part order — but only if 04.2's branch carries that test too.
 
 Progress: [██████████] 100% of Phase 4
 
