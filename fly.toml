@@ -42,12 +42,18 @@ primary_region = 'iad'
   path = "/health"
 
 [[vm]]
-  memory = '1gb'
+  memory = '2gb'
   cpu_kind = 'shared'
   cpus = 1
-  
-# Performance optimization: Consider upgrading for better cold start times
-# Options:
-# - cpu_kind = 'dedicated' (faster cold starts, more expensive)
-# - memory = '2gb' (helps with React SSR, faster app startup)
-# - cpus = 2 (better for concurrent requests)
+
+# Memory raised 1gb -> 2gb (plan 04-17, single attributable change — cpus/cpu_kind deliberately
+# left alone so a later regression is unambiguous). Reason: this process now streams binary PHI,
+# decodes HEIC, re-encodes JPEG, and merges PDFs in-process (plans 04-13/04-15), on top of the
+# existing Shopify session traffic and a `max: 5` Cloud SQL pool (app/lib/db.ts). Worst-case
+# per-request memory is bounded by the ratified caps in 04-UPLOAD-DECISIONS.md:
+# MAX_FILE_BYTES = 15 MB, MAX_TOTAL_BYTES = 50 MB (app/lib/storage/upload-validation.ts).
+# OOM behaviour under realistic load (a handful of concurrent patients, each uploading up to
+# ~4 photos) is actually observed during plan 04-19's human pass — watch `fly logs -a
+# alle-drops-quiz-app` for OOM kills during that pass. If OOM still occurs at 2gb, the
+# pre-decided next lever is `cpus = 2` (NOT the more complex direct-to-GCS architecture — that
+# ordering was decided at plan 04-10, 04-RESEARCH.md Pitfall 4 / Open Question 3).
