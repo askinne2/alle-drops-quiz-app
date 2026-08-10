@@ -483,9 +483,7 @@ export function QuizContainer() {
               scoreBracket={scoreBracket}
               patientState={patientState}
               symptomProfileId={symptomProfileId}
-              onScheduleConsult={handleScheduleConsult}
-              onProceedToPurchase={handleProceedToPurchase}
-              onTestFirst={handleTestFirst}
+              testingStatus={answers.testing_status === "had_testing" ? "had_testing" : "needs_testing"}
             />
           )}
 

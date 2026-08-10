@@ -29,12 +29,13 @@ import { join } from "node:path";
  * again — the type system does not flag an unreachable union member, so nothing but a source-text
  * assertion catches its silent revival in a future edit.
  *
- * `onScheduleConsult`, `onProceedToPurchase`, and `onTestFirst` are DELIBERATELY still asserted
- * PRESENT (not absent) in `ResultsDisplay.tsx` below. Phase 4 (TEST-05) owns stripping the
- * remaining callback props and deleting the 3-6 "Continue to Purchase AlleDrops" jump
- * (`handleProceedToPurchase`) — this plan's job was the 7+ bypass only. An absence-only guard
- * would pass just as well against a file that had been gutted entirely; the positive assertions
- * below are what make this guard non-vacuous.
+ * `onScheduleConsult`, `onProceedToPurchase`, and `onTestFirst` were DELIBERATELY asserted
+ * PRESENT (not absent) in `ResultsDisplay.tsx` below at the time this guard was written. Phase 4
+ * Plan 08 (TEST-05, D-09) has now stripped all three callback props and made `ResultsDisplay`
+ * terminal — those three positive controls are updated to absence assertions below, superseded
+ * by the non-vacuity controls `tests/quiz-testing-bypass-deletion.test.ts` now carries for the
+ * post-Phase-4 shape. An absence-only guard would pass just as well against a file that had been
+ * gutted entirely; that risk is now covered by the sibling guard's positive controls instead.
  *
  * Per this repo's established convention (see `tests/quiz-container-no-question-filter.test.ts`,
  * `tests/quiz-part-renderer-exclusive-clickable.test.ts`), occurrence counting uses
@@ -160,16 +161,19 @@ describe("ResultsDisplay.tsx has no onProceedWithoutTesting prop or button (D-11
     expect(count(RESULTS_DISPLAY_SOURCE, ON_PROCEED_WITHOUT_TESTING_NEEDLE)).toBe(0);
   });
 
-  // Positive controls — Phase 4 (TEST-05) owns removing these; they must survive this plan intact.
-  it("still declares onTestFirst — the 7+ patient's surviving exit", () => {
-    expect(count(RESULTS_DISPLAY_SOURCE, "onTestFirst")).toBeGreaterThan(0);
+  // Updated by Phase 4 Plan 08 (TEST-05, D-09): these three callback props were positive
+  // controls here until this plan stripped them and made ResultsDisplay terminal. Flipped to
+  // absence assertions so this guard tracks the current shape instead of asserting a stale one.
+  // Non-vacuity for the post-Phase-4 shape is covered by tests/quiz-testing-bypass-deletion.test.ts.
+  it("no longer declares onTestFirst — Phase 4 (TEST-05, D-09) made ResultsDisplay terminal", () => {
+    expect(count(RESULTS_DISPLAY_SOURCE, "onTestFirst")).toBe(0);
   });
 
-  it("still declares onScheduleConsult", () => {
-    expect(count(RESULTS_DISPLAY_SOURCE, "onScheduleConsult")).toBeGreaterThan(0);
+  it("no longer declares onScheduleConsult", () => {
+    expect(count(RESULTS_DISPLAY_SOURCE, "onScheduleConsult")).toBe(0);
   });
 
-  it("still declares onProceedToPurchase — the 3-6 jump, deliberately deferred to Phase 4", () => {
-    expect(count(RESULTS_DISPLAY_SOURCE, "onProceedToPurchase")).toBeGreaterThan(0);
+  it("no longer declares onProceedToPurchase — the 3-6 jump, deleted by Phase 4 (TEST-05)", () => {
+    expect(count(RESULTS_DISPLAY_SOURCE, "onProceedToPurchase")).toBe(0);
   });
 });

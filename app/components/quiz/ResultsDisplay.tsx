@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { type ScoreBracket } from "../../lib/quiz/scoring";
+import { getRedirectTarget, REDIRECT_FALLBACK, type QuizRedirectConfig } from "../../lib/quiz/redirects";
+import { getProductHandle, type QuizProductConfig } from "../../lib/quiz/product-links";
+import { toRelativePath } from "../../lib/quiz/navigation";
 import styles from "../../styles/quiz.module.css";
 
 export interface ResultsDisplayProps {
@@ -7,9 +10,52 @@ export interface ResultsDisplayProps {
   scoreBracket: ScoreBracket;
   patientState: "tennessee" | "texas";
   symptomProfileId: string;
-  onScheduleConsult: () => void;
-  onProceedToPurchase: () => void;
-  onTestFirst: () => void;
+  testingStatus: "needs_testing" | "had_testing";
+}
+
+/**
+ * Where the "Schedule Allergy Testing" CTA should send the patient: merchant configuration, else
+ * the module fallback. Thin browser-global wrapper over `getRedirectTarget`, matching the
+ * convention `QuizContainer.tsx` already established for its own copy of this wrapper (see
+ * `redirects.ts`'s doc comment: "the thin browser-global wrapper belongs in the calling
+ * component") — `ResultsDisplay` is now its own caller, not a delegate of `QuizContainer`.
+ */
+function getRedirectUrl(): string {
+  if (typeof window === "undefined") return REDIRECT_FALLBACK.testOptions;
+  const cfg = (window as unknown as { AlleDropsQuizConfig?: QuizRedirectConfig }).AlleDropsQuizConfig;
+  return getRedirectTarget("testOptions", cfg);
+}
+
+/** The product-handle slice of the runtime config, or undefined when unset or server-side. */
+function getProductConfig(): QuizProductConfig {
+  if (typeof window === "undefined") return undefined;
+  return (
+    window as unknown as {
+      AlleDropsQuizConfig?: { tnProductHandle?: string; txProductHandle?: string };
+    }
+  ).AlleDropsQuizConfig;
+}
+
+/**
+ * Send the storefront to a relative path, whether the quiz is framed or standalone. Duplicated
+ * from `QuizContainer.tsx` rather than imported — importing from the component that itself
+ * imports `ResultsDisplay` would create a circular dependency, and this is a thin, pure-by-input
+ * wrapper with no state of its own.
+ */
+function navigateParent(path: string): void {
+  if (typeof window === "undefined") return;
+  const safe = toRelativePath(path);
+  if (safe === null) {
+    // Diagnosability, not correctness — see QuizContainer.tsx's identical comment. Navigation
+    // targets carry no PHI and none may be added to this log line.
+    console.warn("[quiz] refused navigation: target is not a same-origin relative path:", path);
+    return;
+  }
+  if (window.self !== window.top) {
+    window.parent.postMessage({ type: "quiz:navigate", path: safe }, "*");
+  } else {
+    window.location.assign(safe);
+  }
 }
 
 export function ResultsDisplay({
@@ -17,9 +63,7 @@ export function ResultsDisplay({
   scoreBracket,
   patientState,
   symptomProfileId,
-  onScheduleConsult,
-  onProceedToPurchase,
-  onTestFirst,
+  testingStatus,
 }: ResultsDisplayProps) {
   const [copied, setCopied] = useState(false);
 
@@ -34,6 +78,7 @@ export function ResultsDisplay({
     <div className={styles.quizResults} data-patient-state={patientState}>
       <div className={styles.quizResults__header}>
         <h2 className={styles.quizResults__title}>Your Assessment Results</h2>
+        <p className={styles.quizResults__subtitle}>Your responses have been submitted.</p>
       </div>
 
       <div className={styles.quizResults__mainGrid}>
@@ -65,15 +110,6 @@ export function ResultsDisplay({
                   this questionnaire again or scheduling an appointment with an allergist.
                 </p>
               </div>
-              <div className={styles.quizResults__actions}>
-                <button
-                  type="button"
-                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                  onClick={onScheduleConsult}
-                >
-                  Schedule a Consultation
-                </button>
-              </div>
             </div>
           )}
 
@@ -87,22 +123,6 @@ export function ResultsDisplay({
                   identify your triggers and optimize your treatment plan.
                 </p>
               </div>
-              <div className={styles.quizResults__actions}>
-                <button
-                  type="button"
-                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                  onClick={onScheduleConsult}
-                >
-                  Schedule a Telehealth Appointment
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
-                  onClick={onProceedToPurchase}
-                >
-                  Continue to Purchase AlleDrops
-                </button>
-              </div>
             </div>
           )}
 
@@ -115,21 +135,61 @@ export function ResultsDisplay({
                   symptoms are moderate-to-severe, significantly affecting your quality of life, or not adequately
                   controlled with current treatment. An allergist can perform testing to identify your specific triggers
                   and develop a comprehensive treatment plan, which may include prescription medications or
-                  immunotherapy. We recommend proceeding with allergy testing, to identify specific allergens that may be
-                  causing your symptoms.
+                  immunotherapy.
                 </p>
-              </div>
-              <div className={styles.quizResults__actions}>
-                <button
-                  type="button"
-                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                  onClick={onTestFirst}
-                >
-                  I&apos;d Like Allergy Testing First
-                </button>
               </div>
             </div>
           )}
+
+          {/*
+            One shared action area, conditioned on testingStatus and independent of scoreBracket
+            (04-UI-SPEC.md Component Inventory §5). Every action is a plain <a> or a
+            navigateParent() call — no callback prop is reintroduced; that is what makes this
+            screen terminal (TEST-05).
+
+            needs_testing omits the "Go to AlleDrops Product Page" link. This is a
+            PLANNER-RATIFIED decision, not a CONTEXT.md lock (04-UI-SPEC.md §5 flagged it for
+            ratification): showing a direct path to the purchasable SLIT product to a patient who
+            just told the quiz they have not yet been tested reads as implying a purchase path
+            exists before testing is done — precisely what TEST-06 exists to prevent ("no
+            surface... offers or implies a path to purchase without testing"). Surfaced for
+            override at plan 04-19's UAT checkpoint.
+          */}
+          <div className={styles.quizResults__actions}>
+            {testingStatus === "needs_testing" ? (
+              <>
+                <a
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
+                  href={getRedirectUrl()}
+                >
+                  Schedule Allergy Testing
+                </a>
+                <button
+                  type="button"
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
+                  onClick={() => navigateParent("/")}
+                >
+                  Return Home
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
+                  onClick={() => navigateParent("/")}
+                >
+                  Return Home
+                </button>
+                <a
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
+                  href={`/products/${getProductHandle(patientState, getProductConfig())}`}
+                >
+                  Go to AlleDrops Product Page
+                </a>
+              </>
+            )}
+          </div>
 
           <div className={styles.quizResults__profile}>
             <p className={styles.quizResults__profileText}>Your Symptom Profile ID:</p>
