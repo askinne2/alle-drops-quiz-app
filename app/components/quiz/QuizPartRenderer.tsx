@@ -311,7 +311,38 @@ export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = fa
             );
           }
 
-          case "control_0_3": {
+          // Single-line variant of `text_input` (Part 7 / TEST-03). Same label/subtitle/wiring
+          // shape as `text_input` above — the only difference is a single-line `<input
+          // type="text">` in place of the 4-row `<textarea>`, reusing `.quizContainer__input`,
+          // the same class `PatientInfoStep.tsx` already applies to single-line text inputs.
+          case "text_input_short": {
+            const question = item;
+            const val = typeof answers[question.id] === "string" ? answers[question.id] : "";
+            return (
+              <div key={question.id} className={cardClassName}>
+                <label className={styles.questionCard__label} htmlFor={question.id}>
+                  {question.text}
+                </label>
+                {question.subtitle && <p className={styles.questionCard__subtitle}>{question.subtitle}</p>}
+                <input
+                  type="text"
+                  id={question.id}
+                  className={styles.quizContainer__input}
+                  value={val as string}
+                  disabled={disabled}
+                  onChange={(ev) => onAnswerChange(question.id, ev.target.value)}
+                />
+              </div>
+            );
+          }
+
+          // `radio_single` (Part 7 / TEST-01) shares this block with `control_0_3` via case
+          // fallthrough — same card structure, same radiogroup, same options map, same
+          // onAnswerChange wiring. Keep the two case labels falling through to one block rather
+          // than duplicating the ~28 lines below; if you ever need to diverge them, duplicate and
+          // cross-reference instead of letting them silently drift apart.
+          case "control_0_3":
+          case "radio_single": {
             const question = item;
             const val = typeof answers[question.id] === "string" ? answers[question.id] : "";
             return (
