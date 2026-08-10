@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { PDFDocument } from 'pdf-lib'
 
 vi.mock('../app/lib/submission-files', () => ({
@@ -141,6 +143,61 @@ describe('generateVisitSummaryPdf — Test Results section (Part 7)', () => {
     vi.mocked(submissionFiles.listFilesForSubmission).mockResolvedValue([])
     const buf = await generateVisitSummaryPdf(rowWithTestingAnswers)
     expect(buf.subarray(0, 4).toString()).toBe('%PDF')
+  })
+
+  // D-05: testing answers and symptom answers now share one partitionAnswers() call, closing the
+  // pre-existing Phase 4 duplication (testing keys used to print in both Symptom Responses and
+  // Test Results). This case mixes both key types in one answers_json to prove the PDF still
+  // renders — a structural regression check, since pdf-lib cannot extract text from pdfkit output.
+  it('renders successfully when answers_json mixes symptom and testing keys (D-05 partition)', async () => {
+    vi.mocked(submissionFiles.listFilesForSubmission).mockResolvedValue([])
+    const row = {
+      ...baseRow,
+      answers_json: {
+        symptoms_nasal: 'yes',
+        severity_sneezing: 'often',
+        testing_status: 'had_testing',
+        testing_year: '2024',
+        testing_location: 'Allergy & Asthma Clinic',
+        testing_allergens: ['ragweed', 'dust mite'],
+      },
+    }
+    const buf = await generateVisitSummaryPdf(row)
+    expect(buf.subarray(0, 4).toString()).toBe('%PDF')
+    expect(await pageCountOf(buf)).toBe(GOLDEN_NO_FILES_PAGE_COUNT)
+  })
+})
+
+// D-05 source-text guard — proves the Symptom Responses loop no longer drives off raw
+// Object.entries(answers), that both sections are driven by partitionAnswers(), and that each
+// section header still appears exactly once (non-vacuity control against Symptom Responses so an
+// empty or mis-pathed read cannot make the "no Object.entries(answers)" assertion pass vacuously).
+describe('app/lib/pdf.ts source text — D-05 Symptom Responses / Test Results partition', () => {
+  const PDF_SOURCE = readFileSync(join(process.cwd(), 'app', 'lib', 'pdf.ts'), 'utf-8')
+  const count = (needle: string): number => PDF_SOURCE.split(needle).length - 1
+
+  it('Object.entries(answers) no longer appears — the Symptom Responses loop is no longer unfiltered', () => {
+    expect(count('Object.entries(answers)')).toBe(0)
+  })
+
+  it('partitionAnswers is used to drive both sections', () => {
+    expect(count('partitionAnswers')).toBeGreaterThanOrEqual(1)
+  })
+
+  it('symptomEntries appears at least twice (the guard and the loop)', () => {
+    expect(count('symptomEntries')).toBeGreaterThanOrEqual(2)
+  })
+
+  it('testingEntries appears at least twice (the guard and the loop)', () => {
+    expect(count('testingEntries')).toBeGreaterThanOrEqual(2)
+  })
+
+  it('sectionHeader(\'Test Results\') appears exactly once', () => {
+    expect(count("sectionHeader('Test Results')")).toBe(1)
+  })
+
+  it('non-vacuity control: sectionHeader(\'Symptom Responses\') also appears exactly once in the same read', () => {
+    expect(count("sectionHeader('Symptom Responses')")).toBe(1)
   })
 })
 

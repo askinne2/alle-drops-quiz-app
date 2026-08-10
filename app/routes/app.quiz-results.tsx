@@ -7,7 +7,7 @@ import { boundary } from '@shopify/shopify-app-react-router/server'
 import { listAdminSubmissions } from '../lib/submissions'
 import type { AdminSubmissionsPage, SubmissionFullRow } from '../lib/submissions'
 import type { SubmissionFileRow } from '../lib/submission-files'
-import { capitalize, formatDate, formatAnswerValue, getAnswerLabel } from '../lib/format'
+import { capitalize, formatDate, formatAnswerValue, getAnswerLabel, partitionAnswers } from '../lib/format'
 
 // D-08: testing_status is READ-ONLY, derived from answers_json at read time by
 // listAdminSubmissions. There is no provider-review timestamp column, no PATCH endpoint, and no
@@ -141,6 +141,8 @@ export default function QuizResultsPage() {
   }, [])
 
   const detailRow = detailFetcher.data as SubmissionDetail | undefined
+  // Computed once here rather than twice inline in the JSX below (D-05a).
+  const { symptomEntries, testingEntries } = partitionAnswers(detailRow?.answers_json)
 
   return (
     <s-page heading="Quiz Results">
@@ -297,12 +299,31 @@ export default function QuizResultsPage() {
 
                 <SectionHeader>Symptom Responses</SectionHeader>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                  {Object.entries(detailRow.answers_json ?? {}).map(([key, val]) => (
+                  {symptomEntries.map(([key, val]) => (
                     <div key={key} style={answerRowStyle}>
                       <span style={{ fontSize: '0.875rem', color: '#374151' }}>{getAnswerLabel(key)}</span>
                       <SeverityPill value={formatAnswerValue(val)} />
                     </div>
                   ))}
+                </div>
+
+                {/* D-05/D-05a: sole render site for Part 7 keys (testing_status/testing_year/
+                    testing_location/testing_allergens) in the admin detail modal. Mirrors the
+                    equivalent section in app/lib/pdf.ts — header renders unconditionally, with
+                    an explicit empty-case fallback, so both PHI renderers end up with the same
+                    shape. Reuses the existing SectionHeader/answerRowStyle/SeverityPill. */}
+                <SectionHeader>Test Results</SectionHeader>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  {testingEntries.length === 0 ? (
+                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>No testing information recorded.</div>
+                  ) : (
+                    testingEntries.map(([key, val]) => (
+                      <div key={key} style={answerRowStyle}>
+                        <span style={{ fontSize: '0.875rem', color: '#374151' }}>{getAnswerLabel(key)}</span>
+                        <SeverityPill value={formatAnswerValue(val)} />
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 <div style={{ marginTop: '1.25rem', paddingTop: '0.75rem', borderTop: '1px solid #f0f0f0' }}>
