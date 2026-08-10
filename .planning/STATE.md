@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 04.1 context gathered
-last_updated: "2026-08-10T14:51:04.103Z"
-last_activity: 2026-08-10 -- Phase 04.1 execution started
+status: Awaiting Phase 04.2 — Andrew chose to merge and deploy 04.1 together with 04.2
+stopped_at: Phase 04.2 context gathered
+last_updated: "2026-08-10T16:52:09.518Z"
+last_activity: "2026-08-10 -- PR #22 opened, all gates green, merge + deploy deliberately held"
 progress:
   total_phases: 10
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 42
-  completed_plans: 39
-  percent: 30
+  completed_plans: 41
+  percent: 40
 ---
 
 # Project State
@@ -22,7 +22,7 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 04.1 — testing-first-quiz-order
+**Current focus:** Phase 04.2 — resume-in-progress-intake (context gathered; 04.1 held, ships with 04.2)
 
 ## Current Position
 
@@ -413,9 +413,9 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T15:20:00Z
-Stopped at: Phase 04.1 wave 2 complete — blocked on the plan 04.1-05 human browser pass
-Resume file: .planning/phases/04.1-testing-first-quiz-order/04.1-05-PLAN.md
+Last session: 2026-08-10T16:52:09.512Z
+Stopped at: Phase 04.2 context gathered
+Resume file: .planning/phases/04.2-resume-in-progress-intake/04.2-CONTEXT.md
 
 **Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
 mid-plan. Task 1 (`e246391`, bundle rebuild) was committed inside worktree
