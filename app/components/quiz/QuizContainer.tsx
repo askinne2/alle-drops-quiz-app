@@ -1,5 +1,7 @@
 /**
- * Quiz Container — clinical questionnaire flow (TN/TX gate, parts 1–6, outcomes, consent).
+ * Quiz Container — clinical questionnaire flow (TN/TX gate, patient info, 7 quiz parts, consent,
+ * submit, results). Single path for every score bracket: consent always sits between the last
+ * quiz part and the terminal results screen (D-09).
  */
 
 import { useState, useCallback, useEffect, useRef, type ReactNode } from "react";
@@ -20,25 +22,21 @@ import {
 import { visibleAnswers, itemsForPart } from "../../lib/quiz/schema";
 import { type QuizAnswers } from "../../lib/quiz/types";
 import { CONSENT_VERSION } from "../../lib/consent-version";
-import { getProductHandle, type QuizProductConfig } from "../../lib/quiz/product-links";
-import {
-  getRedirectTarget,
-  REDIRECT_FALLBACK,
-  type QuizRedirectConfig,
-  type RedirectKind,
-} from "../../lib/quiz/redirects";
-import { toRelativePath } from "../../lib/quiz/navigation";
 import styles from "../../styles/quiz.module.css";
 
+// D-09: one path for every bracket — quiz_parts (Part 7 last) -> consent -> submitting -> results
+// (terminal). The pre-consent "outcome" screen and the separate post-submit "completed" thank-you
+// screen are gone; "results" is the sole terminal step and is only reached after a successful
+// submit, replacing both. Score and bracket are still computed on leaving the last quiz part
+// (unchanged timing) but are held in state and not displayed until "results" renders.
 type FlowStep =
   | "state_gate"
   | "patient_info"
   | "quiz_parts"
-  | "outcome"
   | "consent"
   | "ineligible"
   | "submitting"
-  | "completed"
+  | "results"
   | "error";
 
 const isTestModeEnabled = () => {
@@ -46,60 +44,6 @@ const isTestModeEnabled = () => {
   const params = new URLSearchParams(window.location.search);
   return params.get("test") === "1" || (window as unknown as { AlleDropsQuizConfig?: { testMode?: boolean } }).AlleDropsQuizConfig?.testMode === true;
 };
-
-/**
- * Where a quiz exit should send the patient: merchant configuration, else the module fallback.
- *
- * This is the thin browser-global wrapper over `getRedirectTarget`; the resolution rules and the
- * fallback values live in `app/lib/quiz/redirects.ts` so they are testable without a DOM. Callers
- * do not need an `||` fallback of their own — one is always returned.
- */
-function getRedirectUrl(kind: RedirectKind): string {
-  if (typeof window === "undefined") return REDIRECT_FALLBACK[kind];
-  const cfg = (window as unknown as { AlleDropsQuizConfig?: QuizRedirectConfig })
-    .AlleDropsQuizConfig;
-  return getRedirectTarget(kind, cfg);
-}
-
-/** The product-handle slice of the runtime config, or undefined when unset or server-side. */
-function getProductConfig(): QuizProductConfig {
-  if (typeof window === "undefined") return undefined;
-  return (
-    window as unknown as {
-      AlleDropsQuizConfig?: { tnProductHandle?: string; txProductHandle?: string };
-    }
-  ).AlleDropsQuizConfig;
-}
-
-/**
- * Send the storefront to a relative path, whether the quiz is framed or standalone.
- *
- * The quiz normally runs in a cross-origin iframe, so it cannot navigate the storefront
- * itself — it posts the target and the parent page performs the navigation. When it is not
- * framed (the bundle-injection path, still supported though not installed) it navigates
- * directly, preserving prior behavior.
- *
- * The target is validated here even though the parent validates it again: a merchant-supplied
- * redirect setting is the one target that never reaches the parent's own guard, because it is
- * refused on this side first.
- */
-function navigateParent(path: string): void {
-  if (typeof window === "undefined") return;
-  const safe = toRelativePath(path);
-  if (safe === null) {
-    // Diagnosability, not correctness — both live redirect settings are verified relative.
-    // A merchant pasting an absolute third-party URL into one of them is refused here, before
-    // any message is posted, so without this the rejection would be silent in both windows.
-    // Log the rejected target only. Navigation targets carry no PHI and none may be added.
-    console.warn("[quiz] refused navigation: target is not a same-origin relative path:", path);
-    return;
-  }
-  if (window.self !== window.top) {
-    window.parent.postMessage({ type: "quiz:navigate", path: safe }, "*");
-  } else {
-    window.location.assign(safe);
-  }
-}
 
 async function postQuiz(payload: Record<string, unknown>): Promise<{ success: boolean; error?: string }> {
   const cfg = typeof window !== "undefined"
@@ -139,9 +83,7 @@ export function QuizContainer() {
   const [startTime] = useState(() => Date.now());
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [showTestMode, setShowTestMode] = useState(false);
-  const [savedToServer, setSavedToServer] = useState(false);
 
-  const autoSubmit0to2Attempted = useRef(false);
   const isFirstRender = useRef(true);
 
   useEffect(() => {
@@ -201,30 +143,17 @@ export function QuizContainer() {
     [buildPayload]
   );
 
-  // Auto-save assessments for 0-2 bracket once results are shown
-  useEffect(() => {
-    if (step !== "outcome" || scoreBracket !== "0-2" || autoSubmit0to2Attempted.current) return;
-    if (!symptomProfileId || !patientState) return;
-    autoSubmit0to2Attempted.current = true;
-    void (async () => {
-      try {
-        await submitPayload();
-        setSavedToServer(true);
-      } catch (e) {
-        console.error(e);
-        autoSubmit0to2Attempted.current = false;
-        setSubmissionError(e instanceof Error ? e.message : "Could not save assessment");
-      }
-    })();
-  }, [step, scoreBracket, symptomProfileId, patientState, submitPayload]);
-
-  const goToOutcome = useCallback(() => {
+  // D-09: the last quiz part computes score/bracket at the same point the pre-consent "outcome"
+  // screen used to (immediately on leaving Part 7), but now routes to consent instead of
+  // displaying anything — every bracket takes the same path and none can submit without first
+  // rendering ConsentStep.
+  const goToConsent = useCallback(() => {
     const visible = visibleAnswers(ALL_ITEMS, answers);
     const s = calculateTotalScore(ALL_SCORED_QUESTIONS, visible);
     const b = getScoreBracket(s);
     setScore(s);
     setScoreBracket(b);
-    setStep("outcome");
+    setStep("consent");
   }, [answers]);
 
   const onEligible = (state: "tennessee" | "texas") => {
@@ -238,47 +167,13 @@ export function QuizContainer() {
     setPatientInfo((p) => ({ ...p, [field]: value }));
   };
 
-  const handleScheduleConsult = useCallback(async () => {
-    if (!patientState || !symptomProfileId || score === null || !scoreBracket) return;
-    if (!(scoreBracket === "0-2" && savedToServer)) {
-      try {
-        await submitPayload();
-        setSavedToServer(true);
-      } catch (e) {
-        console.error(e);
-        alert(e instanceof Error ? e.message : "Could not save assessment. Please try again.");
-        return;
-      }
-    }
-    navigateParent(getRedirectUrl("consult"));
-  }, [submitPayload, patientState, symptomProfileId, score, scoreBracket, savedToServer]);
-
-  const handleTestFirst = useCallback(async () => {
-    if (!patientState || !symptomProfileId || score === null || !scoreBracket) return;
-    try {
-      await submitPayload();
-      setSavedToServer(true);
-    } catch (e) {
-      console.error(e);
-      alert(e instanceof Error ? e.message : "Could not save assessment. Please try again.");
-      return;
-    }
-    navigateParent(getRedirectUrl("testOptions"));
-  }, [submitPayload, patientState, symptomProfileId, score, scoreBracket]);
-
-  const handleProceedToPurchase = useCallback(() => {
-    setConsentChecked(false);
-    setStep("consent");
-  }, []);
-
   const handleConsentSubmit = useCallback(async () => {
     if (!consentChecked) return;
     setStep("submitting");
     setSubmissionError(null);
     try {
       await submitPayload();
-      setSavedToServer(true);
-      setStep("completed");
+      setStep("results");
     } catch (e) {
       setSubmissionError(e instanceof Error ? e.message : "Submit failed");
       setStep("error");
@@ -325,49 +220,10 @@ export function QuizContainer() {
     );
   }
 
-  if (step === "completed") {
-    return (
-      <div className={styles.quizContainer}>
-        <div className={styles.questionCard}>
-          <div className={styles.quizCompleted}>
-            <div className={styles.quizCompleted__icon} aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" fill="rgba(76,175,80,0.12)" stroke="#4CAF50" strokeWidth="2"/>
-                <path d="M7 12.5l3.5 3.5 6.5-7" stroke="#4CAF50" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <h2 className={styles.questionCategory__title}>Thank You</h2>
-            <p className={styles.quizContainer__subtitle}>
-              Your assessment has been submitted successfully.
-            </p>
-            {symptomProfileId && (
-              <div className={styles.quizCompleted__profileId}>
-                <span>Profile ID:</span>
-                <strong>{symptomProfileId}</strong>
-              </div>
-            )}
-            <div className={styles.quizCompleted__actions}>
-              <button
-                type="button"
-                className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                onClick={() => navigateParent("/")}
-              >
-                Return Home
-              </button>
-              {patientState && (
-                <a
-                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
-                  href={`/products/${getProductHandle(patientState, getProductConfig())}`}
-                >
-                  Go to AlleDrops Product Page
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // D-09: the separate "completed" thank-you step is gone. Its two actions (Return Home, Go to
+  // AlleDrops Product Page) folded into ResultsDisplay's shared action area (04-UI-SPEC.md
+  // Component Inventory §5); ResultsDisplay is now the sole terminal screen, rendered on the
+  // "results" step below only after a successful submit.
 
   if (step === "submitting") {
     return (
@@ -463,9 +319,9 @@ export function QuizContainer() {
                     type="button"
                     className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
                     disabled={!isPartComplete(currentPartItems, answers)}
-                    onClick={() => isPartComplete(currentPartItems, answers) && goToOutcome()}
+                    onClick={() => isPartComplete(currentPartItems, answers) && goToConsent()}
                   >
-                    See results
+                    Continue
                   </button>
                 )}
               </>
@@ -473,7 +329,7 @@ export function QuizContainer() {
           </>
         )}
 
-        {step === "outcome" &&
+        {step === "results" &&
           patientState &&
           symptomProfileId &&
           score !== null &&
@@ -495,7 +351,12 @@ export function QuizContainer() {
                 <button
                   type="button"
                   className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
-                  onClick={() => setStep("outcome")}
+                  onClick={() => {
+                    // D-09: consent's Previous no longer targets the deleted "outcome" step — it
+                    // re-enters quiz_parts at the last part, the only step that now precedes consent.
+                    setCurrentPartIndex(quizPartsTotal - 1);
+                    setStep("quiz_parts");
+                  }}
                 >
                   ← Previous
                 </button>
@@ -518,7 +379,7 @@ export function QuizContainer() {
           <button
             type="button"
             onClick={() => {
-              if (!confirm("Test Mode: fill sample data and jump to outcome?")) return;
+              if (!confirm("Test Mode: fill sample data and jump to results?")) return;
               setPatientState("tennessee");
               setPatientInfo({
                 name: "Test User",
@@ -529,8 +390,11 @@ export function QuizContainer() {
               setSymptomProfileId(generateSymptomProfileId());
               // symptoms_sinus: [] carries no answer under D-06 (empty selection no longer counts
               // as answered), but Test Mode bypasses isPartComplete entirely and jumps straight to
-              // outcome, so this is not a behavior change — noted so a future reader comparing this
-              // sample against the required rules is not surprised.
+              // results — skipping consent and the actual submit — so this is not a behavior
+              // change from D-09's perspective; it is a pre-existing dev/QA shortcut (gated behind
+              // ?test=1) that never went through consent even before this plan, and it still
+              // performs no POST — noted so a future reader comparing this sample against the
+              // required rules is not surprised.
               const sample: QuizAnswers = {
                 symptoms_nasal: ["sneezing", "runny_nose"],
                 symptoms_eye: ["itchy_eyes"],
@@ -555,11 +419,11 @@ export function QuizContainer() {
               const b = getScoreBracket(s);
               setScore(s);
               setScoreBracket(b);
-              setStep("outcome");
+              setStep("results");
             }}
             className={styles.quizContainer__testButton}
           >
-            Test Mode: jump to outcome
+            Test Mode: jump to results
           </button>
         </div>
       )}

@@ -141,12 +141,16 @@ describe("QuizContainer.tsx has no remaining medical_history FlowStep or D-11 by
     expect(count(QUIZ_CONTAINER_SOURCE, "QUIZ_PARTS")).toBeGreaterThan(0);
   });
 
-  it("still wires handleTestFirst — the 7+ patient's only remaining exit", () => {
-    expect(count(QUIZ_CONTAINER_SOURCE, "handleTestFirst")).toBeGreaterThan(0);
+  // Updated by Phase 4 Plan 08 (TEST-07, D-09): handleTestFirst and the 0-2 auto-submit chain
+  // were positive controls here ("unedited by this plan") until Phase 4 deleted them entirely —
+  // routing every bracket through consent instead of a per-bracket auto-submit or direct exit.
+  // Flipped to absence assertions so this guard tracks the current shape.
+  it("no longer wires handleTestFirst — deleted by Phase 4 (TEST-07, D-09); every bracket now routes through consent", () => {
+    expect(count(QUIZ_CONTAINER_SOURCE, "handleTestFirst")).toBe(0);
   });
 
-  it("still guards the 0-2 auto-submit with autoSubmit0to2Attempted (D-13 — unedited by this plan)", () => {
-    expect(count(QUIZ_CONTAINER_SOURCE, "autoSubmit0to2Attempted")).toBeGreaterThan(0);
+  it("no longer guards a 0-2 auto-submit with autoSubmit0to2Attempted — the whole auto-submit chain is deleted by D-09", () => {
+    expect(count(QUIZ_CONTAINER_SOURCE, "autoSubmit0to2Attempted")).toBe(0);
   });
 
   it("still computes quizPartsTotal for the progress indicator (unedited by this plan)", () => {
