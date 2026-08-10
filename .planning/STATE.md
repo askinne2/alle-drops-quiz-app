@@ -10,7 +10,7 @@ progress:
   total_phases: 10
   completed_phases: 3
   total_plans: 42
-  completed_plans: 35
+  completed_plans: 39
   percent: 30
 ---
 
@@ -27,9 +27,9 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 04.1 (testing-first-quiz-order) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 04.1
-Last activity: 2026-08-10 -- Phase 04.1 execution started
+Plan: 4 of 6 (waves 1–2 complete; wave 3 = plan 04.1-05, a BLOCKING human browser pass)
+Status: Executing Phase 04.1 — awaiting Andrew's browser pass (04.1-05) before waves 3 and 4
+Last activity: 2026-08-10 -- Wave 2 complete (04.1-04 merged); next gate is human, not autonomous
 
 Progress: [██████████] 100% of Phase 4
 
@@ -400,6 +400,17 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T14:05:01.540Z
-Stopped at: Phase 04.1 context gathered
-Resume file: .planning/phases/04.1-testing-first-quiz-order/04.1-CONTEXT.md
+Last session: 2026-08-10T15:20:00Z
+Stopped at: Phase 04.1 wave 2 complete — blocked on the plan 04.1-05 human browser pass
+Resume file: .planning/phases/04.1-testing-first-quiz-order/04.1-05-PLAN.md
+
+**Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
+mid-plan. Task 1 (`e246391`, bundle rebuild) was committed inside worktree
+`agent-aef816fddf7804720` but never merged, and Task 2's guard test was written, green, and
+**uncommitted** — with its mandatory RED proof never run. The safe-resume gate caught this
+(production commits present, SUMMARY.md absent) before a second executor was dispatched, which
+would have duplicated the rebuild. Recovery was to resume an executor in the *same* worktree
+rather than re-execute: it ran the missing RED proof, committed Task 2, and wrote the SUMMARY.
+Lesson worth keeping: a green test is not a trusted test until it has been observed failing —
+the interrupted session left behind exactly the "passes, therefore correct" artifact this
+project has been burned by six times.
