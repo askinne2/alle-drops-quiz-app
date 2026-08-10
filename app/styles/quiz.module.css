@@ -1889,3 +1889,328 @@
     gap: var(--quiz-spacing-md);
   }
 }
+
+/* ==========================================================================
+   File Upload Widget (Phase 4 / TEST-04 / 04-16) — the multi-file upload
+   widget for testing_files. Every value below composes from existing
+   custom properties and existing class treatments (.questionCard,
+   .infoBlockCard's neutral fill, .questionCard__subtitle's Caption
+   typography, .questionCard__optionVertical's row treatment, and the
+   .quizContainer__input:focus / :has(input:focus-visible) ring technique
+   already proven at :1822). Zero new colors, zero new spacing values, zero
+   new type sizes — see 04-UI-SPEC.md Component Inventory §2.
+   ========================================================================== */
+
+/* Outer wrapper — same base treatment as .questionCard (it IS a question
+   card containing the label, requirements caption, dropzone, and list). */
+.fileUpload {
+  padding: var(--quiz-spacing-md);
+  background-color: rgb(var(--color-background, 255, 255, 255));
+  border: none;
+  border-radius: var(--quiz-border-radius);
+  transition: box-shadow var(--quiz-transition);
+}
+
+@media (min-width: 750px) {
+  .fileUpload {
+    padding: var(--quiz-spacing-lg);
+  }
+}
+
+/* Format/size caption, reusing .questionCard__subtitle's exact Caption
+   typography, positioned ABOVE the dropzone (requirements stated before
+   the picker, per the Interaction Contract). */
+.fileUpload__requirements {
+  font-size: var(--font-body-size, 1.2rem);
+  color: rgba(var(--color-foreground, 32, 34, 35), 0.6);
+  margin: 0 0 var(--quiz-spacing-sm);
+}
+
+@media (min-width: 750px) {
+  .fileUpload__requirements {
+    font-size: var(--font-body-size, 1.4rem);
+    margin-bottom: var(--quiz-spacing-md);
+  }
+}
+
+/* The "Add files" tap target. Dashed border (not solid) is the one
+   deliberate visual departure from .questionCard__option's solid border,
+   signaling "drop/tap zone" rather than "selectable option". Deliberately
+   taller than the 44px floor — the single highest-stakes tap target in the
+   app. The native <input type="file"> lives inside this <label>. */
+.fileUpload__dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--quiz-spacing-xs);
+  min-height: 96px;
+  padding: var(--quiz-spacing-md);
+  border: 2px dashed rgba(var(--color-foreground, 32, 34, 35), 0.15);
+  border-radius: var(--quiz-border-radius);
+  background-color: rgba(var(--color-foreground, 32, 34, 35), 0.02);
+  cursor: pointer;
+  transition: border-color var(--quiz-transition), box-shadow var(--quiz-transition);
+}
+
+@media (min-width: 750px) {
+  .fileUpload__dropzone {
+    min-height: 112px;
+    padding: var(--quiz-spacing-lg);
+  }
+}
+
+.fileUpload__dropzone:hover,
+.fileUpload__dropzone:focus-within {
+  border-style: solid;
+  border-color: rgb(var(--color-button, 0, 123, 255));
+  box-shadow: 0 0 0 3px rgba(var(--color-button, 0, 123, 255), 0.1);
+}
+
+/* Mirrors the existing :has(input[type="radio"]:focus-visible) technique at
+   :1822 so the ring appears correctly whether the patient tabs to the
+   hidden native input or clicks/taps directly. */
+.fileUpload__dropzone:has(input[type="file"]:focus-visible) {
+  border-style: solid;
+  border-color: rgb(var(--color-button, 0, 123, 255));
+  box-shadow: 0 0 0 3px rgba(var(--color-button, 0, 123, 255), 0.1);
+}
+
+.fileUpload__dropzone__icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: rgb(var(--color-button, 0, 123, 255));
+}
+
+@media (min-width: 750px) {
+  .fileUpload__dropzone__icon {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.fileUpload__dropzone__label {
+  font-size: var(--font-body-size, 1.4rem);
+  font-weight: 600;
+  color: rgb(var(--color-foreground, 32, 34, 35));
+}
+
+@media (min-width: 750px) {
+  .fileUpload__dropzone__label {
+    font-size: var(--font-body-size, 1.6rem);
+  }
+}
+
+/* The native <input type="file"> — visually hidden with the clip technique.
+   NEVER display: none, which would remove it from the tab order and break
+   keyboard reachability. */
+.fileUpload__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Reusable visually-hidden utility for the per-file status text equivalent
+   (the icon is aria-hidden; this sibling carries "Uploading"/"Uploaded"/
+   "Upload failed" for a screen-reader user). Same clip technique as above,
+   its own class since it is used inside .fileUpload__item rows, not only
+   on the file input. */
+.fileUpload__visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Wraps the added-file rows. role="list" is restated in the JSX because
+   list-style: none strips the implicit list role in some browsers. */
+.fileUpload__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--quiz-spacing-xs);
+  list-style: none;
+  margin: var(--quiz-spacing-sm) 0 0;
+  padding: 0;
+}
+
+@media (min-width: 750px) {
+  .fileUpload__list {
+    gap: var(--quiz-spacing-sm);
+    margin-top: var(--quiz-spacing-md);
+  }
+}
+
+/* One row per file. Composes with .questionCard__optionVertical in the JSX
+   for border/radius/padding/min-height:44px — NOT re-declared here. This
+   class only adds the row's internal flex layout (space-between, gap) that
+   .questionCard__optionVertical's own two-child (input+span) shape never
+   needed. */
+.fileUpload__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--quiz-spacing-sm);
+  cursor: default;
+}
+
+.fileUpload__item__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--quiz-spacing-sm);
+  min-width: 0;
+  flex: 1;
+}
+
+/* Small neutral badge — Secondary role (30% band), not accent, since this
+   is metadata, not a selection state. */
+.fileUpload__chip {
+  flex-shrink: 0;
+  background-color: rgba(var(--color-foreground, 32, 34, 35), 0.08);
+  color: rgba(var(--color-foreground, 32, 34, 35), 0.6);
+  font-size: var(--font-body-size, 1.2rem);
+  padding: var(--quiz-spacing-xs);
+  border-radius: var(--quiz-border-radius);
+}
+
+@media (min-width: 750px) {
+  .fileUpload__chip {
+    font-size: var(--font-body-size, 1.4rem);
+  }
+}
+
+/* Label role — ellipsis + max-width so a long camera-roll filename cannot
+   push the remove button off a 373px viewport. */
+.fileUpload__filename {
+  font-size: var(--font-body-size, 1.4rem);
+  font-weight: 600;
+  color: rgb(var(--color-foreground, 32, 34, 35));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 160px;
+}
+
+@media (min-width: 750px) {
+  .fileUpload__filename {
+    font-size: var(--font-body-size, 1.6rem);
+    max-width: 320px;
+  }
+}
+
+.fileUpload__status {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 750px) {
+  .fileUpload__status {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.fileUpload__statusUploading {
+  color: rgba(var(--color-foreground, 32, 34, 35), 0.5);
+}
+
+.fileUpload__statusUploaded {
+  color: var(--quiz-color-success);
+}
+
+.fileUpload__statusFailed {
+  color: var(--quiz-color-error);
+}
+
+/* Remove button — at least 44x44px tap target. */
+.fileUpload__remove {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: rgba(var(--color-foreground, 32, 34, 35), 0.5);
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--quiz-border-radius);
+}
+
+.fileUpload__remove:hover {
+  color: var(--quiz-color-error);
+  background-color: rgba(var(--color-foreground, 32, 34, 35), 0.05);
+}
+
+.fileUpload__remove:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Retry action on a failed row. */
+.fileUpload__retry {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: var(--quiz-spacing-xs) var(--quiz-spacing-sm);
+  border: 2px solid rgb(var(--color-button, 0, 123, 255));
+  border-radius: var(--quiz-border-radius);
+  background-color: rgb(var(--color-background, 255, 255, 255));
+  color: rgb(var(--color-button, 0, 123, 255));
+  font-size: var(--font-body-size, 1.2rem);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (min-width: 750px) {
+  .fileUpload__retry {
+    font-size: var(--font-body-size, 1.4rem);
+  }
+}
+
+/* Empty-state caption — "No files added yet." */
+.fileUpload__empty {
+  font-size: var(--font-body-size, 1.2rem);
+  color: rgba(var(--color-foreground, 32, 34, 35), 0.6);
+  margin: var(--quiz-spacing-sm) 0 0;
+}
+
+@media (min-width: 750px) {
+  .fileUpload__empty {
+    font-size: var(--font-body-size, 1.4rem);
+    margin-top: var(--quiz-spacing-md);
+  }
+}
+
+/* The inline error line (Copywriting Contract's deliberate deviation).
+   Caption size, error color, preceded by a "⚠" glyph in the JSX (never a
+   color-only signal), role="alert" so it is announced distinctly from the
+   aria-live="polite" file-list region. */
+.fileUpload__error {
+  font-size: var(--font-body-size, 1.2rem);
+  color: var(--quiz-color-error);
+  margin: var(--quiz-spacing-xs) 0 0;
+}
+
+@media (min-width: 750px) {
+  .fileUpload__error {
+    font-size: var(--font-body-size, 1.4rem);
+  }
+}
+
+/* Per-file error line, inside a row rather than at the widget level. */
+.fileUpload__item__error {
+  font-size: var(--font-body-size, 1.2rem);
+  color: var(--quiz-color-error);
+  flex-basis: 100%;
+  margin-top: var(--quiz-spacing-xs);
+}
