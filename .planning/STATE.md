@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-05-PLAN.md
-last_updated: "2026-08-10T00:06:52.799Z"
+stopped_at: Completed 04-07-PLAN.md
+last_updated: "2026-08-10T00:13:21.578Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 36
-  completed_plans: 23
+  completed_plans: 24
   percent: 38
 ---
 
@@ -27,14 +27,14 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 04 (mandatory-allergy-testing) — EXECUTING
-Plan: 6 of 19
+Plan: 7 of 19
 Status: Ready to execute
   proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
   from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
   at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
 Last activity: 2026-08-10
 
-Progress: [██████░░░░] 64%
+Progress: [███████░░░] 67%
 
 Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
 27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
@@ -78,6 +78,7 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 04 P03 | 6min | 2 tasks | 3 files |
 | Phase 04-mandatory-allergy-testing P05 | 11min | 2 tasks | 4 files |
 | Phase 04-mandatory-allergy-testing P06 | 20min | 3 tasks | 4 files |
+| Phase 04 P07 | 10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,8 @@ Affecting current work:
 - [Phase 04]: 04-05: Non-vacuity control corrected from plan's literal data-alledrops-quiz needle (0 occurrences, does not exist in current markup) to id="alledrops-quiz plus the appointly control, both nonzero on all fetches
 - [Phase 04]: 04-06: PART7_ALLERGY_TESTING added to QUIZ_PARTS as 7th part (radio_single testing_status gate + 3 required showIf-gated text fields), zero score contribution; getQuestionById widened to resolve Part 7 IDs
 - [Phase 04]: 04-06: Part 7 banner comment in questions.ts describes the deferred file_multi upload question without the literal substring testing_files, since the plan's own acceptance check requires zero occurrences of that string in questions.ts until plan 04-16 adds it
+- [Phase 04]: 04-07: radio_single shares its block with control_0_3 via case-label fallthrough (not duplication); text_input_short is a duplicated block from text_input since the two differ in control element
+- [Phase 04]: 04-07: Part 7 DOM coverage added (TEST-01/02/03) through the real QUIZ_PARTS -> itemsForPart -> QuizPartRenderer seam and the real isPartComplete export; suite now 392/27
 
 ### Pending Todos
 
@@ -328,6 +331,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T00:06:52.794Z
-Stopped at: Completed 04-05-PLAN.md
+Last session: 2026-08-10T00:13:21.573Z
+Stopped at: Completed 04-07-PLAN.md
 Resume file: None

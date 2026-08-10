@@ -86,11 +86,11 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 
 ### Mandatory Allergy Testing
 
-- [ ] **TEST-01**: Every patient reaches an allergy-testing step before the score page, offering
+- [x] **TEST-01**: Every patient reaches an allergy-testing step before the score page, offering
   exactly two options and no skip (`REQ-mandatory-allergy-testing-split`)
-- [ ] **TEST-02**: "I need allergy testing" takes the patient to the storefront testing-options page
+- [x] **TEST-02**: "I need allergy testing" takes the patient to the storefront testing-options page
   (`REQ-mandatory-allergy-testing-split`)
-- [ ] **TEST-03**: "I've already had allergy testing" collects Year, Location, and "What Allergens
+- [x] **TEST-03**: "I've already had allergy testing" collects Year, Location, and "What Allergens
   Did You React To?", persisted into `answers_json` (`REQ-mandatory-allergy-testing-split`)
 - [ ] **TEST-04**: The `had_testing` branch requires the patient to upload at least one copy of
   their allergy test results before they can continue — no optional-with-email-fallback (D-02). The
@@ -257,9 +257,9 @@ Acknowledged, not in the v1.0 roadmap.
 | HIST-04 | Phase 3 | Complete |
 | HIST-05 | Phase 3 | Complete |
 | DIAG-01 | Phase 3 | Blocked (William — R6 scope) |
-| TEST-01 | Phase 4 | Pending |
-| TEST-02 | Phase 4 | Pending |
-| TEST-03 | Phase 4 | Pending |
+| TEST-01 | Phase 4 | Complete |
+| TEST-02 | Phase 4 | Complete |
+| TEST-03 | Phase 4 | Complete |
 | TEST-04 | Phase 4 | Pending |
 | TEST-05 | Phase 4 | Pending |
 | TEST-06 | Phase 8 (reassigned 2026-08-09 from Phase 4 — content is Shopify Admin-managed, not in either repo; see requirement note) | Pending |

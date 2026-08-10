@@ -274,7 +274,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 04-07-PLAN.md — radio_single and text_input_short render branches plus Part 7 DOM coverage
+- [x] 04-07-PLAN.md — radio_single and text_input_short render branches plus Part 7 DOM coverage
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -489,7 +489,7 @@ exposures today.
 | 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
 | 2. Quiz Schema Foundation | 4/4 | Complete    | 2026-08-09 |
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
-| 4. Mandatory Allergy Testing | 6/19 | In Progress|  |
+| 4. Mandatory Allergy Testing | 7/19 | In Progress|  |
 | 5. Preliminary Score Page | 0/TBD | Not started | - |
 | 6. Purchase Prerequisites | 0/TBD | Not started | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |
