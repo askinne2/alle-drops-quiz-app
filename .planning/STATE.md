@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: "Phase 4: 18/19 plans executed, PR #20 open. 04-19 (DDL + deploy + UAT) DEFERRED — GCP ADC credentials cannot work on Fly; Andrew deferred credential wiring to the AOD GCP cutover. Migration 004 authored, unrun."
-last_updated: "2026-08-10T09:48:13.126Z"
+last_updated: "2026-08-10T10:08:43.553Z"
 last_activity: 2026-08-10
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 3
   total_plans: 36
   completed_plans: 35
-  percent: 38
+  percent: 33
 ---
 
 # Project State
@@ -92,6 +92,10 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 04-mandatory-allergy-testing P18 | 20min | 2 tasks | 7 files |
 
 ## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase 04.1 inserted after Phase 4: Testing-First Quiz Order — move the allergy-testing split and required upload to the front of the quiz so abandonment costs 30 seconds, not 10 minutes (URGENT)
 
 ### Decisions
 

@@ -24,6 +24,7 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - [x] **Phase 2: Quiz Schema Foundation** - `required`, `showIf`, and static-info question types (completed 2026-08-09)
 - [x] **Phase 3: Mandatory Medical History** - Rebuilt history section every patient passes through (completed 2026-08-09)
 - [ ] **Phase 4: Mandatory Allergy Testing** - Two-option testing split; both bypasses deleted
+- [ ] **Phase 4.1: Testing-First Quiz Order** *(INSERTED)* - Move the testing split + required upload to the front so abandonment costs seconds, not ten minutes
 - [ ] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale
 - [ ] **Phase 6: Purchase Prerequisites** - Honor-system checkboxes and returning-patient state
 - [ ] **Phase 7: Telehealth Intake Path** - Booking-capable consult page and telehealth branching
@@ -311,6 +312,62 @@ Plans:
 **Wave 11** *(blocked on Wave 10 completion)*
 
 - [ ] 04-19-PLAN.md — Human browser pass, migration execution, William message, merge and deploy authorization
+
+### Phase 04.1: Testing-First Quiz Order (INSERTED)
+
+**Goal**: A patient who cannot supply allergy test results finds that out in the first thirty
+seconds, not after completing a ten-minute clinical questionnaire
+**Depends on**: Phase 4 (the testing part, upload widget, and storage path must exist before they
+can be moved)
+**Requirements**: TEST-01, TEST-04 (re-verified in the new position — no new requirement IDs)
+**Success Criteria** (what must be TRUE):
+
+  1. The allergy-testing split is the FIRST quiz part a patient sees after the state gate and
+     patient-info step — before any scored symptom question
+
+  2. A patient who selects "I've already had allergy testing" and cannot produce a file discovers
+     the hard requirement having invested seconds, not the full questionnaire
+
+  3. The score is byte-identical to Phase 4's for the same answers — reordering the parts array
+     changes presentation only. `ALL_SCORED_QUESTIONS` still excludes the testing part
+
+  4. Consent still sits between the final part and the results screen, on one path for every
+     bracket — the D-09 invariant survives the reorder
+
+  5. `public/quiz-bundle.js` is rebuilt in the same commit, with markers measured 0-before/≥1-after
+
+**Plans:** TBD
+**UI hint**: yes
+
+**Notes**: ~half a day. This is deliberately cheap because Phase 2 made part order *data*:
+`QUIZ_PARTS` is an array and the renderer carries zero question-ID literals. The upload widget,
+`/api/quiz/upload`, GCS staging, promotion, and all three retrieval surfaces are position-independent
+and are not touched.
+
+**Why this phase exists.** Phase 4 put a REQUIRED file upload at the end of the flow. Nothing
+persists until the terminal POST, so a patient who cannot produce their results loses a completed
+ten-minute clinical intake. That is the same defect shape as session 33's HIST-02 finding — a
+required field with a plausible "I'm stuck" case — one step further along and with a far worse cost.
+Moving it to the front does not remove the wall; it moves the wall to where hitting it is cheap.
+
+**Two things the reorder actually changes, both real:**
+
+1. **Orphaned staged uploads increase materially.** Today a patient must reach the last part to leave
+   a file in `pending/`. After the reorder, *every* patient who abandons anywhere leaves one. Because
+   nothing persists client-side, an abandoned upload is orphaned the moment the tab closes — the
+   patient can never return to claim it. **Revisit `PENDING_OLM_AGE_DAYS`** (currently `2`, applied to
+   `gs://alledrops-quiz-uploads-dev` and documented in `docs/gcs-lifecycle-and-retention.md`): a
+   shorter window buys strictly less PHI at rest and costs nothing, *unless* Phase 4.2's resume
+   capability lands, in which case a resuming patient must still find their file. **These two phases
+   set that value together — do not tune it in isolation.**
+
+2. **`generateSymptomProfileId()` timing is unaffected** — it is called on leaving `patient_info`,
+   which still precedes the first quiz part. Verified, not assumed.
+
+**Interaction with Phase 4.2 (Resume).** If resume ships, abandonment stops being fatal and this
+phase's headline rationale weakens — but does not disappear. Hitting a hard upload requirement early
+is still better UX than hitting it late, and at half a day this is cheap enough to do regardless.
+Sequence 4.1 first: it is small, self-contained, and does not depend on any resume decision.
 
 ### Phase 5: Preliminary Score Page
 
