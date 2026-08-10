@@ -8,7 +8,19 @@
  * NEVER write any of these fields to Shopify customer metafields, customer
  * record fields, or any Shopify Admin API payload. Shopify holds only
  * non-PHI flags (last_completed_at, quiz_count) — see app/lib/shopify/metafields.ts.
+ *
+ * `answers.testing_files` (plan 04-17) holds opaque upload tokens, not file content — but a
+ * token is client-supplied and gets interpolated into a GCS object-lookup prefix during
+ * promotion (api.quiz.submit.tsx step 3.5). It is validated here, in the same place every other
+ * payload shape is validated, as an array of at most MAX_FILES UUID-shaped strings BEFORE any
+ * storage lookup is ever attempted.
  */
+import { MAX_FILES } from "./storage/upload-validation";
+
+// Accepts any RFC 4122-shaped UUID (the app only ever generates v4 via crypto.randomUUID(), but
+// this validator's job is shape-checking a client-supplied token, not asserting the generator's
+// version bits).
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type QuizState = "tennessee" | "texas";
 export type ScoreBracket = "0-2" | "3-6" | "7+";
@@ -110,6 +122,20 @@ export function validateQuizData(data: unknown): ValidationResult {
 
   if (!quizData.answers || typeof quizData.answers !== "object" || Array.isArray(quizData.answers)) {
     return { valid: false, error: "answers must be an object" };
+  }
+
+  const testingFiles = (quizData.answers as Record<string, unknown>).testing_files;
+  if (testingFiles !== undefined) {
+    const isValidTokenArray =
+      Array.isArray(testingFiles) &&
+      testingFiles.length <= MAX_FILES &&
+      testingFiles.every((t) => typeof t === "string" && UUID_SHAPE.test(t));
+    if (!isValidTokenArray) {
+      return {
+        valid: false,
+        error: `answers.testing_files must be an array of at most ${MAX_FILES} UUID-shaped upload tokens`,
+      };
+    }
   }
 
   return { valid: true };
