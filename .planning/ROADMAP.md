@@ -23,7 +23,7 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - [x] **Phase 1: Live Defect Fixes** - Four defects in already-shipped code; ships alone this week (completed 2026-07-30)
 - [x] **Phase 2: Quiz Schema Foundation** - `required`, `showIf`, and static-info question types (completed 2026-08-09)
 - [x] **Phase 3: Mandatory Medical History** - Rebuilt history section every patient passes through (completed 2026-08-09)
-- [ ] **Phase 4: Mandatory Allergy Testing** - Two-option testing split; both bypasses deleted
+- [x] **Phase 4: Mandatory Allergy Testing** - Two-option testing split; both bypasses deleted (completed 2026-08-10)
 - [ ] **Phase 4.1: Testing-First Quiz Order** *(INSERTED)* - Move the testing split + required upload to the front so abandonment costs seconds, not ten minutes
 - [ ] **Phase 4.2: Resume In-Progress Intake** *(INSERTED)* - Browser-local (localStorage) resume so a closed tab does not lose a completed intake. No draft PHI store, no BAA needed
 - [ ] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale
@@ -212,15 +212,25 @@ special case as part of this phase.
 
 **Goal**: No patient — and no storefront page — can reach purchase without allergy testing
 **Depends on**: Phase 3 (hard: deleting the bypasses first would orphan medical history)
-**Blocked on** (client-side, see `.planning/phases/04-mandatory-allergy-testing/04-CONTEXT.md`):
+**Blocked on** — status as of 2026-08-10, when the phase shipped:
 
-  1. **William agrees to test-result upload, and it is priced** — reverses his own 2026-07-29 LOCKED
-     decision (`DEC-testing-results-by-email-not-upload`, retracted in place by D-01). Blocks all of
-     D-01…D-05. Owner: William / Andrew.
-  2. **Fly.io BAA signed** — patient-uploaded test results are PHI in a file and cannot transit or
-     land on Fly without it. Owner: Andrew.
-  3. **Production cutover to AOD's Google Cloud project** — object storage belongs under AOD's BAA,
-     not Andrew's `alledrops-quiz` dev project. Owner: William / AOD.
+  1. ~~**William agrees to test-result upload, and it is priced**~~ — **CLEARED for building** by
+     Andrew's explicit in-session authorization ("Execute all waves no William blocker"). The
+     *pricing* conversation is still owed and now sits on the William list, not on this phase.
+  2. **Fly.io BAA signed** — STILL OPEN. Owner: Andrew.
+  3. **Production cutover to AOD's Google Cloud project** — STILL OPEN. Owner: William / AOD.
+
+  Blockers 2 and 3 did not stop the phase shipping to the dev environment, and they do not gate
+  Phase 4.1 or 4.2. They gate **real patient PHI**: no live patient may use the upload path until
+  both close. That is a Phase 8 gate, and `submissions` remains test data only until then.
+
+  **A fourth blocker appeared mid-phase and is now closed.** Plans 04-13 and 04-17 found that
+  `app/lib/storage/gcs.ts` relied on Application Default Credentials, which a Fly VM cannot satisfy
+  — there is no key file, no gcloud, and no GCE metadata server, because Fly is not Google
+  infrastructure. Every GCS call would have returned 500 in production while working on a laptop.
+  No plan owned it and it was deferred to the AOD cutover. **Closed 2026-08-10** by passing
+  service-account credentials explicitly from the `GCP_SA_KEY` Fly secret, verified by a live upload
+  from the deployed VM. See `docs/gcs-credentials.md`.
 
 **Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05, TEST-06, TEST-07
 **Success Criteria** (what must be TRUE):
@@ -312,7 +322,12 @@ Plans:
 
 **Wave 11** *(blocked on Wave 10 completion)*
 
-- [ ] 04-19-PLAN.md — Human browser pass, migration execution, William message, merge and deploy authorization
+- [x] 04-19-PLAN.md — Migration execution, merge and deploy. **Partially complete, deliberately.** Done: migration 004
+  executed after verified backup 1786361850289, PR #20 merged (`ea3dd26`), Fly **v51** and Shopify
+  **alledrops-quiz-production-22** deployed and verified on served bytes, and the GCP ADC credential gap CLOSED and
+  proven with a live upload from the Fly VM. **Not done:** the human browser pass (Andrew chose to skip the locally
+  testable checks and move forward) and the William message (6 items, paused at Andrew's request). Neither blocks
+  Phase 4.1 or 4.2.
 
 ### Phase 04.2: Resume In-Progress Intake (INSERTED)
 
@@ -634,7 +649,7 @@ exposures today.
 | 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
 | 2. Quiz Schema Foundation | 4/4 | Complete    | 2026-08-09 |
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
-| 4. Mandatory Allergy Testing | 17/19 | In Progress|  |
+| 4. Mandatory Allergy Testing | 19/19 | Complete   | 2026-08-10 |
 | 5. Preliminary Score Page | 0/TBD | Not started | - |
 | 6. Purchase Prerequisites | 0/TBD | Not started | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |

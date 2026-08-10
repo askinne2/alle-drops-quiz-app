@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: "Phase 4: 18/19 plans executed, PR #20 open. 04-19 (DDL + deploy + UAT) DEFERRED — GCP ADC credentials cannot work on Fly; Andrew deferred credential wiring to the AOD GCP cutover. Migration 004 authored, unrun."
-last_updated: "2026-08-10T10:14:10.760Z"
+status: ready_to_plan
+stopped_at: "Phase 4 COMPLETE and DEPLOYED. 19/19 plans. PR #20 merged (ea3dd26), Fly v51, Shopify alledrops-quiz-production-22. Migration 004 executed against alledrops_quiz_dev after backup 1786361850289. The GCP ADC credential gap is CLOSED — GCP_SA_KEY service-account credentials, proven with a live upload from the Fly VM. Outstanding: the William message (6 items) and the human browser pass, which Andrew deliberately skipped."
+last_updated: "2026-08-10T12:40:00.000Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 10
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 36
-  completed_plans: 35
-  percent: 30
+  completed_plans: 36
+  percent: 40
 ---
 
 # Project State
@@ -22,33 +22,52 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 04 — mandatory-allergy-testing
+**Current focus:** Phase 04.1 — testing-first quiz order (Phase 4 shipped 2026-08-10)
 
 ## Current Position
 
-Phase: 04 (mandatory-allergy-testing) — EXECUTING
-Plan: 18 of 19
-Status: Ready to execute
-  proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
-  from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
-  at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
+Phase: 04 (mandatory-allergy-testing) — COMPLETE and DEPLOYED (2026-08-10)
+Plan: 19 of 19
+Status: Ready to plan Phase 4.1
 Last activity: 2026-08-10
 
-Progress: [██████████] 97%
+Progress: [██████████] 100% of Phase 4
 
-Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
-27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
-**v50**. Phase 1 shipped DEF-01..04 plus three security fixes. Phase 2 made the quiz schema
-declarative (`required`, `showIf`, info blocks). Phase 3 replaced the vestigial Part 6 medical-history
-checklist with a mandatory HIST-01..04/DIAG-01 section ahead of the testing split, removed both
-no-testing bypasses, and closed the asymmetric app-code/DDL migration for the two legacy PHI columns.
+Codebase baseline: `main` @ `ea3dd26` (merge of `phase-4-mandatory-allergy-testing`, PR #20),
+**558 tests / 37 files passing**, typecheck clean, build clean, theme bundle byte-identical to the
+committed artifact. Deployed to Fly (`alle-drops-quiz-app`, iad) release **v51**; Shopify app version
+**alledrops-quiz-production-22**. Phase 1 shipped DEF-01..04 plus three security fixes. Phase 2 made
+the quiz schema declarative (`required`, `showIf`, info blocks). Phase 3 replaced the vestigial Part 6
+medical-history checklist with a mandatory HIST-01..04/DIAG-01 section, removed both no-testing
+bypasses, and closed the asymmetric app-code/DDL migration for the two legacy PHI columns. Phase 4
+added the Part 7 testing split with a required multi-file upload, the app's first binary PHI path
+(GCS staging → promotion → `submission_files` → retrieval on three surfaces), and closed a live
+TEST-07 defect where 0–2 bracket patients auto-submitted with a `consent_version` they never saw.
+
+**Phase 4 deploy verification (2026-08-10), all on served bytes rather than exit codes:**
+
+| | v50 | v51 |
+|---|---|---|
+| served `/quiz-bundle-js` | 186,738 B | **195,102 B**, byte-identical to the committed artifact |
+| `fileUpload__dropzone` | 0 | **9** |
+| `testing_status` | 0 | **7** |
+| `testing_files` | 0 | **1** |
+| `Step ` / `Part ` | 2 / 1 | **1 / 0** (UAT defect #6 fix) |
+
+`/health` 200. A live `POST /api/quiz/upload` against production returned 200 with a staging token
+and the object was confirmed in `gs://alledrops-quiz-uploads-dev/pending/` — the first proof that the
+Fly VM can authenticate to GCS at all. Admin PDF download for submission `faac0486…` returned
+**316,771 bytes** against 3,457 pre-deploy, confirming the uploaded JPEG embeds. Probe objects
+deleted; bucket holds only the one real UAT object.
 
 **Standing risk, now mitigated (not fully closed):** three prior defects (session 32/33, plus this
 phase's own two UAT findings) all shipped past a fully green suite from the same blind spot — no test
 rendered `QuizPartRenderer` or `QuizContainer`. Phase 3 plan 03-04 adopted DOM test infrastructure
 (`jsdom`, `@testing-library/react`, Andrew-approved) and plan 03-05 added a first DOM-rendering test,
 closing part of the gap. The two Phase 3 UAT defects (`bfa0431`, `1da8c3d`) were still caught by a
-human, not CI, so the blind spot is narrowed but not eliminated — worth watching in Phase 4.
+human, not CI, so the blind spot is narrowed but not eliminated. **Phase 4 produced defect #6 in the same
+way** — the split step counter ("Step 2 of 9" then "Part 1 of 7") passed 550 green tests and was caught by
+Andrew clicking. The tally is now six. Keep the human browser pass.
 
 ## Performance Metrics
 
@@ -96,7 +115,7 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 ### Roadmap Evolution
 
 - Phase 04.1 inserted after Phase 4: Testing-First Quiz Order — move the allergy-testing split and required upload to the front of the quiz so abandonment costs 30 seconds, not 10 minutes (URGENT)
-- Phase 04.2 inserted after Phase 4: Resume In-Progress Intake — server draft store + emailed magic link; reverses the recorded out-of-scope decision on resume (URGENT)
+- Phase 04.2 inserted after Phase 4: Resume In-Progress Intake — **browser-local `localStorage` only.** The server draft store + emailed magic link version was scoped and deliberately DROPPED (~1+ week, two new BAA surfaces); this line originally described it and is corrected here. No draft PHI table, no email provider, no BAA implication. Partially reverses the recorded out-of-scope decision on resume — browser-local is in, cross-device stays out (URGENT)
 
 ### Decisions
 
@@ -110,8 +129,9 @@ Affecting current work:
 - Purchase gating is an honor system — no account flags, Functions, or real-time blocking
   (`DEC-purchase-gating-is-honor-system`)
 
-- Test results come by email, not upload — no PHI file infrastructure
-  (`DEC-testing-results-by-email-not-upload`)
+- ~~Test results come by email, not upload — no PHI file infrastructure~~
+  (`DEC-testing-results-by-email-not-upload`) — **RETRACTED 2026-08-09 by 04-CONTEXT.md D-01.** Upload is
+  required. Shipped in Phase 4 and live on Fly v51. Retained struck through so the reversal is visible.
 
 - The "purchase if approved" paragraph must not ship (`DEC-no-approval-promise-copy`)
 - Max score is derived from the question set, never hardcoded (`DEC-derive-max-score-from-question-set`)
@@ -153,7 +173,7 @@ Affecting current work:
 - [Phase 04-mandatory-allergy-testing]: 04-12: No live network capture against @google-cloud/storage was run in this plan (04-RESEARCH.md Assumption A3 still open) — threat T-4-57 explicitly assigns that capture to plan 04-13, the first plan making a real (non-mocked) GCS call. Do not mark TEST-04 complete; that remains plan 04-19's bookkeeping.
 - [Phase 04-mandatory-allergy-testing]: 04-13: Fixed parseFormData's argument order from the plan's own interfaces snippet (real 0.17.4 signature is request, options, uploadHandler) — verified against installed source before writing the route
 - [Phase 04-mandatory-allergy-testing]: 04-13: Created gs://alledrops-quiz-uploads-dev (alledrops-quiz project) and ran a real network capture for T-4-64 — only storage.googleapis.com and www.googleapis.com contacted, confirming no third-party telemetry; temporary service account deleted after use
-- [Phase 04-mandatory-allergy-testing]: 04-13: Fly runtime GCP credential wiring is unsolved — gcs.ts relies on ADC which the Fly VM has no way to satisfy; staged (not deployed) GCS_BUCKET_NAME/GCS_PROJECT_ID Fly secrets only. Flagged for 04-19's deploy authorization step.
+- [Phase 04-mandatory-allergy-testing]: 04-13: Fly runtime GCP credential wiring is unsolved — gcs.ts relies on ADC which the Fly VM has no way to satisfy; staged (not deployed) GCS_BUCKET_NAME/GCS_PROJECT_ID Fly secrets only. Flagged for 04-19's deploy authorization step. **[SUPERSEDED 2026-08-10 — closed by the 04-19 entry below. Accurate when written; do not act on it.]**
 - [Phase 04]: Patient file route (04-14) supports both Authorization: Bearer and ?token= query-param token sources, and both JSON {url} and 302-redirect response shapes — Resolves the quiz-history extension's flagged <s-link href> shape mismatch in one route rather than a client-side rewrite
 - [Phase 04]: Admin testing-status column (D-08) is read-only, derived from answers_json via a parameterized JSONB accessor — No new column, no PATCH endpoint, no UPDATE against submissions — the provider-review-checkbox scope was explicitly reversed earlier in the phase discussion
 - [Phase 04-mandatory-allergy-testing]: 04-15: generateVisitSummaryPdf now embeds uploaded test-result files via pdf-lib post-processing of pdfkit's output (copyPages for donor PDFs, embedJpg/embedPng for images); zero files still returns the base pdfkit bytes unchanged, and any per-file failure degrades to a note page (file id + byte size, never filename) rather than failing the download
@@ -164,10 +184,14 @@ Affecting current work:
 - [Phase 04-mandatory-allergy-testing]: 04-17: Promotion reads staged pending/ objects by GCS prefix listing (getBucket().getFiles({prefix: pending/token/})), not via buildPendingKey(token, filename) — the upload route never returns the filename to the client, so there is nothing to reconstruct a pending key from
 - [Phase 04-mandatory-allergy-testing]: 04-17: Promotion failure policy — the submission is authoritative; a copyObject, insertSubmissionFiles, or deleteObject rejection at any point still returns the route's normal success response and never rolls back insertSubmission, costing a reconciliation task instead
 - [Phase 04-mandatory-allergy-testing]: 04-17: Applied a single Delete lifecycle rule (age:2, matchesPrefix:[pending/]) to the real dev bucket gs://alledrops-quiz-uploads-dev and empirically proved the scoping against three real probe objects (read back via gcloud, not asserted from docs); fly.toml [[vm]] memory raised 1gb->2gb as the sole attributable VM change
-- [Phase 04-mandatory-allergy-testing]: 04-17: CRITICAL — the Fly-runtime GCP ADC credential gap from 04-13 remains UNSOLVED; gcs.ts is not in this plan's files_modified and credential wiring is an architectural decision left explicitly flagged for plan 04-19, not improvised mid-execution
+- [Phase 04-mandatory-allergy-testing]: 04-17: CRITICAL — the Fly-runtime GCP ADC credential gap from 04-13 remains UNSOLVED; gcs.ts is not in this plan's files_modified and credential wiring is an architectural decision left explicitly flagged for plan 04-19, not improvised mid-execution **[SUPERSEDED 2026-08-10 — closed by the 04-19 entry below. Accurate when written; do not act on it.]**
 - [Phase 04-mandatory-allergy-testing]: 04-18: QuizHistoryBlock.js confirmed orphaned (not referenced by shopify.extension.toml, not a dist build input) but updated in parallel with QuizHistoryBlock.jsx's file-link change to stay in sync
 - [Phase 04-mandatory-allergy-testing]: 04-18: file_multi rejected as a bundle freshness marker (measured 1-before, not 0, since schema.ts's showIf/scoring switch arm predates the widget); replaced with fileUpload__dropzone, unique to QuizPartRenderer.tsx's actual render branch
 - [Phase 04-mandatory-allergy-testing]: 04-18: public/quiz-bundle.css committed alongside public/quiz-bundle.js in the same commit even though only the .js file was named in files_modified — both come from the same build:theme invocation and the widget's fileUpload__* CSS Modules classes only ship if both move together
+- [Phase 04]: 04-19: **The Fly-runtime GCP ADC gap is CLOSED, not deferred.** gcs.ts now reads a full service-account key document from the `GCP_SA_KEY` Fly secret and passes it to `new Storage({ projectId, credentials })`, falling back to ADC when absent so local dev and tests need no key. A Fly VM cannot satisfy ADC — no key file, no gcloud, and no GCE metadata server, because Fly is not Google infrastructure. Service account `alledrops-quiz-app@alledrops-quiz` holds `roles/storage.objectAdmin` on the uploads bucket ONLY. Proven by a paired local test (key present → full round trip; key absent under an isolated HOME → "Could not load the default credentials"), then by a live POST from the deployed VM. Andrew's earlier decision to defer credential wiring to the AOD cutover is superseded for dev; the cutover still swaps the secret for one in AOD's BAA-covered project, or Workload Identity Federation.
+- [Phase 04]: 04-19: Migration 004 executed against alledrops_quiz_dev ahead of the deploy, deviating from its own "app code live on Fly first" precondition. That precondition guards Phase 3's DROP-before-code failure mode; 004 is additive in the opposite direction (CREATE TABLE IF NOT EXISTS, two indexes, a CHECK widened 3→4 values), so v50 was unaffected and the database was left ahead of the code rather than behind. Backup 1786361850289 ON_DEMAND SUCCESSFUL read back first. Execution deviation: `submissions` is owned by alledrops_app and `submission_access_log` by postgres, so no single role can run the file — ran as postgres in one transaction with SET ROLE alledrops_app for the table, RESET ROLE for the ALTER.
+- [Phase 04]: 04-19: **UAT defect #6** — the progress counter read "Step 2 of 9" on the intro screens then switched noun AND denominator to "Part 1 of 7" for the quiz parts, and omitted consent entirely despite D-09 making it mandatory. Replaced with one continuous counter (`quizFlowProgress` in schema.ts, pure and unit-tested), Step 1..N+3 where N = QUIZ_PARTS.length. Sixth defect on this project found by a human clicking and missed by a fully green suite.
+- [Phase 04]: 04-19: A local `alledrops_dev` Postgres role was created for development so local work never touches the credential Fly runs on. Root cause of the long-standing local `28P01`: **port 5433 is another project's Docker container**, not the Cloud SQL Auth Proxy, which was never running. Session 33's "stale local DATABASE_URL password" is retracted in HANDOFF.md. Setup documented in `docs/local-dev-database.md` and `.env.example` (both new).
 
 ### Pending Todos
 
@@ -376,6 +400,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T09:48:13.119Z
-Stopped at: Phase 4: 18/19 plans executed, PR #20 open. 04-19 (DDL + deploy + UAT) DEFERRED — GCP ADC credentials cannot work on Fly; Andrew deferred credential wiring to the AOD GCP cutover. Migration 004 authored, unrun.
-Resume file: .planning/phases/04-mandatory-allergy-testing/04-19-PLAN.md
+Last session: 2026-08-10T12:40:00.000Z
+Stopped at: Phase 4 COMPLETE and DEPLOYED (19/19). PR #20 merged (ea3dd26), Fly v51, Shopify alledrops-quiz-production-22, migration 004 executed, GCP ADC gap closed via GCP_SA_KEY and proven from the VM. Next: /gsd:plan-phase 4.1.
+Resume file: none — Phase 4 is closed. Next: `/gsd:plan-phase 4.1` (testing-first quiz order, ~half a day, unblocked).
