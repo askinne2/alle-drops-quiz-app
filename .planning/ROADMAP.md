@@ -291,7 +291,7 @@ Plans:
 **Wave 7** *(blocked on Wave 6 completion)*
 
 - [x] 04-11-PLAN.md — Migration 004 (own commit, no DDL executed) and the ownership-bounded submission_files data layer
-- [ ] 04-12-PLAN.md — Storage primitives: GCS client, magic-byte validation, HEIC conversion
+- [x] 04-12-PLAN.md — Storage primitives: GCS client, magic-byte validation, HEIC conversion
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
@@ -489,7 +489,7 @@ exposures today.
 | 1. Live Defect Fixes | 6/6 | Complete   | 2026-07-30 |
 | 2. Quiz Schema Foundation | 4/4 | Complete    | 2026-08-09 |
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
-| 4. Mandatory Allergy Testing | 11/19 | In Progress|  |
+| 4. Mandatory Allergy Testing | 12/19 | In Progress|  |
 | 5. Preliminary Score Page | 0/TBD | Not started | - |
 | 6. Purchase Prerequisites | 0/TBD | Not started | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |
