@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Awaiting Phase 04.2 — Andrew chose to merge and deploy 04.1 together with 04.2
-stopped_at: Phase 04.2 context gathered
-last_updated: "2026-08-10T16:52:09.518Z"
+stopped_at: Phase 04.2 UI-SPEC approved (6/6, revision 1)
+last_updated: "2026-08-10T21:30:24.224Z"
 last_activity: "2026-08-10 -- PR #22 opened, all gates green, merge + deploy deliberately held"
 progress:
   total_phases: 10
@@ -413,9 +413,9 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T16:52:09.512Z
-Stopped at: Phase 04.2 context gathered
-Resume file: .planning/phases/04.2-resume-in-progress-intake/04.2-CONTEXT.md
+Last session: 2026-08-10T21:30:24.217Z
+Stopped at: Phase 04.2 UI-SPEC approved (6/6, revision 1)
+Resume file: .planning/phases/04.2-resume-in-progress-intake/04.2-UI-SPEC.md
 
 **Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
 mid-plan. Task 1 (`e246391`, bundle rebuild) was committed inside worktree
