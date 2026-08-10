@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 04-05-PLAN.md
-last_updated: "2026-08-10T00:00:10.028Z"
-last_activity: 2026-08-09
+last_updated: "2026-08-10T00:06:52.799Z"
+last_activity: 2026-08-10
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 36
-  completed_plans: 22
+  completed_plans: 23
   percent: 38
 ---
 
@@ -27,14 +27,14 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 04 (mandatory-allergy-testing) — EXECUTING
-Plan: 5 of 19
+Plan: 6 of 19
 Status: Ready to execute
   proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
   from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
   at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
-Last activity: 2026-08-09
+Last activity: 2026-08-10
 
-Progress: [██████░░░░] 61%
+Progress: [██████░░░░] 64%
 
 Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
 27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
@@ -77,6 +77,7 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 04 P02 | 12min | 3 tasks | 3 files |
 | Phase 04 P03 | 6min | 2 tasks | 3 files |
 | Phase 04-mandatory-allergy-testing P05 | 11min | 2 tasks | 4 files |
+| Phase 04-mandatory-allergy-testing P06 | 20min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,8 @@ Affecting current work:
 - [Phase 04]: 04-05: Theme push authorized and executed — commit 9c36e0f pushed to live Sense theme (135799767246); Klaviyo disabled: true, orphaned page.testing-options.json removed, redirect URLs confirmed already correct
 - [Phase 04]: 04-05: TEST-06 reassigned to Phase 8 (from Phase 4) — measured on live served bytes that both target surfaces (product pages, /pages/test-options) render Shopify Admin content (product.description, page.content), not theme-repo source; no theme push can close it. Not marked complete.
 - [Phase 04]: 04-05: Non-vacuity control corrected from plan's literal data-alledrops-quiz needle (0 occurrences, does not exist in current markup) to id="alledrops-quiz plus the appointly control, both nonzero on all fetches
+- [Phase 04]: 04-06: PART7_ALLERGY_TESTING added to QUIZ_PARTS as 7th part (radio_single testing_status gate + 3 required showIf-gated text fields), zero score contribution; getQuestionById widened to resolve Part 7 IDs
+- [Phase 04]: 04-06: Part 7 banner comment in questions.ts describes the deferred file_multi upload question without the literal substring testing_files, since the plan's own acceptance check requires zero occurrences of that string in questions.ts until plan 04-16 adds it
 
 ### Pending Todos
 
@@ -325,6 +328,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T00:00:10.023Z
+Last session: 2026-08-10T00:06:52.794Z
 Stopped at: Completed 04-05-PLAN.md
 Resume file: None
