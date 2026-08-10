@@ -329,7 +329,7 @@ Plans:
   testable checks and move forward) and the William message (6 items, paused at Andrew's request). Neither blocks
   Phase 4.1 or 4.2.
 
-### Phase 04.2: Resume In-Progress Intake (INSERTED)
+### Phase 4.2: Resume In-Progress Intake (INSERTED)
 
 **Goal**: A patient who closes the tab mid-intake can come back to the same browser and pick up
 where they left off, instead of starting a ten-minute clinical questionnaire over
@@ -397,7 +397,7 @@ record.
 **Sequencing:** 4.1 first (half a day, self-contained). 4.2 is now also unblocked and can follow
 immediately — neither waits on the BAA chain, credentials, or William.
 
-### Phase 04.1: Testing-First Quiz Order (INSERTED)
+### Phase 4.1: Testing-First Quiz Order (INSERTED)
 
 **Goal**: A patient who cannot supply allergy test results finds that out in the first thirty
 seconds, not after completing a ten-minute clinical questionnaire
