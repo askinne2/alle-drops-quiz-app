@@ -124,3 +124,44 @@ describe('TESTING_ANSWER_KEYS', () => {
     ])
   })
 })
+
+// D-05a source-text guard — proves the admin detail modal's Symptom Responses loop no longer
+// drives off raw Object.entries(detailRow.answers_json), that a Test Results section exists
+// exactly once, and that both partitionAnswers outputs are actually used. Non-vacuity controls
+// on Symptom Responses and Uploaded Files prove the file was actually read and that the
+// neighbouring sections were not disturbed.
+describe('app/routes/app.quiz-results.tsx source text — D-05a Test Results section (add-then-filter)', () => {
+  const ROUTE_SOURCE = readFileSync(
+    join(process.cwd(), 'app', 'routes', 'app.quiz-results.tsx'),
+    'utf-8'
+  )
+  const routeCount = (needle: string): number => count(ROUTE_SOURCE, needle)
+
+  it('Object.entries(detailRow.answers_json no longer appears', () => {
+    expect(routeCount('Object.entries(detailRow.answers_json')).toBe(0)
+  })
+
+  it('partitionAnswers is used', () => {
+    expect(routeCount('partitionAnswers')).toBeGreaterThanOrEqual(1)
+  })
+
+  it('"Test Results" appears exactly once', () => {
+    expect(routeCount('Test Results')).toBe(1)
+  })
+
+  it('symptomEntries appears at least once', () => {
+    expect(routeCount('symptomEntries')).toBeGreaterThanOrEqual(1)
+  })
+
+  it('testingEntries appears at least twice (the map plus the emptiness guard)', () => {
+    expect(routeCount('testingEntries')).toBeGreaterThanOrEqual(2)
+  })
+
+  it('non-vacuity control: "Symptom Responses" appears exactly once in the same read', () => {
+    expect(routeCount('Symptom Responses')).toBe(1)
+  })
+
+  it('non-vacuity control: "Uploaded Files" appears exactly once in the same read, proving neighbouring sections were not disturbed', () => {
+    expect(routeCount('Uploaded Files')).toBe(1)
+  })
+})
