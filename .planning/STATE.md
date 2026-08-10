@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-13-PLAN.md
-last_updated: "2026-08-10T01:37:32.972Z"
+stopped_at: Completed 04-14-PLAN.md
+last_updated: "2026-08-10T01:52:19.446Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 36
-  completed_plans: 30
+  completed_plans: 31
   percent: 38
 ---
 
@@ -27,14 +27,14 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 04 (mandatory-allergy-testing) — EXECUTING
-Plan: 13 of 19
+Plan: 14 of 19
 Status: Ready to execute
   proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
   from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
   at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
 Last activity: 2026-08-10
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 86%
 
 Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
 27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
@@ -85,6 +85,7 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 04 P11 | 10min | 3 tasks | 3 files |
 | Phase 04-mandatory-allergy-testing P12 | 25min | 3 tasks | 6 files |
 | Phase 04-mandatory-allergy-testing P13 | 15min | 3 tasks | 2 files |
+| Phase 04 P14 | 20min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -144,6 +145,8 @@ Affecting current work:
 - [Phase 04-mandatory-allergy-testing]: 04-13: Fixed parseFormData's argument order from the plan's own interfaces snippet (real 0.17.4 signature is request, options, uploadHandler) — verified against installed source before writing the route
 - [Phase 04-mandatory-allergy-testing]: 04-13: Created gs://alledrops-quiz-uploads-dev (alledrops-quiz project) and ran a real network capture for T-4-64 — only storage.googleapis.com and www.googleapis.com contacted, confirming no third-party telemetry; temporary service account deleted after use
 - [Phase 04-mandatory-allergy-testing]: 04-13: Fly runtime GCP credential wiring is unsolved — gcs.ts relies on ADC which the Fly VM has no way to satisfy; staged (not deployed) GCS_BUCKET_NAME/GCS_PROJECT_ID Fly secrets only. Flagged for 04-19's deploy authorization step.
+- [Phase 04]: Patient file route (04-14) supports both Authorization: Bearer and ?token= query-param token sources, and both JSON {url} and 302-redirect response shapes — Resolves the quiz-history extension's flagged <s-link href> shape mismatch in one route rather than a client-side rewrite
+- [Phase 04]: Admin testing-status column (D-08) is read-only, derived from answers_json via a parameterized JSONB accessor — No new column, no PATCH endpoint, no UPDATE against submissions — the provider-review-checkbox scope was explicitly reversed earlier in the phase discussion
 
 ### Pending Todos
 
@@ -352,6 +355,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T01:37:32.965Z
-Stopped at: Completed 04-13-PLAN.md
+Last session: 2026-08-10T01:52:19.441Z
+Stopped at: Completed 04-14-PLAN.md
 Resume file: None
