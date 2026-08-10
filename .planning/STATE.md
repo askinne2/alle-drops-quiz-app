@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-08-PLAN.md
-last_updated: "2026-08-10T00:25:18.657Z"
+stopped_at: Completed 04-09-PLAN.md
+last_updated: "2026-08-10T00:31:41.041Z"
 last_activity: 2026-08-10
 progress:
   total_phases: 8
   completed_phases: 3
   total_plans: 36
-  completed_plans: 25
+  completed_plans: 26
   percent: 38
 ---
 
@@ -27,14 +27,14 @@ AOD-owned infrastructure, without PHI leaving the BAA chain.
 ## Current Position
 
 Phase: 04 (mandatory-allergy-testing) — EXECUTING
-Plan: 8 of 19
+Plan: 9 of 19
 Status: Ready to execute
   proven live on served bytes), and `personal_history_json`/`family_history_json` permanently dropped
   from `alledrops_quiz_dev.submissions` after the deploy was independently proven live. Row count held
   at 42 before/after; a post-DDL synthetic POST proved the write path survived. Next: Phase 4.
 Last activity: 2026-08-10
 
-Progress: [███████░░░] 69%
+Progress: [███████░░░] 72%
 
 Codebase baseline: `main` @ `ac40f09` (merge of `phase-3-mandatory-medical-history`), **361 tests /
 27 files passing**, typecheck clean, build clean. Deployed to Fly (`alle-drops-quiz-app`, iad) release
@@ -80,6 +80,7 @@ human, not CI, so the blind spot is narrowed but not eliminated — worth watchi
 | Phase 04-mandatory-allergy-testing P06 | 20min | 3 tasks | 4 files |
 | Phase 04 P07 | 10min | 2 tasks | 2 files |
 | Phase 04 P08 | 35min | 3 tasks | 4 files |
+| Phase 04-mandatory-allergy-testing P09 | 20min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,8 @@ Affecting current work:
 - [Phase 04]: 04-07: Part 7 DOM coverage added (TEST-01/02/03) through the real QUIZ_PARTS -> itemsForPart -> QuizPartRenderer seam and the real isPartComplete export; suite now 392/27
 - [Phase 04]: Closed the live TEST-07 defect: deleted the 0-2 auto-submit chain; every bracket now routes through ConsentStep before submit (D-09)
 - [Phase 04]: Resolved the symptom_profile_id double-submit defect for free by deleting the multi-exit pre-consent outcome screen; verified there is exactly one submitPayload() call site
+- [Phase 04]: 04-09: public/quiz-bundle.js rebuilt (186764 -> 185946 bytes), folding in plans 04-02/04-03/04-06/04-07/04-08; theme build proven deterministic across two consecutive builds (identical SHA-256); freshness guard extended with 10 Phase-4 markers (7 presence, 3 absence), each independently measured 0-before/>=1-after (or reverse). Full suite 426/28, typecheck clean, both builds clean.
+- [Phase 04]: 04-09: file_multi measured (0 before, 1 after) but deliberately withheld from the freshness guard since its upload widget ships in plan 04-16; text_input_short used instead for the 04-02 schema marker slot.
 
 ### Pending Todos
 
@@ -334,6 +337,6 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T00:25:18.652Z
-Stopped at: Completed 04-08-PLAN.md
+Last session: 2026-08-10T00:31:41.036Z
+Stopped at: Completed 04-09-PLAN.md
 Resume file: None
