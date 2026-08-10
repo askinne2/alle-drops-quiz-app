@@ -9,16 +9,33 @@ vi.mock('../app/lib/submissions', () => ({
   backfillCustomerIdByEmail: vi.fn(),
 }))
 
+vi.mock('../app/lib/submission-files', () => ({
+  listFilesForSubmission: vi.fn(),
+}))
+
 import { loader } from '../app/routes/api.me.assessments'
 import * as auth from '../app/lib/customer-auth'
 import * as submissions from '../app/lib/submissions'
+import * as submissionFiles from '../app/lib/submission-files'
 import type { SubmissionLedgerEntry } from '../app/lib/submissions'
+import type { SubmissionFileRow } from '../app/lib/submission-files'
 
 const mockEntry: SubmissionLedgerEntry = {
   id: 'aaaa-1111',
   symptom_profile_id: 'AOD_TEST_001',
   created_at: '2026-05-07T18:00:00.000Z',
   patient_state: 'tennessee',
+}
+
+const mockFileRow: SubmissionFileRow = {
+  id: 'file-1111',
+  submission_id: 'aaaa-1111',
+  storage_object_key: 'submissions/aaaa-1111/file-1111-test.jpg',
+  original_filename: 'test-result.jpg',
+  content_type: 'image/jpeg',
+  original_content_type: 'image/jpeg',
+  size_bytes: 12345,
+  uploaded_at: '2026-05-07T18:01:00.000Z',
 }
 
 const mockFetch = vi.fn()
@@ -38,6 +55,7 @@ describe('GET /api/me/assessments', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockFetch.mockReset()
+    vi.mocked(submissionFiles.listFilesForSubmission).mockResolvedValue([])
   })
 
   it('returns 401 when Authorization header is missing', async () => {
@@ -73,6 +91,7 @@ describe('GET /api/me/assessments', () => {
         id: 'aaaa-1111',
         symptom_profile_id: 'AOD_TEST_001',
         completed_at: '2026-05-07T18:00:00.000Z',
+        files: [],
       },
     ])
     expect(body[0]).not.toHaveProperty('patient_state')
@@ -91,6 +110,45 @@ describe('GET /api/me/assessments', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body).toEqual([])
+  })
+
+  it('returns a files array per assessment sourced from listFilesForSubmission', async () => {
+    vi.mocked(auth.verifyCustomerToken).mockResolvedValue({
+      customerId: 'gid://shopify/Customer/9876543210',
+    })
+    vi.mocked(submissions.listSubmissionLedger).mockResolvedValue([mockEntry])
+    vi.mocked(submissionFiles.listFilesForSubmission).mockResolvedValue([mockFileRow])
+
+    const req = new Request('https://fly.dev/api/me/assessments', {
+      headers: { Authorization: 'Bearer valid.token' },
+    })
+    const res = await loader({ request: req, params: {}, context: {} } as any)
+    expect(res.status).toBe(200)
+
+    const body = await res.json()
+    expect(body).toEqual([
+      {
+        id: 'aaaa-1111',
+        symptom_profile_id: 'AOD_TEST_001',
+        completed_at: '2026-05-07T18:00:00.000Z',
+        files: [{ id: 'file-1111', filename: 'test-result.jpg', sizeBytes: 12345 }],
+      },
+    ])
+    expect(submissionFiles.listFilesForSubmission).toHaveBeenCalledWith('aaaa-1111')
+  })
+
+  it('returns 503 when listFilesForSubmission throws', async () => {
+    vi.mocked(auth.verifyCustomerToken).mockResolvedValue({
+      customerId: 'gid://shopify/Customer/9876543210',
+    })
+    vi.mocked(submissions.listSubmissionLedger).mockResolvedValue([mockEntry])
+    vi.mocked(submissionFiles.listFilesForSubmission).mockRejectedValue(new Error('connection refused'))
+
+    const req = new Request('https://fly.dev/api/me/assessments', {
+      headers: { Authorization: 'Bearer valid.token' },
+    })
+    const res = await loader({ request: req, params: {}, context: {} } as any)
+    expect(res.status).toBe(503)
   })
 
   it('returns 503 when DB throws', async () => {
@@ -144,6 +202,7 @@ describe('GET /api/me/assessments', () => {
         id: 'aaaa-1111',
         symptom_profile_id: 'AOD_TEST_001',
         completed_at: '2026-05-07T18:00:00.000Z',
+        files: [],
       },
     ])
 

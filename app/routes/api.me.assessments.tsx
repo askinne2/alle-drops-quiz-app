@@ -1,6 +1,7 @@
 import type { LoaderFunctionArgs } from 'react-router'
 import { verifyCustomerToken } from '../lib/customer-auth'
 import { listSubmissionLedger, backfillCustomerIdByEmail } from '../lib/submissions'
+import { listFilesForSubmission } from '../lib/submission-files'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -84,11 +85,32 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     })
   }
 
-  // 4. Return only non-PHI fields
-  const ledger = entries.map((e) => ({
+  // 4. Attach each submission's files — entries are already ownership-scoped above (by GID or
+  //    email), so listFilesForSubmission needs no additional ownership filter here.
+  let filesBySubmission: import('../lib/submission-files').SubmissionFileRow[][]
+  try {
+    filesBySubmission = await Promise.all(
+      entries.map((e) => listFilesForSubmission(e.id))
+    )
+  } catch {
+    return new Response(JSON.stringify({ error: 'Service unavailable' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    })
+  }
+
+  // 5. Return only non-PHI fields — filenames are PHI-shaped and never appear in this route's
+  //    own logs; they are returned here only inside the authenticated JSON body, matching the
+  //    same posture the PDF/file routes already use for link text.
+  const ledger = entries.map((e, idx) => ({
     id: e.id,
     symptom_profile_id: e.symptom_profile_id,
     completed_at: e.created_at,
+    files: filesBySubmission[idx].map((f) => ({
+      id: f.id,
+      filename: f.original_filename,
+      sizeBytes: f.size_bytes,
+    })),
   }))
 
   return new Response(JSON.stringify(ledger), {

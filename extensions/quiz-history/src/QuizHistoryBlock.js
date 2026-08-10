@@ -41,12 +41,16 @@ shopify.extend('customer-account.profile.block.render', async () => {
 
     const stack = el('s-stack', { direction: 'block', gap: 'base' })
     for (const a of data) {
-      stack.appendChild(
-        el('s-stack', { direction: 'inline', gap: 'base', 'align-items': 'center' },
-          el('s-text', {}, formatDate(a.completed_at)),
-          el('s-link', { href: `${FLY_BASE}/api/me/assessment/${a.id}/pdf?token=${encodeURIComponent(token)}` }, 'Download PDF')
-        )
+      const row = el('s-stack', { direction: 'inline', gap: 'base', 'align-items': 'center' },
+        el('s-text', {}, formatDate(a.completed_at)),
+        el('s-link', { href: `${FLY_BASE}/api/me/assessment/${a.id}/pdf?token=${encodeURIComponent(token)}` }, 'Download PDF')
       )
+      for (const f of (a.files || [])) {
+        row.appendChild(
+          el('s-link', { href: `${FLY_BASE}/api/me/assessment/${a.id}/files/${f.id}?token=${encodeURIComponent(token)}` }, f.filename)
+        )
+      }
+      stack.appendChild(row)
     }
     section.appendChild(stack)
   } catch {
