@@ -287,3 +287,94 @@ describe("public/quiz-bundle.js carries Phase 4's file-upload widget (plan 04-16
     expect(count(needle)).toBeGreaterThanOrEqual(1);
   });
 });
+
+/**
+ * Phase 4.1 (testing-first-quiz-order) rebuild — plan 04.1-04.
+ *
+ * Rebuilt 2026-08-10 via `npm run build:theme`, folding in plan 04.1-01's reorder of `QUIZ_PARTS`
+ * to `[PART7_ALLERGY_TESTING, PART1..PART5, PART6_MEDICAL_HISTORY]`. Committed bundle byte size
+ * stayed at 195142 -> 195142 bytes (0 delta — a pure array-element reorder moves no bytes in or
+ * out, only rearranges existing ones), but the SHA-256 changed
+ * (`a2be1ab758cab05aa1f1f81890412636ba8076aa52afd286e221bf64fde8762c` ->
+ * `ba35bdc5c2c148d1d55a6353cd48e768d3667c4d45ea98c7ed94e2717cc9ba18`). `quiz-bundle.css`'s SHA-256
+ * is unchanged (`f28b21f24cc5b49da9f272281bcd865b01b35b5297c71aa41f3fb0053737b58d` both before and
+ * after) — a pure part reorder touches no class names, so zero CSS delta is expected, not a bug.
+ * Determinism was re-verified (not inherited from any prior plan) by running `npm run build:theme`
+ * twice in a row and confirming byte-identical SHA-256 hashes for both files before either was
+ * trusted.
+ *
+ * D-09 IN 04.1-CONTEXT.md ORIGINALLY SPECIFIED an `indexOf("testing_status") <
+ * indexOf("symptoms_nasal")` relative-position assertion on raw string literals. THAT TECHNIQUE
+ * DOES NOT WORK AND MUST NOT BE RESTORED. Measured against the committed pre-4.1 bundle on
+ * 2026-08-10: `testing_status` occurs 7 times, first at index 160970; `symptoms_nasal` occurs 2
+ * times, first at index 153560. Those positions are fixed because the string literals live inside
+ * the minified `PART*` const declarations, whose order in the emitted module follows SOURCE
+ * DECLARATION ORDER in `app/lib/quiz/questions.ts` (`…ns=[{kind:"question",id:"symptoms_nasal",…}]…
+ * us=[{kind:"question",id:"testing_status",…}]…`), NOT `QUIZ_PARTS` array order. Reordering the
+ * `QUIZ_PARTS` array literal moves seven one-to-two-character identifier tokens inside a `[...]`
+ * literal — it moves no string literal. `indexOf("testing_status")` stays at ~160970 and
+ * `indexOf("symptoms_nasal")` stays at ~153560 after a perfectly correct rebuild, so that assertion
+ * would read a correctly-rebuilt bundle as stale. No identifier-pair substitution fixes this —
+ * nothing about string positions changes when only the array literal is reordered.
+ *
+ * THE CORRECTED MECHANISM below proves order on the artifact's own bytes by extracting the
+ * minified `QUIZ_PARTS` array's seven element identifiers (anchored on the `.flat()` call that
+ * immediately follows the array, which uniquely identifies it in the whole bundle) and resolving
+ * each part's minified identifier from the declaration that heads it with a known question id
+ * (`<ident>=[{kind:"question",id:"<qid>"`). Minified identifier names are NOT stable across
+ * builds, so this guard hardcodes none of them (`ns`, `us`, etc.) — it re-derives both extraction
+ * results from the same `SOURCE` read on every run. Every count in this file uses
+ * `SOURCE.split(needle).length - 1`, never a line-counting grep with the count flag, which
+ * collapses this single-line ~185KB minified bundle down to a count of `1` for any match.
+ */
+describe("public/quiz-bundle.js — built QUIZ_PARTS element order proves Part 7 (allergy testing) now leads the flow (Phase 4.1 reorder, D-09 corrected mechanism)", () => {
+  // Anchors on the array literal immediately followed by `.flat()` on the same variable — this
+  // is what `ALL_ITEMS = QUIZ_PARTS.flat()` compiles to, and it is the only seven-identifier
+  // array literal in the bundle followed by a `.flat()` call on itself.
+  const partsMatch = SOURCE.match(
+    /([A-Za-z_$][\w$]*)=\[((?:[A-Za-z_$][\w$]*,){6}[A-Za-z_$][\w$]*)\],[A-Za-z_$][\w$]*=\1\.flat\(\)/,
+  );
+  const extractedPartIdentifiers: string[] = partsMatch ? partsMatch[2].split(",") : [];
+
+  // Resolves a known question id to the minified identifier of the part array that heads it, by
+  // matching `<ident>=[{kind:"question",id:"<qid>"`. Re-derived on every run from the same
+  // SOURCE read — no minified identifier is ever hardcoded.
+  const resolvePartHeadIdentifier = (questionId: string): string | undefined => {
+    const m = SOURCE.match(
+      new RegExp(
+        '([A-Za-z_$][\\w$]*)=\\[\\{kind:"question",id:"' + questionId + '"',
+      ),
+    );
+    return m ? m[1] : undefined;
+  };
+
+  it("non-vacuity control: the seven-identifier QUIZ_PARTS extraction matched, and testing_status / symptoms_nasal / history_comorbidities each resolve to a non-empty minified identifier", () => {
+    // Must run before any ordering claim below — an unresolved id would make every positional
+    // assertion pass or fail for the wrong reason. Also confirms every needle used below is
+    // present at least once in the bundle, per this file's own non-vacuity discipline.
+    expect(partsMatch).not.toBeNull();
+    expect(extractedPartIdentifiers).toHaveLength(7);
+    expect(count("testing_status")).toBeGreaterThanOrEqual(1);
+    expect(count("symptoms_nasal")).toBeGreaterThanOrEqual(1);
+    expect(count("history_comorbidities")).toBeGreaterThanOrEqual(1);
+    expect(resolvePartHeadIdentifier("testing_status")).toBeTruthy();
+    expect(resolvePartHeadIdentifier("symptoms_nasal")).toBeTruthy();
+    expect(resolvePartHeadIdentifier("history_comorbidities")).toBeTruthy();
+  });
+
+  it("element 0 of the built QUIZ_PARTS array is the testing_status (Part 7) head — Part 7 leads the flow", () => {
+    expect(extractedPartIdentifiers[0]).toBe(resolvePartHeadIdentifier("testing_status"));
+  });
+
+  it("element 1 of the built QUIZ_PARTS array is the symptoms_nasal (Part 1) head — Part 1 immediately follows Part 7", () => {
+    expect(extractedPartIdentifiers[1]).toBe(resolvePartHeadIdentifier("symptoms_nasal"));
+  });
+
+  it("element 6 (last) of the built QUIZ_PARTS array is the history_comorbidities (Part 6) head — medical history is last, immediately before consent", () => {
+    expect(extractedPartIdentifiers[6]).toBe(resolvePartHeadIdentifier("history_comorbidities"));
+  });
+
+  it("distinctness control: all seven extracted QUIZ_PARTS identifiers are distinct, so a degenerate match cannot satisfy the order assertions above", () => {
+    expect(new Set(extractedPartIdentifiers).size).toBe(7);
+  });
+});
