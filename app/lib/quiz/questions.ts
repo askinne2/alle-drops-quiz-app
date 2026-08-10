@@ -455,12 +455,14 @@ export const PART6_MEDICAL_HISTORY: QuizItem[] = [
 // PART 7 — Allergy Testing Split (mandatory, no score)
 // Every patient passes through this part before consent (D-06/D-07). Nothing here is scored —
 // ALL_SCORED_QUESTIONS stays Parts 1-5 only (D-04's guarantee, unchanged by Phase 4). The required
-// `file_multi` upload question for the had_testing branch (D-02) is DELIBERATELY NOT here — it is
-// appended to this same array by the blocker-gated upload wave (plan 04-16) once Blockers 1-3
-// clear. Its absence here is not an oversight; do not add it to close a "missing field" impression.
+// `file_multi` upload question (testing_files) plus its guidance info block
+// (testing_upload_requirements) were appended by plan 04-16 once Blockers 1-3 cleared — see
+// 04-UPLOAD-DECISIONS.md §Ratified for the size caps substituted into their copy below. Widened
+// from QuizQuestion[] to QuizItem[] (same widening PART6_MEDICAL_HISTORY already needed) so the
+// info block can share this array.
 // ─────────────────────────────────────────────
 
-export const PART7_ALLERGY_TESTING: QuizQuestion[] = [
+export const PART7_ALLERGY_TESTING: QuizItem[] = [
   {
     kind: "question",
     id: "testing_status",
@@ -521,6 +523,38 @@ export const PART7_ALLERGY_TESTING: QuizQuestion[] = [
     order: 73,
     showIf: { questionId: "testing_status", equals: "had_testing" },
     // required omitted — defaults to true.
+  },
+  {
+    kind: "info",
+    id: "testing_upload_requirements",
+    // UNCONFIRMED proposed copy — 04-UI-SPEC.md "Proposed copy" table, not yet confirmed with
+    // William. Same UNCONFIRMED comment convention Phase 3 used for its own proposed copy.
+    // Paragraph 2 is the escape-hatch copy — the named mitigation for the abandonment risk D-02
+    // accepts (a patient without their results can still finish today via needs_testing). Do not
+    // trim it.
+    heading: "Uploading Your Results",
+    paragraphs: [
+      "Upload a photo or PDF of your allergy test results below. We accept PDF, JPEG, PNG, and HEIC files — add more than one if your results are multiple pages. This is required to continue.",
+      'Don\'t have your results with you right now? Go back and choose "I need allergy testing" instead so you can finish today — you can always follow up with your results once you\'re tested.',
+    ],
+    order: 74,
+    part: 7,
+    showIf: { questionId: "testing_status", equals: "had_testing" },
+  },
+  {
+    kind: "question",
+    id: "testing_files",
+    type: "file_multi",
+    part: 7,
+    // UNCONFIRMED proposed copy — 04-UI-SPEC.md "Proposed copy" table.
+    text: "Upload your allergy test results",
+    // Requirements line, ratified caps substituted (04-UPLOAD-DECISIONS.md §Ratified:
+    // MAX_FILE_BYTES = 15 MB, MAX_TOTAL_BYTES = 50 MB). No placeholder braces reach this copy.
+    subtitle: "PDF, JPEG, PNG, or HEIC · up to 15 MB per file, 50 MB total.",
+    order: 75,
+    showIf: { questionId: "testing_status", equals: "had_testing" },
+    // required omitted — defaults to true (D-02). Only successfully-uploaded files' tokens ever
+    // reach this answer — see QuizPartRenderer.tsx's file_multi branch.
   },
 ];
 

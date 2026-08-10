@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   type QuizQuestion,
   type QuizInfoBlock,
@@ -96,12 +98,44 @@ describe("quiz schema type guarantees (D-09)", () => {
     expect(getQuestionById("testing_year")).toBeDefined();
   });
 
-  it("exactly three Part 7 items carry showIf, all pointing at testing_status — a flat gate, no chaining", () => {
+  it("exactly five Part 7 items carry showIf, all pointing at testing_status — a flat gate, no chaining", () => {
+    // 04-16 added two more gated members (testing_files, testing_upload_requirements) to the
+    // original three (testing_year, testing_location, testing_allergens) — still a flat,
+    // single-level gate, no chaining.
     const gated = PART7_ALLERGY_TESTING.filter((i) => i.showIf);
-    expect(gated.length).toBe(3);
+    expect(gated.length).toBe(5);
     for (const item of gated) {
       expect(item.showIf?.questionId).toBe("testing_status");
     }
+  });
+
+  // 04-16 — testing_files (file_multi) and testing_upload_requirements (info block).
+  it("PART7_ALLERGY_TESTING contains testing_files as a required file_multi question", () => {
+    const testingFiles = PART7_ALLERGY_TESTING.find((i) => i.id === "testing_files");
+    expect(testingFiles).toBeDefined();
+    expect(testingFiles?.kind).toBe("question");
+    if (testingFiles?.kind === "question") {
+      expect(testingFiles.type).toBe("file_multi");
+      expect(testingFiles.required).not.toBe(false);
+    }
+  });
+
+  it("PART7_ALLERGY_TESTING contains exactly one kind: 'info' item", () => {
+    const infoItems = PART7_ALLERGY_TESTING.filter((i) => i.kind === "info");
+    expect(infoItems.length).toBe(1);
+    expect(infoItems[0]?.id).toBe("testing_upload_requirements");
+  });
+
+  it("ALL_SCORED_QUESTIONS still has no part === 7 member after the 04-16 additions", () => {
+    expect(ALL_SCORED_QUESTIONS.some((q) => q.part === 7)).toBe(false);
+  });
+
+  it("app/lib/quiz/questions.ts ships no literal {N} or {M} placeholder (DEF-04 defect class)", () => {
+    const source = readFileSync(join(process.cwd(), "app", "lib", "quiz", "questions.ts"), "utf-8");
+    const nNeedle = "{" + "N" + "}";
+    const mNeedle = "{" + "M" + "}";
+    expect(source.split(nNeedle).length - 1).toBe(0);
+    expect(source.split(mNeedle).length - 1).toBe(0);
   });
 
   // Non-vacuous positive control (Phase 3, Task 3): the old Part 6 content had zero info blocks,
