@@ -6,7 +6,34 @@ import { authenticate } from '../shopify.server'
 import { boundary } from '@shopify/shopify-app-react-router/server'
 import { listAdminSubmissions } from '../lib/submissions'
 import type { AdminSubmissionsPage, SubmissionFullRow } from '../lib/submissions'
+import type { SubmissionFileRow } from '../lib/submission-files'
 import { capitalize, formatDate, formatAnswerValue, getAnswerLabel } from '../lib/format'
+
+// D-08: testing_status is READ-ONLY, derived from answers_json at read time by
+// listAdminSubmissions. There is no provider-review timestamp column, no PATCH endpoint, and no
+// write statement against the submissions table anywhere in this file — that scope was
+// explicitly proposed and reversed in the Phase 4 discussion (see 04-CONTEXT.md D-08). Do not
+// "complete" this into a write path.
+const TESTING_STATUS_LABELS: Record<string, string> = {
+  had_testing: 'Had testing',
+  needs_testing: 'Needs testing',
+}
+
+function testingStatusLabel(value: string | null | undefined): string {
+  return value ? (TESTING_STATUS_LABELS[value] ?? '—') : '—'
+}
+
+function formatFileSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+// The detail fetcher's response is the full submission row plus its uploaded files (added by
+// api.admin.submission.$id.tsx for this task) — files travel by opaque id only, never a filename
+// in a URL.
+type SubmissionDetail = SubmissionFullRow & { files?: SubmissionFileRow[] }
 
 declare global {
   interface Window {
@@ -23,17 +50,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const from = url.searchParams.get('from') || null
   const to = url.searchParams.get('to') || null
   const q = url.searchParams.get('q') || null
+  const testing_status = url.searchParams.get('testing_status') || null
   const cursor = url.searchParams.get('cursor') || null
 
   let page: AdminSubmissionsPage
   try {
-    page = await listAdminSubmissions({ state, score_bracket, from, to, q, cursor, limit: 50 })
+    page = await listAdminSubmissions({
+      state,
+      score_bracket,
+      from,
+      to,
+      q,
+      testing_status,
+      cursor,
+      limit: 50,
+    })
     console.log(`[admin] quiz-results loader count=${page.rows.length}`)
   } catch {
     page = { rows: [], hasNextPage: false, cursor: null }
   }
 
-  return { page, filters: { state, score_bracket, from, to, q, cursor } }
+  return { page, filters: { state, score_bracket, from, to, q, testing_status, cursor } }
 }
 
 export default function QuizResultsPage() {
@@ -103,7 +140,7 @@ export default function QuizResultsPage() {
     }
   }, [])
 
-  const detailRow = detailFetcher.data as SubmissionFullRow | undefined
+  const detailRow = detailFetcher.data as SubmissionDetail | undefined
 
   return (
     <s-page heading="Quiz Results">
@@ -158,6 +195,17 @@ export default function QuizResultsPage() {
               style={{ ...inputStyle, width: '220px' }}
             />
           </FilterField>
+          <FilterField label="Testing Status">
+            <select
+              value={filters.testing_status ?? ''}
+              onChange={e => handleFilterChange('testing_status', e.target.value)}
+              style={selectStyle}
+            >
+              <option value="">All</option>
+              <option value="had_testing">Had testing</option>
+              <option value="needs_testing">Needs testing</option>
+            </select>
+          </FilterField>
         </div>
       </s-section>
 
@@ -172,7 +220,7 @@ export default function QuizResultsPage() {
             <table style={tableStyle}>
               <thead>
                 <tr>
-                  {['Date', 'Name', 'Email', 'State', 'Bracket', 'Score'].map(col => (
+                  {['Date', 'Name', 'Email', 'State', 'Bracket', 'Score', 'Testing'].map(col => (
                     <th key={col} style={thStyle}>{col}</th>
                   ))}
                 </tr>
@@ -264,6 +312,17 @@ export default function QuizResultsPage() {
                   </div>
                 </div>
 
+                {detailRow.files && detailRow.files.length > 0 && (
+                  <>
+                    <SectionHeader>Uploaded Files</SectionHeader>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      {detailRow.files.map(file => (
+                        <FileDownloadLink key={file.id} submissionId={detailRow.id} file={file} />
+                      ))}
+                    </div>
+                  </>
+                )}
+
                 {pdfError && (
                   <div style={{ color: '#dc2626', marginTop: '0.75rem', fontSize: '0.875rem', padding: '0.5rem 0.75rem', background: '#fef2f2', borderRadius: '5px' }}>
                     {pdfError}
@@ -321,7 +380,53 @@ function SubmissionRow({
       <td style={tdStyle}>{capitalize(row.patient_state)}</td>
       <td style={tdStyle}>{row.score_bracket}</td>
       <td style={tdStyle}>{row.quiz_score}</td>
+      <td style={tdStyle}>{testingStatusLabel(row.testing_status)}</td>
     </tr>
+  )
+}
+
+/**
+ * One uploaded file's download control. Fetches a short-lived signed URL from the admin file
+ * route (opaque submission id + file id only — no filename ever appears in a URL, per D-05's
+ * threat register) using the same window.shopify.idToken() Bearer pattern as handleDownloadPdf,
+ * then opens the signed URL in a new tab. The filename renders as UI text only — never logged,
+ * never placed in a URL.
+ */
+function FileDownloadLink({
+  submissionId,
+  file,
+}: {
+  submissionId: string
+  file: import('../lib/submission-files').SubmissionFileRow
+}) {
+  const [error, setError] = useState<string | null>(null)
+
+  const handleClick = useCallback(async () => {
+    setError(null)
+    try {
+      const token = await window.shopify.idToken()
+      const res = await fetch(`/api/admin/submission/${submissionId}/file/${file.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) { setError(`Download failed (${res.status})`); return }
+      const { url } = await res.json() as { url: string }
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch {
+      setError('Download failed — please try again')
+    }
+  }, [submissionId, file.id])
+
+  return (
+    <div>
+      <button onClick={handleClick} style={fileLinkBtnStyle}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '0.4rem', flexShrink: 0 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.original_filename}</span>
+        <span style={{ color: '#9ca3af', fontWeight: 400, marginLeft: '0.4rem', flexShrink: 0 }}>({formatFileSize(file.size_bytes)})</span>
+      </button>
+      {error && (
+        <div style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '0.2rem' }}>{error}</div>
+      )}
+    </div>
   )
 }
 
@@ -388,6 +493,7 @@ const modalStyle: CSSProperties = { background: 'white', borderRadius: '10px', p
 const btnStyle: CSSProperties = { padding: '0.45rem 1rem', background: '#333', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem' }
 const closeBtnStyle: CSSProperties = { background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#9ca3af', lineHeight: 1, padding: '0.25rem', transition: 'color 150ms' }
 const pdfBtnStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', padding: '0.5rem 1.1rem', background: '#0070f3', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600 }
+const fileLinkBtnStyle: CSSProperties = { display: 'flex', alignItems: 'center', width: '100%', padding: '0.45rem 0.65rem', background: '#f8f9fa', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '5px', cursor: 'pointer', fontSize: '0.85rem', textAlign: 'left' }
 const closeBtnSecStyle: CSSProperties = { padding: '0.5rem 1.1rem', background: 'white', color: '#374151', border: '1px solid #d1d5db', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 500 }
 const infoGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem 1.5rem' }
 
