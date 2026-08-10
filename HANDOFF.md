@@ -184,7 +184,18 @@ Full record in `.planning/phases/03-mandatory-medical-history/03-05-SUMMARY.md`.
 - **Long `await` loops inside one `javascript_tool` call** — exceeded the 45s CDP budget twice and returned a timeout while the page was fine. One part per call.
 - **`resize_window` to 375px** did not produce a 375px iframe viewport (got 477). Setting the iframe's own `style.width` did.
 - **`slopcheck install <pkgs>` actually runs `npm install`** — it is not a dry run. It briefly modified `package.json` during research; caught via `git status` and reverted. `slopcheck scan` is the dry-run-safe alternative.
-- **The local `DATABASE_URL` password is stale** — a local submit fails with Postgres `28P01`. Environmental, not a Phase 3 defect; a broken INSERT from this phase's column changes would surface as `42703`. Fly's credential is fine.
+- ~~**The local `DATABASE_URL` password is stale** — a local submit fails with Postgres `28P01`.~~
+  **RETRACTED 2026-08-10 (session 35) — the password was never the problem.** The `28P01` was real
+  and reproducible, and the diagnosis was wrong; it then rode along in this file for two sessions.
+  **Port 5433 is not the Cloud SQL Auth Proxy. It is `fieldflow-sync-db`, an unrelated project's
+  `postgres:16` container**, and it binds `0.0.0.0:5433` *and* `[::]:5433`, so the old
+  "use `127.0.0.1`, Docker only holds `::1`" workaround below no longer avoids it. The proxy was
+  not running at all. The app was authenticating against a different project's database, which
+  rejected `alledrops_app` because that role does not exist there — a wrong-database error that
+  presents as a wrong-password error. Fly's credential was always fine, which is the one part of
+  the original entry that held up. Fixed by running the proxy on **5436** and adding a
+  local-only `alledrops_dev` role; see `docs/local-dev-database.md`. Retained struck through so
+  the retraction is visible to anyone who read the original.
 - **`.env` still carries `GOOGLE_SHEETS_WEB_APP_URL`** — the code is dead (`google-sheets.ts` throws) but it is a `CLAUDE.md` rule 3 surface sitting in a config file. Worth deleting the line.
 
 ### ~~Next steps~~ — SUPERSEDED by session 34
@@ -895,24 +906,36 @@ All three landed via PR #13 (`fix-security-findings` @ `596210e`, merged into `m
 
 ### How to run it
 
-1. **Cloud SQL Auth Proxy** on port 5433:
+**UPDATED 2026-08-10 (session 35).** Port and role both changed — see
+`docs/local-dev-database.md` for the full setup and the reasoning.
+
+1. **Cloud SQL Auth Proxy** on port **5436** (NOT 5433 — that port belongs to another project's
+   Docker container, see gotchas):
    ```bash
-   /opt/homebrew/share/google-cloud-sdk/bin/cloud-sql-proxy \
-     alledrops-quiz:us-east1:alledrops-quiz-data \
-     --port=5433
+   cloud-sql-proxy --port 5436 alledrops-quiz:us-east1:alledrops-quiz-data
    ```
-2. `.env` — use `127.0.0.1` not `localhost` (Docker occupies `::1:5433`):
+2. `.env` — use the local-only `alledrops_dev` role, not `alledrops_app`:
    ```
-   DATABASE_URL=postgresql://alledrops_app:<password>@127.0.0.1:5433/alledrops_quiz_dev?sslmode=disable
+   DATABASE_URL="postgresql://alledrops_dev:<password>@127.0.0.1:5436/alledrops_quiz_dev?sslmode=disable"
+   GCS_BUCKET_NAME=alledrops-quiz-uploads-dev
+   GCS_PROJECT_ID=alledrops-quiz
    SHOPIFY_API_SECRET=<from shopify app env pull>
    SHOPIFY_API_KEY=<from shopify app env pull>
    ```
-   Get the current password from Fly: `fly ssh console -a alle-drops-quiz-app -C "printenv DATABASE_URL"`
+   `alledrops_dev` exists so local work never touches the credential Fly runs on. If you do need
+   Fly's: `fly ssh console -a alle-drops-quiz-app -C "printenv DATABASE_URL"`.
 3. Run: `npx tsx scripts/e2e-test.ts`
 
 ### Known gotchas
 
-- **Docker on localhost:5433** — Docker binds `::1:5433` (IPv6); proxy is on `127.0.0.1:5433` (IPv4). Always use `127.0.0.1` in local DATABASE_URL.
+- **Port 5433 is NOT the proxy.** It is `fieldflow-sync-db` (`postgres:16`), an unrelated project's
+  container, and it binds both `0.0.0.0:5433` and `[::]:5433`. Connecting there yields
+  `28P01 password authentication failed for user "alledrops_app"` — a *wrong database*, not a wrong
+  password. Two sessions were lost to that. Use 5436. Check with
+  `docker ps --format "{{.Names}} {{.Ports}}"` before assuming any port is yours.
+- ~~**Docker on localhost:5433** — Docker binds `::1:5433` (IPv6); proxy is on `127.0.0.1:5433`
+  (IPv4). Always use `127.0.0.1` in local DATABASE_URL.~~ **OBSOLETE 2026-08-10** — the container
+  now occupying 5433 binds IPv4 as well, so `127.0.0.1` no longer routes around it.
 - **Fly DATABASE_URL** must use the Cloud SQL public IP `34.139.97.17:5432` with `sslmode=no-verify` — not `localhost`.
 - **pg URL parser** mangles special chars in passwords. Script uses `new URL()` to parse explicitly — this is intentional, don't revert.
 - **Auth on `/api/me/*`** is JWT Bearer (HS256, `SHOPIFY_API_SECRET`), not HMAC. The script mints a JWT with a fake customer GID and stamps it on test rows via SQL.
