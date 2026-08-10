@@ -332,13 +332,27 @@ describe("Part 7 gating — the real isPartComplete, imported from the renderer 
     expect(isPartComplete(PART_7_ITEMS, { testing_status: "had_testing" })).toBe(false);
   });
 
-  it("is complete once all three revealed fields are filled with non-whitespace text", () => {
+  it("is incomplete once the three text fields are filled but testing_files is still empty (04-16)", () => {
+    // testing_files (file_multi) was added to PART7_ALLERGY_TESTING by 04-16 as a fifth
+    // had_testing-gated required field — the three text fields alone are no longer sufficient.
     expect(
       isPartComplete(PART_7_ITEMS, {
         testing_status: "had_testing",
         testing_year: "2019",
         testing_location: "X",
         testing_allergens: "Y",
+      })
+    ).toBe(false);
+  });
+
+  it("is complete once all three revealed text fields AND testing_files are filled (04-16)", () => {
+    expect(
+      isPartComplete(PART_7_ITEMS, {
+        testing_status: "had_testing",
+        testing_year: "2019",
+        testing_location: "X",
+        testing_allergens: "Y",
+        testing_files: ["tok_a"],
       })
     ).toBe(true);
   });
