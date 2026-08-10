@@ -132,3 +132,53 @@ describe("ratified size-cap constants (04-UPLOAD-DECISIONS.md Section 4 item 4)"
     expect(MAX_FILES).toBe(10);
   });
 });
+
+// ── heic.ts — HEIC to JPEG conversion wrapper (Task 3) ──────────────────────────────────────
+//
+// Mock heic-convert rather than committing a real HEIC fixture — a real one is device-captured
+// PHI-adjacent binary and does not belong in the repo. A real device-captured HEIC is exercised in
+// plan 04-19's human pass.
+
+vi.mock("heic-convert", () => ({
+  default: vi.fn(),
+}));
+
+describe("heicBufferToJpeg", () => {
+  it("returns { ok: false, reason } without throwing for a malformed HEIC buffer, and the reason contains no filename", async () => {
+    vi.resetModules();
+    const heicConvertModule = await import("heic-convert");
+    const mockConvert = vi.mocked(heicConvertModule.default);
+    mockConvert.mockRejectedValueOnce(new Error("unable to parse ftyp box"));
+
+    const { heicBufferToJpeg } = await import("../app/lib/storage/heic");
+    const malformed = Buffer.from([0x00, 0x01, 0x02, 0x03]);
+
+    const result = await heicBufferToJpeg(malformed);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).not.toMatch(/\.(heic|jpg|jpeg|png|pdf)/i);
+      expect(result.reason).toBe("unable to parse ftyp box");
+    }
+  });
+
+  it("returns a JPEG buffer beginning with the JPEG signature on success", async () => {
+    vi.resetModules();
+    const heicConvertModule = await import("heic-convert");
+    const mockConvert = vi.mocked(heicConvertModule.default);
+    const fakeJpegBytes = new Uint8Array([0xff, 0xd8, 0xff, 0x00, 0x01, 0x02]);
+    mockConvert.mockResolvedValueOnce(fakeJpegBytes);
+
+    const { heicBufferToJpeg } = await import("../app/lib/storage/heic");
+    const input = Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]); // arbitrary HEIC-shaped bytes
+
+    const result = await heicBufferToJpeg(input);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.jpeg[0]).toBe(0xff);
+      expect(result.jpeg[1]).toBe(0xd8);
+      expect(result.jpeg[2]).toBe(0xff);
+    }
+  });
+});
