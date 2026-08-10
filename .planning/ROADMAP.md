@@ -25,7 +25,7 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - [x] **Phase 3: Mandatory Medical History** - Rebuilt history section every patient passes through (completed 2026-08-09)
 - [ ] **Phase 4: Mandatory Allergy Testing** - Two-option testing split; both bypasses deleted
 - [ ] **Phase 4.1: Testing-First Quiz Order** *(INSERTED)* - Move the testing split + required upload to the front so abandonment costs seconds, not ten minutes
-- [ ] **Phase 4.2: Resume In-Progress Intake** *(INSERTED)* - Stop/resume at any point on any device; draft PHI store + emailed magic link. Reverses a recorded out-of-scope decision
+- [ ] **Phase 4.2: Resume In-Progress Intake** *(INSERTED)* - Browser-local (localStorage) resume so a closed tab does not lose a completed intake. No draft PHI store, no BAA needed
 - [ ] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale
 - [ ] **Phase 6: Purchase Prerequisites** - Honor-system checkboxes and returning-patient state
 - [ ] **Phase 7: Telehealth Intake Path** - Booking-capable consult page and telehealth branching
@@ -316,67 +316,71 @@ Plans:
 
 ### Phase 04.2: Resume In-Progress Intake (INSERTED)
 
-**Goal**: A patient can stop the intake at any point and pick it up later on any device, so
-abandonment stops losing clinical work
-**Depends on**: Phase 4 (the flow and upload path must be settled first), **the Fly.io BAA**, and
-**the AOD GCP cutover** — this phase creates a second PHI store and the app's first outbound email
-**Requirements**: RESUME-01 … RESUME-05 (to be written into REQUIREMENTS.md during planning)
+**Goal**: A patient who closes the tab mid-intake can come back to the same browser and pick up
+where they left off, instead of starting a ten-minute clinical questionnaire over
+**Depends on**: Phase 4 (the flow must be settled first). **Not gated on any BAA** — see below
+**Requirements**: RESUME-01 … RESUME-04 (to be written into REQUIREMENTS.md during planning)
 **Success Criteria** (what must be TRUE):
 
-  1. A patient who closes the tab mid-intake can return via an emailed link and find every answer
-     they had given, including any uploaded test-result files
+  1. A patient who closes the tab mid-intake and returns to the quiz page on the same browser is
+     offered their prior answers, and can either resume or start fresh
 
-  2. Resuming works on a different device from the one that started the intake
-  3. A resume link expires, is single-purpose, and cannot be replayed to read someone else's draft
-  4. A draft that becomes a completed submission leaves no duplicate PHI behind
-  5. No draft is reachable without the token — there is no enumerable draft ID and no listing endpoint
+  2. Nothing is written to the draft until the patient has actually begun — an untouched page load
+     leaves no trace
+
+  3. The draft is cleared on successful submission, and an explicit "start over" control clears it
+     on demand
+
+  4. A stale draft expires on its own, so a shared or family device does not surface one patient's
+     name, DOB, and symptoms to the next person
+
+  5. The score and submitted payload are identical whether an intake was completed in one sitting or
+     resumed — resume changes persistence only, never clinical data
 
 **Plans:** TBD
 **UI hint**: yes
 
-**Notes**: **~1+ week, and it reverses a decision that was deliberately recorded as out of scope.**
-`PROJECT.md` carried this under Out of Scope with the source directive quoted verbatim: *"Do not let
-this get promised casually."* Andrew reversed it on 2026-08-09; the original is retracted in place
-there rather than deleted. **It goes on the William list** — scope that was explicitly not committed
-is now committed, and the 6/27 list is still unpriced with $1,800 unbilled.
+**Notes**: **~1–2 days. Browser-local only, deliberately.** Quiz state persists to `localStorage` as
+the patient answers; returning to the page offers to restore it.
 
-**Why it is a week and not a weekend — four things that do not exist today:**
+**Why this has no BAA implication.** The draft never leaves the patient's device. It is the
+patient's own copy of their own information, which is categorically different from the clinic
+storing it — HIPAA governs what the covered entity holds, not what a patient keeps in their own
+browser. **No draft table, no email provider, no token system, no new PHI store, no new vendor.**
+This is the whole reason the browser-local route was chosen over a server draft.
 
-1. **No draft store.** `submissions` is INSERT-ONLY, there is no `updateSubmission`, and
-   `symptom_profile_id` is `NOT NULL UNIQUE`. A draft needs its own table and its own identity; it
-   cannot be a half-written submission row.
+**Scope reversal recorded.** `PROJECT.md` carried resume under Out of Scope with the source directive
+quoted verbatim: *"Do not let this get promised casually."* Andrew committed it on 2026-08-09; the
+original is retracted in place there rather than deleted. The **server-side, cross-device** version
+(draft PHI table + emailed magic link, ~1+ week, gated on the Fly.io BAA and an email provider BAA)
+was scoped and then deliberately dropped — see `<deferred>` below. Browser-local is explicitly
+"good enough for now," not a first increment toward the server version.
 
-2. **No email infrastructure at all.** Measured 2026-08-09: zero occurrences of `nodemailer`,
-   `resend`, `sendgrid`, `postmark`, `mailgun`, or `sendEmail` across `app/` and `package.json`. The
-   app has never sent an email. A magic link means a provider, a BAA with that provider, deliverability
-   on a clinical domain, and the unresolved domain-spelling decision (LAUNCH-07) actually blocking
-   something for the first time.
+**What this deliberately does NOT do:**
 
-3. **No token system for this shape.** `customer-auth.ts` does HS256 Bearer verification for
-   logged-in customers. A resume token is different: anonymous, single-purpose, time-boxed, and it
-   grants read/write to a partial clinical record. It must not be reusable and must not be guessable.
+- **No cross-device resume.** Start on a laptop, finish on a phone — not supported. This is the
+  accepted trade.
+- **Does not survive a cache clear, private browsing, or a different browser on the same machine.**
+- **Does not resurrect a patient who never came back.** There is no server-side record of an
+  abandoned intake, and therefore no follow-up capability. If AOD ever wants "you left something
+  unfinished" outreach, that requires the server version and its BAA chain.
 
-4. **A second PHI store, with everything that implies.** A draft holds name, DOB, email, phone, and
-   partial symptom answers. That is PHI at rest under `CLAUDE.md`'s rules: ownership-bounded access
-   only, no PHI in logs, its own entry in `docs/breach-response-runbook.md`, and coverage in
-   `submission_access_log`.
+**The shared-device case is the one real risk, and it is a design requirement not a footnote.** A
+patient completing an intake on a family iPad, a library machine, or a clinic kiosk leaves name,
+DOB, email, phone, and symptom answers in that browser. Success criteria 3 and 4 exist for exactly
+this. Expiry, clear-on-submit, and a visible "start over" control are mitigations, not optional
+polish. The threat model should say so plainly.
 
-**Open question for counsel, not for engineering (raise before building):** is an *abandoned* partial
-intake a medical record subject to the 6-year HIPAA retention rule, or may it be purged on expiry?
-The answer sets the draft table's deletion policy, and guessing it wrong is a compliance finding in
-either direction — purging a record that must be kept, or hoarding PHI that should have been deleted.
-`CLAUDE.md` already forbids deleting submission data during incident response; whether that extends to
-drafts is genuinely unclear.
+**Interaction with Phase 4.1 — smaller than the server version, but not zero.** After 4.1 the upload
+comes first, so a resuming patient has already staged a file server-side under `pending/`, which
+expires at `PENDING_OLM_AGE_DAYS` = `2`. A patient who resumes on day 3 gets their answers back but
+their upload is gone. **The resume flow must detect a staged file that no longer exists and re-prompt
+for it, rather than silently carrying a dead reference into submit.** That is a concrete plan
+requirement, not a nice-to-have — a submission that references a deleted object is a broken clinical
+record.
 
-**Interaction with Phase 4.1 — these two set one number together.** `PENDING_OLM_AGE_DAYS` is `2`
-today. Phase 4.1 argues for shortening it, because after the reorder every abandoner leaves an
-orphaned staged file that can never be reclaimed. Resume argues for lengthening it, because a patient
-resuming on day 3 must still find their upload. **Neither phase may tune that value alone.** If both
-ship, the draft's own expiry and the `pending/` lifecycle age must be the same number, derived from
-how long a resume link stays valid.
-
-**Sequencing:** 4.1 first — it is half a day, self-contained, and depends on nothing here. 4.2 is
-gated on the same BAA chain as the upload deploy, so it cannot start earlier anyway.
+**Sequencing:** 4.1 first (half a day, self-contained). 4.2 is now also unblocked and can follow
+immediately — neither waits on the BAA chain, credentials, or William.
 
 ### Phase 04.1: Testing-First Quiz Order (INSERTED)
 
@@ -607,12 +611,16 @@ different directions:
 
 - **Phase 4.1** moves the testing split and its required upload to the front, so a patient who
   cannot produce results loses seconds instead of a completed intake. Half a day, unblocked.
-- **Phase 4.2** adds true resume via a draft PHI store and an emailed magic link. ~1+ week, gated on
-  the Fly.io BAA and the AOD GCP cutover.
+- **Phase 4.2** adds browser-local resume (`localStorage`). ~1–2 days, **unblocked** — no draft PHI
+  store, no email provider, no BAA implication, because the draft never leaves the patient's device.
 
-**Until 4.2 actually ships, this risk stands exactly as originally written.** And the retracted
-sentence's warning still applies to the *commercial* side: it was never priced, and it is now
-committed scope on a project with $1,800 unbilled and no Phase 2 SOW.
+**The risk is reduced, not eliminated, and the residue is specific:** browser-local resume does not
+survive a cache clear, private browsing, a different browser, or a switch to another device. A
+patient who starts on a laptop and returns on a phone still loses everything. Cross-device resume
+requires the server-side draft + magic-link design, which was scoped and deliberately dropped
+(~1+ week, and it would put a partial clinical record in a new PHI table plus an email provider —
+two more BAA surfaces). If AOD later wants cross-device resume or "you left something unfinished"
+outreach, that is a new phase and a priced conversation.
 
 ## Progress
 

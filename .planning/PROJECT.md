@@ -88,24 +88,27 @@ Full checkable list with IDs: `.planning/REQUIREMENTS.md`. Grouped summary:
   client was told on the call but never committed. Source directive: *"Do not let this get promised
   casually."* **Carried as an explicit risk, not a phase** — see Risks below.~~
 
-  ⚠️ **RETRACTED 2026-08-09 — Andrew committed this to scope.** It is now **Phase 4.2 — Resume
-  In-Progress Intake**, specified in `ROADMAP.md`, using a server-side draft store plus an emailed
-  magic link so resume works across devices. The original is kept struck through so anyone who read
-  it sees that it changed and why (same convention as `DEC-testing-results-by-email-not-upload` and
-  the `injectIframe` correction).
+  ⚠️ **PARTIALLY RETRACTED 2026-08-09.** It is now **Phase 4.2 — Resume In-Progress Intake**,
+  scoped to **browser-local (`localStorage`) resume only**. The original is kept struck through so
+  anyone who read it sees that it changed and why (same convention as
+  `DEC-testing-results-by-email-not-upload` and the `injectIframe` correction).
 
-  **Everything the original said about the cost remains true and none of it was disproven** — the
-  1+ week estimate, the absent draft table, the missing `updateSubmission`, and the `NOT NULL UNIQUE`
-  constraint on `symptom_profile_id` are all still exactly as described. Two further gaps were
-  measured on 2026-08-09: the app has **no email infrastructure of any kind** (zero occurrences of
+  **The original's cost analysis was never disproven — it was routed around.** The 1+ week estimate,
+  the absent draft table, the missing `updateSubmission`, and the `NOT NULL UNIQUE` constraint on
+  `symptom_profile_id` all still hold *for the server-side design*. Two further gaps were measured
+  on 2026-08-09: the app has **no email infrastructure of any kind** (zero occurrences of
   `nodemailer`/`resend`/`sendgrid`/`postmark`/`mailgun`/`sendEmail` across `app/` and
-  `package.json`), and a draft constitutes a **second PHI store** requiring its own access controls,
-  breach-runbook coverage, and retention policy.
+  `package.json`), and a server draft would be a **second PHI store** needing its own access
+  controls, breach-runbook coverage, and retention policy — plus an open counsel question about
+  whether an abandoned partial intake is a medical record under 6-year retention at all.
 
-  **Consequence that must not get lost:** the source directive was *"do not let this get promised
-  casually."* Committing it is therefore a client conversation, not just an engineering one — it
-  belongs on the William list alongside the upload reversal, and it is unpriced scope on a project
-  with $1,800 already unbilled and the Phase 2 SOW unwritten since 6/30.
+  **Browser-local sidesteps all of it.** The draft never leaves the patient's device, so it is the
+  patient's own copy of their own information — not something the covered entity holds. No draft
+  table, no email provider, no token system, no new BAA surface. ~1–2 days instead of ~1 week.
+
+  **STILL OUT OF SCOPE, and the original warning still applies to it:** cross-device resume, and any
+  "you left something unfinished" follow-up. Both require the server-side draft and its BAA chain,
+  and neither has been priced.
 - **Account-flag gating, Shopify Functions, real-time checkout blocking, mandatory accounts,
   manual clinical unlock, `orders/create` auto-cancel backstop, Locksmith-style gating apps,
   `tagsAdd` approval flow** — all removed by `DEC-purchase-gating-is-honor-system`. AOD is on
@@ -341,8 +344,11 @@ answer the registration question.
   place. Making testing mandatory makes that abandonment point *more* likely, not less.
   ~~Resume is out of scope for v1.0 — this risk ships with the milestone unless the client funds
   it.~~ **UPDATED 2026-08-09:** two phases now address this — **Phase 4.1** moves the testing split
-  and its required upload to the FRONT of the quiz so hitting the wall costs seconds rather than ten
-  minutes, and **Phase 4.2** adds resume. Until 4.2 ships, the risk stands exactly as written.
+  and its required upload to the FRONT so hitting the wall costs seconds rather than ten minutes,
+  and **Phase 4.2** adds browser-local (`localStorage`) resume. Both are unblocked; neither needs a
+  BAA. **Residual risk after both ship:** browser-local resume does not survive a cache clear,
+  private browsing, or a switch to another device — a patient who starts on a laptop and returns on
+  a phone still loses everything. Cross-device resume remains out of scope and unpriced.
 - **Klaviyo on a PHI-collecting page.** `/pages/allergy-quiz` was observed loading
   `static.klaviyo.com` and `static-tracking.klaviyo.com`. Zero references in this repo, so it is
   theme or Shopify-app level. This is a PHI disclosure to a vendor with no BAA and a reportable
