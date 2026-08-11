@@ -685,7 +685,13 @@
   border: none;
   background: transparent;
   color: rgba(var(--color-foreground, 32, 34, 35), 0.6);
-  font-size: var(--font-body-size, 1.2rem);
+  /* Explicit rem, NOT var(--font-body-size, 1.2rem). The embed page defines
+     --font-body-size: 1.6rem on :root (app/routes/quiz-embed.tsx:40), so a
+     fallback is dead code and every such declaration collapses to body size.
+     This control is the Caption/muted role in 04.2-UI-SPEC.md and must read
+     as lower-emphasis than body text; at 1.6rem it competed with the quiz
+     content. Found in Andrew's 04.2-07 browser pass. */
+  font-size: 1.2rem;
   font-family: var(--font-body-family, inherit);
   cursor: pointer;
   border-radius: var(--quiz-border-radius);
@@ -693,7 +699,7 @@
 
 @media (min-width: 750px) {
   .quizStartOver {
-    font-size: var(--font-body-size, 1.4rem);
+    font-size: 1.4rem;
   }
 }
 
@@ -718,7 +724,8 @@
 .quizStartOver__confirmButton {
   flex: 1;
   padding: var(--quiz-spacing-sm) var(--quiz-spacing-md);
-  font-size: var(--font-body-size, 1.4rem);
+  /* Explicit rem — see the note on .quizStartOver above. */
+  font-size: 1.4rem;
   font-weight: 600;
   font-family: var(--font-body-family, inherit);
   border: 2px solid var(--quiz-color-error);
@@ -733,7 +740,7 @@
 @media (min-width: 750px) {
   .quizStartOver__confirmButton {
     padding: var(--quiz-spacing-md) var(--quiz-spacing-lg);
-    font-size: var(--font-body-size, 1.6rem);
+    font-size: 1.6rem;
   }
 }
 
