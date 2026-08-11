@@ -23,7 +23,7 @@ import {
 import { visibleAnswers, itemsForPart, quizFlowProgress } from "../../lib/quiz/schema";
 import { type QuizAnswers } from "../../lib/quiz/types";
 import { buildSubmitPayload } from "../../lib/quiz/payload";
-import { readDraft, clearDraft, type QuizDraft } from "../../lib/quiz/draft-store";
+import { readDraft, writeDraft, clearDraft, type QuizDraft } from "../../lib/quiz/draft-store";
 import styles from "../../styles/quiz.module.css";
 
 // D-09: one path for every bracket — quiz_parts (Part 7 last) -> consent -> submitting -> results
@@ -125,6 +125,40 @@ export function QuizContainer() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [step, currentPartIndex]);
+
+  // D-07: nothing is written to storage until the patient has answered a real quiz question —
+  // ROADMAP criterion 2's sharpest requirement is that an untouched page load leaves zero trace.
+  // Debounced 500ms trailing write, not a write-on-every-change: several Part 6/Part 7 questions
+  // are free text and fire onChange per keystroke, and localStorage.setItem is synchronous, so an
+  // undebounced write would block the main thread on every character typed.
+  useEffect(() => {
+    // No window (SSR) — writeDraft already no-ops without it, but skip scheduling a timer too.
+    if (typeof window === "undefined") return;
+    // Step gate: only quiz_parts and consent can ever hold a draft-worthy answer. This is also
+    // what excludes Test Mode — the Test Mode block below sets a full sample `answers` object and
+    // sets `step` to "results" in the same batch, so a QA shortcut behind ?test=1 never persists
+    // a synthetic draft. It equally keeps resume_offer/state_gate/patient_info from ever
+    // scheduling a write before the patient has engaged with a real quiz question.
+    if (step !== "quiz_parts" && step !== "consent") return;
+    // Answers gate: the state gate and patient-info typing must leave nothing on disk — identity
+    // PHI is only persisted once the patient has answered at least one clinical question. This is
+    // the gate that keeps a curious or accidental page load, and a fully-typed-but-not-yet-quizzed
+    // patient-info screen, from ever writing a name/DOB/email/phone to a shared device.
+    if (Object.keys(answers).length === 0) return;
+
+    const timer = setTimeout(() => {
+      writeDraft({
+        step: step === "consent" ? "consent" : "quiz_parts",
+        patientState,
+        patientInfo,
+        symptomProfileId,
+        currentPartIndex,
+        answers,
+      });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [answers, currentPartIndex, step, patientState, patientInfo, symptomProfileId]);
 
   // No special-case deletion here (D-03). A hidden question's answer stays in React state so a
   // patient who flips an answer back and forth never loses typed text with no undo; `visibleAnswers`
@@ -257,6 +291,9 @@ export function QuizContainer() {
     setSubmissionError(null);
     try {
       await submitPayload();
+      // D-08: clear only after a successful submission, never in the catch branch — a transient
+      // network error must not cost the patient a ten-minute questionnaire's worth of answers.
+      clearDraft();
       setStep("results");
     } catch (e) {
       setSubmissionError(e instanceof Error ? e.message : "Submit failed");
