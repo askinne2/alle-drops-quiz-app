@@ -3,7 +3,7 @@ phase: 5
 slug: preliminary-score-page
 status: planned
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-08-11
 updated: 2026-08-11
 plans: 6
@@ -41,16 +41,16 @@ waves: 4
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 05-01-T1 | 05-01 | 1 | SCORE-02 | T-5-01 | RED proof before implementation; no hardcoded ceiling in the expectation | unit | `npx vitest run app/lib/quiz/scoring.test.ts` | ✅ (extend) | ⬜ pending |
-| 05-01-T2 | 05-01 | 1 | SCORE-02 | T-5-01, T-5-04 | `getQuestionMaxScore` handles every `QuestionType`; unscored types contribute 0, not `NaN`; no `console.*` | unit | `npx vitest run app/lib/quiz/scoring.test.ts` | ✅ (extend) | ⬜ pending |
-| 05-01-T3 | 05-01 | 1 | SCORE-03 | T-5-02, T-5-03 | `max` assigned from `getMaxScore(`, never a literal; provisional status identifiable in source (D-04) | unit | `npx vitest run app/lib/quiz/score-scale.test.ts` | ❌ W0 | ⬜ pending |
-| 05-02-T1 | 05-02 | 1 | SCORE-01 | T-5-07 | Seven legacy severity classes deleted; the two out-of-scope orphans deliberately retained | static | `node -e` occurrence assertion on `app/styles/quiz.module.css` (in-plan) + `npm test` | ✅ | ⬜ pending |
-| 05-02-T2 | 05-02 | 1 | SCORE-03 | T-5-08, T-5-09 | Tone selected by `data-tone`, not by an interpolated class name; track must not clip | static | `node -e` selector assertion on `app/styles/quiz.module.css` (in-plan) + `npm test` | ✅ | ⬜ pending |
-| 05-03-T1 | 05-03 | 2 | SCORE-01, SCORE-02, SCORE-03 | T-5-12, T-5-13, T-5-14, T-5-16 | No new prop or callback (TEST-05); `scoreBracket` absent from the bar subtree; no XSS sink; bracket absent from the accessible name | static + DOM | `node -e` source assertion (in-plan) + `npm run typecheck` | ✅ | ⬜ pending |
-| 05-03-T2 | 05-03 | 2 | SCORE-01 | T-5-15 | Three band explanations + disclaimer copy-frozen (D-09); no `console.*` added | static | `node -e` copy assertion (in-plan) + `npm run typecheck` | ✅ | ⬜ pending |
-| 05-03-T3 | 05-03 | 2 | SCORE-01 | T-5-17 | Coupled assertions repointed, not deleted — positive controls preserved | unit | `npx vitest run tests/quiz-testing-bypass-deletion.test.ts tests/quiz-resume-write-gate.test.ts tests/quiz-resume-payload-parity.test.ts` | ✅ (extend) | ⬜ pending |
-| 05-04-T1 | 05-04 | 3 | SCORE-01, SCORE-02, SCORE-03 | T-5-19, T-5-21, T-5-22 | Three mutation-proven guards; synthetic fixtures only; ceiling read from config | DOM | `npx vitest run tests/quiz-results-scale-bar-dom.test.ts` | ❌ W0 | ⬜ pending |
-| 05-04-T2 | 05-04 | 3 | SCORE-01 | T-5-20 | D-10 no-approval-promise guard, proven non-vacuous | static | `npx vitest run tests/quiz-testing-bypass-deletion.test.ts` | ✅ (extend) | ⬜ pending |
+| 05-01-T1 | 05-01 | 1 | SCORE-02 | T-5-01 | RED proof before implementation; no hardcoded ceiling in the expectation | unit | `npx vitest run app/lib/quiz/scoring.test.ts` | ✅ (extend) | ✅ green |
+| 05-01-T2 | 05-01 | 1 | SCORE-02 | T-5-01, T-5-04 | `getQuestionMaxScore` handles every `QuestionType`; unscored types contribute 0, not `NaN`; no `console.*` | unit | `npx vitest run app/lib/quiz/scoring.test.ts` | ✅ (extend) | ✅ green |
+| 05-01-T3 | 05-01 | 1 | SCORE-03 | T-5-02, T-5-03 | `max` assigned from `getMaxScore(`, never a literal; provisional status identifiable in source (D-04) | unit | `npx vitest run app/lib/quiz/score-scale.test.ts` | ✅ | ✅ green |
+| 05-02-T1 | 05-02 | 1 | SCORE-01 | T-5-07 | Seven legacy severity classes deleted; the two out-of-scope orphans deliberately retained | static | `node -e` occurrence assertion on `app/styles/quiz.module.css` (in-plan) + `npm test` | ✅ | ✅ green |
+| 05-02-T2 | 05-02 | 1 | SCORE-03 | T-5-08, T-5-09 | Tone selected by `data-tone`, not by an interpolated class name; track must not clip | static | `node -e` selector assertion on `app/styles/quiz.module.css` (in-plan) + `npm test` | ✅ | ✅ green |
+| 05-03-T1 | 05-03 | 2 | SCORE-01, SCORE-02, SCORE-03 | T-5-12, T-5-13, T-5-14, T-5-16 | No new prop or callback (TEST-05); `scoreBracket` absent from the bar subtree; no XSS sink; bracket absent from the accessible name | static + DOM | `node -e` source assertion (in-plan) + `npm run typecheck` | ✅ | ✅ green |
+| 05-03-T2 | 05-03 | 2 | SCORE-01 | T-5-15 | Three band explanations + disclaimer copy-frozen (D-09); no `console.*` added | static | `node -e` copy assertion (in-plan) + `npm run typecheck` | ✅ | ✅ green |
+| 05-03-T3 | 05-03 | 2 | SCORE-01 | T-5-17 | Coupled assertions repointed, not deleted — positive controls preserved | unit | `npx vitest run tests/quiz-testing-bypass-deletion.test.ts tests/quiz-resume-write-gate.test.ts tests/quiz-resume-payload-parity.test.ts` | ✅ (extend) | ✅ green |
+| 05-04-T1 | 05-04 | 3 | SCORE-01, SCORE-02, SCORE-03 | T-5-19, T-5-21, T-5-22 | Three mutation-proven guards; synthetic fixtures only; ceiling read from config | DOM | `npx vitest run tests/quiz-results-scale-bar-dom.test.ts` | ✅ | ✅ green |
+| 05-04-T2 | 05-04 | 3 | SCORE-01 | T-5-20 | D-10 no-approval-promise guard, proven non-vacuous | static | `npx vitest run tests/quiz-testing-bypass-deletion.test.ts` | ✅ (extend) | ✅ green |
 | 05-05-T1 | 05-05 | 3 | (all) | T-5-25, T-5-27, T-5-28 | Deterministic rebuild verified across two runs; no secret or PHI in the public artifact | bundle | `npm run build:theme` (twice, SHA-256 compared) | ✅ | ⬜ pending |
 | 05-05-T2 | 05-05 | 3 | (all) | T-5-26, T-5-29 | Every marker measured 0-before / ≥1-after; `provisional` zero-marker (D-04) | bundle | `npx vitest run tests/quiz-bundle-freshness.test.ts` | ✅ (extend) | ⬜ pending |
 | 05-06-T1 | 05-06 | 4 | (all) | T-5-31 | No bypass reintroduced to reach an arbitrary score; clean working tree | manual + static | `npx vitest run tests/quiz-testing-bypass-deletion.test.ts` | ✅ | ⬜ pending |
