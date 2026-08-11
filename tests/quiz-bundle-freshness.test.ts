@@ -174,10 +174,16 @@ describe("public/quiz-bundle.js carries Phase 4 (mandatory-allergy-testing) cont
     expect(count(needle)).toBeGreaterThanOrEqual(1);
   });
 
-  it('contains the "Your responses have been submitted." results confirmation line at least once — proves the post-consent terminal results screen (04-08) is compiled in', () => {
-    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
-    // fresh rebuild: 1 occurrence.
-    const needle = "Your responses have been submitted.";
+  it('contains the "1-2 business days" clinical-review sentence at least once — proves the terminal results screen\'s confirmation copy is compiled in (needle repointed by plan 05-05)', () => {
+    // This assertion's needle was originally the Phase 4 (04-08) post-consent confirmation
+    // subtitle. Plan 05-05 (SCORE-01, Phase 5) retired that exact sentence when ResultsDisplay
+    // was retitled to "Preliminary Score" and its subtitle became the clinical-review timeline
+    // sentence containing this fragment. The assertion's purpose is unchanged: it is the only
+    // bundle-level proof that the terminal results screen's confirmation copy is compiled in, so
+    // it is repointed here, not deleted. Measured against the pre-05-05-rebuild committed bundle
+    // (201707 bytes): 0 occurrences. Measured against the plan-05-05 rebuild (203588 bytes): 1
+    // occurrence.
+    const needle = "1-2 business days";
     expect(count(needle)).toBeGreaterThanOrEqual(1);
   });
 
@@ -435,5 +441,130 @@ describe("public/quiz-bundle.js carries Phase 4.2 (resume-in-progress-intake) co
     // fresh rebuild: 1 occurrence.
     const needle = "Your previous answers have been restored.";
     expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+});
+
+/**
+ * Phase 5 (preliminary-score-page) rebuild — plan 05-05.
+ *
+ * Rebuilt 2026-08-11 via `npm run build:theme`, folding in plan 05-02's `.scaleBar__*` CSS class
+ * family and three `--quiz-color-tone-*` custom properties, and plan 05-03's `ResultsDisplay.tsx`
+ * rewrite (SCORE-01 header/subtitle copy, the retired chip block replaced by the data-driven
+ * scale bar, and the D-06 "What this means for you" meaning-section wrapper).
+ *
+ * Byte sizes: `public/quiz-bundle.js` moved 201707 -> 203588 bytes (+1881). `public/quiz-bundle.css`
+ * moved 51134 -> 53670 bytes (+2536; five legacy severity rules deleted, the `.scaleBar__*` rule
+ * family plus three `--quiz-color-tone-*` custom properties added). Both deltas are accounted for
+ * entirely by the known markup/CSS additions and deletions from plans 05-02/05-03 — no environment
+ * variable, API call, or patient data was introduced into either artifact (T-5-28).
+ *
+ * Determinism was verified this session (not inherited from a prior plan) by running
+ * `npm run build:theme` twice in a row and confirming byte-identical SHA-256 hashes for both files
+ * before any marker below was trusted:
+ *   js:  cc84220deefdb60d6019256ec4510244451c083618941cb38ae71822d1496899
+ *   css: 2866b563377fe339badab7346b9dc210b2a6d35693c9d8bbb8a0f5ff903c4131
+ *
+ * Every count below uses `SOURCE.split(needle).length - 1`, exclusively — never the line-counting
+ * trap this file's own header comment documents, which collapses this single-line ~200KB minified
+ * bundle down to a count of `1` for any needle present anywhere, making a `>= 1` gate pass
+ * vacuously. All six candidate markers measured
+ * during this plan's Task 1 baseline (against the pre-rebuild committed bundle, 201707 bytes) came
+ * back 0-before / >=1-after on the first attempt — none was rejected under the admissibility rule.
+ *
+ * This test file asserts only against `public/quiz-bundle.js`; it does not read
+ * `public/quiz-bundle.css` directly (see this file's own governing rule, restated in plan 05-05:
+ * "this test file reads only the JS bundle, and CSS Modules class names appear in the JS bundle
+ * anyway"). The `.scaleBar` class-name marker below is therefore measured against the JS bundle,
+ * where esbuild emits it verbatim as a `className` string, not against the CSS bundle. (Plan 05-05's
+ * SUMMARY separately records a CSS-bundle measurement of the `.scaleBar__*` rule family and the
+ * three `--quiz-color-tone-*` custom properties, as evidence that the stylesheet build itself is
+ * correct — that measurement is not a test assertion here, by design.)
+ *
+ * The Phase 2 / 3 / 4 / 4.1 / 4.2 markers above CANNOT detect Phase 5 staleness: the Preliminary
+ * Score copy, the data-driven scale bar, and the D-06 meaning section did not exist in any bundle
+ * those markers were chosen against — a bundle stale only with respect to Phase 5 (i.e., carrying
+ * every prior phase's content correctly) would pass every assertion above this block while still
+ * shipping the retired "Your Assessment Results" title and "Symptom Score:" chip to the storefront.
+ */
+describe("public/quiz-bundle.js carries Phase 5 (preliminary-score-page) content — the Preliminary Score title, data-driven scale bar, and D-06 meaning section compiled in", () => {
+  it('contains the "Preliminary Score" h2 title at least once — proves SCORE-01\'s retitle is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle (201707 bytes): 0 occurrences. Measured
+    // against the fresh rebuild (203588 bytes): 1 occurrence.
+    const needle = "Preliminary Score";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "1-2 business days" clinical-review sentence at least once — proves SCORE-01\'s subtitle copy is compiled in (same needle the repointed Phase 4 assertion above now also covers)', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "1-2 business days";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "Symptom burden" scale-bar axis label at least once — proves SCORE-03\'s bar axis is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 2 occurrences (the axis label text plus its aria-label template use).
+    const needle = "Symptom burden";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "What this means for you" D-06 meaning-section heading at least once — proves the recommendation blocks are wrapped under the new heading', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "What this means for you";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "scaleBar" CSS Modules class family at least once, with a double-digit count — proves the scale-bar markup (SCORE-03) is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 36 occurrences (the class family applied across the track/zones/marker/legend
+    // markup plus its CSS Modules-generated selector names embedded in the JS bundle).
+    const needle = "scaleBar";
+    expect(count(needle)).toBeGreaterThanOrEqual(10);
+  });
+
+  it('contains the "data-tone" attribute name at least once — proves the bar\'s tone-driven zone/marker styling hook is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence. Confirmed present as a literal attribute name (not only emitted
+    // via a props object), so this is admissible as a positive marker.
+    const needle = "data-tone";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('has zero occurrences of the retired "Your Assessment Results" title — proves SCORE-01\'s retitle actually reached the storefront, not just the source tree', () => {
+    // Measured against the pre-rebuild committed bundle: 1 occurrence. Measured against the fresh
+    // rebuild: 0 occurrences.
+    const needle = "Your Assessment Results";
+    expect(count(needle)).toBe(0);
+  });
+
+  it('has zero occurrences of the retired "Symptom Score:" chip label — proves D-08\'s chip retirement actually reached the storefront', () => {
+    // Measured against the pre-rebuild committed bundle: 1 occurrence. Measured against the fresh
+    // rebuild: 0 occurrences.
+    const needle = "Symptom Score:";
+    expect(count(needle)).toBe(0);
+  });
+
+  it('has zero occurrences of the retired "severityValue" CSS class family — proves D-07/D-08\'s legacy severity-chip classes actually reached the storefront deletion, not just the source tree', () => {
+    // Measured against the pre-rebuild committed bundle: 12 occurrences (the class family plus its
+    // four tone variants, applied across the chip markup). Measured against the fresh rebuild: 0
+    // occurrences.
+    const needle = "severityValue";
+    expect(count(needle)).toBe(0);
+  });
+
+  it("has zero case-sensitive occurrences of a standalone \"Provisional\"/\"provisional\" word — proves D-04's provisional-scale flag never reaches patient-facing markup", () => {
+    // D-04 requires the provisional default to be visibly flagged in source only, never rendered
+    // to the patient. The raw capitalized needle cannot be used as-is: `getScoreScale()`'s
+    // `isProvisional` boolean property name survives minification verbatim (esbuild does not
+    // mangle property-access names), so a bare "Provisional" needle measures 1 occurrence against
+    // the fresh rebuild — not because patient-facing text leaked, but because the property name
+    // itself contains the substring. Narrowed here to two word-boundary-safe needles (a leading
+    // space before each casing) that cannot match inside "isProvisional" (which has no space before
+    // "Provisional"). Measured against the pre-rebuild committed bundle: 0 occurrences for both.
+    // Measured against the fresh rebuild: 0 occurrences for both — confirming the flag's property
+    // name is the only place either substring appears, and it never reaches rendered copy.
+    expect(count(" Provisional")).toBe(0);
+    expect(count(" provisional")).toBe(0);
   });
 });
