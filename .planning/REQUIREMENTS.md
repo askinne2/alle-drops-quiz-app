@@ -152,14 +152,14 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 
 ### Preliminary Score Page
 
-- [ ] **SCORE-01**: The results page is titled "Preliminary Score", states "Our Clinical Team is
+- [x] **SCORE-01**: The results page is titled "Preliminary Score", states "Our Clinical Team is
   reviewing your information, and will send you email confirmation of your final results within the
   next 1-2 business days", keeps the three approved band explanations, and contains no
   approval/unlock promise (`REQ-preliminary-score-page`, `DEC-no-approval-promise-copy`)
-- [ ] **SCORE-02**: The score ceiling is derived from the scored question set in code, so adding a
+- [x] **SCORE-02**: The score ceiling is derived from the scored question set in code, so adding a
   scored question changes it automatically (`REQ-derived-max-score`) — ⚠ **blocked on the score-scale
   decision**
-- [ ] **SCORE-03**: A colour-banded scale bar directly above the score shows where the patient falls
+- [x] **SCORE-03**: A colour-banded scale bar directly above the score shows where the patient falls
   on the full range (`REQ-preliminary-score-page`) — ⚠ **blocked on the score-scale decision**
 
 > **AMENDED 2026-08-11.** SCORE-02 and SCORE-03 are **no longer code-blocked.** `/gsd:discuss-phase 5`
@@ -314,9 +314,9 @@ Acknowledged, not in the v1.0 roadmap.
 | RESUME-02 | Phase 4.2 | Complete (2026-08-11, verified live) |
 | RESUME-03 | Phase 4.2 | Complete (2026-08-11, verified live) |
 | RESUME-04 | Phase 4.2 | Complete (2026-08-11, verified live) |
-| SCORE-01 | Phase 5 | Pending |
-| SCORE-02 | Phase 5 | Pending (unblocked 2026-08-11 — provisional default, William tunes via Phase 5.1) |
-| SCORE-03 | Phase 5 | Pending (unblocked 2026-08-11 — provisional default, William tunes via Phase 5.1) |
+| SCORE-01 | Phase 5 | Complete |
+| SCORE-02 | Phase 5 | Complete (unblocked 2026-08-11 — provisional default, William tunes via Phase 5.1) |
+| SCORE-03 | Phase 5 | Complete (unblocked 2026-08-11 — provisional default, William tunes via Phase 5.1; Phase 5 shipped provisional bands as a code constant — Phase 5.1 replaces `getScoreScale()`'s body with a database read behind the same signature) |
 | SCALE-01 | Phase 5.1 | Pending |
 | SCALE-02 | Phase 5.1 | Pending |
 | SCALE-03 | Phase 5.1 | Pending |

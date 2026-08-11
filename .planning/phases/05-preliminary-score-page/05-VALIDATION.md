@@ -51,11 +51,11 @@ waves: 4
 | 05-03-T3 | 05-03 | 2 | SCORE-01 | T-5-17 | Coupled assertions repointed, not deleted — positive controls preserved | unit | `npx vitest run tests/quiz-testing-bypass-deletion.test.ts tests/quiz-resume-write-gate.test.ts tests/quiz-resume-payload-parity.test.ts` | ✅ (extend) | ✅ green |
 | 05-04-T1 | 05-04 | 3 | SCORE-01, SCORE-02, SCORE-03 | T-5-19, T-5-21, T-5-22 | Three mutation-proven guards; synthetic fixtures only; ceiling read from config | DOM | `npx vitest run tests/quiz-results-scale-bar-dom.test.ts` | ✅ | ✅ green |
 | 05-04-T2 | 05-04 | 3 | SCORE-01 | T-5-20 | D-10 no-approval-promise guard, proven non-vacuous | static | `npx vitest run tests/quiz-testing-bypass-deletion.test.ts` | ✅ (extend) | ✅ green |
-| 05-05-T1 | 05-05 | 3 | (all) | T-5-25, T-5-27, T-5-28 | Deterministic rebuild verified across two runs; no secret or PHI in the public artifact | bundle | `npm run build:theme` (twice, SHA-256 compared) | ✅ | ⬜ pending |
-| 05-05-T2 | 05-05 | 3 | (all) | T-5-26, T-5-29 | Every marker measured 0-before / ≥1-after; `provisional` zero-marker (D-04) | bundle | `npx vitest run tests/quiz-bundle-freshness.test.ts` | ✅ (extend) | ⬜ pending |
-| 05-06-T1 | 05-06 | 4 | (all) | T-5-31 | No bypass reintroduced to reach an arbitrary score; clean working tree | manual + static | `npx vitest run tests/quiz-testing-bypass-deletion.test.ts` | ✅ | ⬜ pending |
-| 05-06-T2 | 05-06 | 4 | SCORE-01, SCORE-03 | T-5-33, T-5-34 | Greyscale + 375px human pass; no PHI in captures; no deploy | manual | none — blocking checkpoint | n/a | ⬜ pending |
-| 05-06-T3 | 05-06 | 4 | (all) | T-5-32, T-5-35 | Requirement rows closed only after the human pass; D-04 audit trail preserved | docs | `npm test` | ✅ | ⬜ pending |
+| 05-05-T1 | 05-05 | 3 | (all) | T-5-25, T-5-27, T-5-28 | Deterministic rebuild verified across two runs; no secret or PHI in the public artifact | bundle | `npm run build:theme` (twice, SHA-256 compared) | ✅ | ✅ green |
+| 05-05-T2 | 05-05 | 3 | (all) | T-5-26, T-5-29 | Every marker measured 0-before / ≥1-after; `provisional` zero-marker (D-04) | bundle | `npx vitest run tests/quiz-bundle-freshness.test.ts` | ✅ (extend) | ✅ green |
+| 05-06-T1 | 05-06 | 4 | (all) | T-5-31 | No bypass reintroduced to reach an arbitrary score; clean working tree | manual + static | `npx vitest run tests/quiz-testing-bypass-deletion.test.ts` | ✅ | ✅ green |
+| 05-06-T2 | 05-06 | 4 | SCORE-01, SCORE-03 | T-5-33, T-5-34 | Greyscale + 375px human pass; no PHI in captures; no deploy | manual | none — blocking checkpoint | n/a | ✅ green |
+| 05-06-T3 | 05-06 | 4 | (all) | T-5-32, T-5-35 | Requirement rows closed only after the human pass; D-04 audit trail preserved | docs | `npm test` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -85,14 +85,17 @@ the word "verified" — this table is read during HIPAA readiness review.
 
 | Behavior | Requirement | Owner | Why Manual | Test Instructions | Observed |
 |----------|-------------|-------|------------|-------------------|----------|
-| Scale-bar marker not clipped at score 0 / max | SCORE-03 | 05-06-T2 | Overflow/`position` visual; jsdom computes no layout | Open results at score 0 and at 60; marker straddles the rounded ends without a half-moon clip | ⬜ pending |
-| Bands distinguishable in greyscale | SCORE-03 / WCAG 1.4.1 | 05-06-T2 | Colour-independence cannot be asserted in jsdom | Greyscale capture at both widths; three regions distinguishable and the current one locatable via the bolded label | ⬜ pending |
-| Zone seam contrast vs bar colours | SCORE-03 / WCAG 1.4.11 | 05-06-T2 | Contrast is visual | Confirm opaque `--color-foreground` seams visible against each zone tone | ⬜ pending |
-| Legend labels do not collide at 375px | SCORE-03 | 05-06-T2 | Text metrics and wrapping are layout-dependent | 375px capture; Low / Moderate / High sit under their own segments without wrapping or overlap | ⬜ pending |
-| Score 7 with bracket `7+` reads low-tone, not severe | SCORE-03 / D-05 | 05-06-T2 | Clinical-honesty judgement, not a boolean | Confirm the bar is in the low band while the SLIT recommendation shows; blocker if it reads red | ⬜ pending |
-| Band explanations + disclaimer unchanged | SCORE-01 / D-09 | 05-06-T2 | Clinical copy approval | Diff against pre-phase text; three h3/body blocks + disclaimer byte-identical aside from structural wrappers | ⬜ pending |
-| No copy promises purchase on approval | SCORE-01 / D-10 | 05-06-T2 | Compliance judgement (backed by 05-04-T2's needle guard) | Read the subtitle and all three band messages aloud | ⬜ pending |
-| No patient-facing "provisional" banner | D-04 | 05-06-T2 | Product judgment (backed by 05-05-T2's bundle zero-marker) | Confirm the results page has no "these numbers aren't final" notice | ⬜ pending |
+| Scale-bar marker not clipped at score 0 / max | SCORE-03 | 05-06-T2 | Overflow/`position` visual; jsdom computes no layout | Open results at score 0 and at 60; marker straddles the rounded ends without a half-moon clip | 2026-08-11 harness: marker sits at left end at score 0 and right end at score 60; no half-moon clip visible in desktop captures |
+| Bands distinguishable in greyscale | SCORE-03 / WCAG 1.4.1 | 05-06-T2 | Colour-independence cannot be asserted in jsdom | Greyscale capture at both widths; three regions distinguishable and the current one locatable via the bolded label | 2026-08-11: greyscale score-7 capture still shows three band regions via Low/Moderate/High labels + bold current + seams |
+| Zone seam contrast vs bar colours | SCORE-03 / WCAG 1.4.11 | 05-06-T2 | Contrast is visual | Confirm opaque `--color-foreground` seams visible against each zone tone | 2026-08-11: opaque foreground seams visible between Low/Moderate/High in colour captures |
+| Legend labels do not collide at 375px | SCORE-03 | 05-06-T2 | Text metrics and wrapping are layout-dependent | 375px capture; Low / Moderate / High sit under their own segments without wrapping or overlap | 2026-08-11: score-7 at 375px — Low/Moderate/High present under segments; axis row tighter but labels readable |
+| Score 7 with bracket `7+` reads low-tone, not severe | SCORE-03 / D-05 | 05-06-T2 | Clinical-honesty judgement, not a boolean | Confirm the bar is in the low band while the SLIT recommendation shows; blocker if it reads red | 2026-08-11 Andrew approved: Low bar + SLIT together. Post-approval UX adds circle caption "Low symptom burden", bridge sentence, and "Low on the symptom scale" under the meaning heading |
+| Band explanations + disclaimer unchanged | SCORE-01 / D-09 | 05-06-T2 | Clinical copy approval | Diff against pre-phase text; three h3/body blocks + disclaimer byte-identical aside from structural wrappers | 2026-08-11: three h3/body blocks and disclaimer left verbatim; only structural wrappers + new teaching lines outside those blocks |
+| No copy promises purchase on approval | SCORE-01 / D-10 | 05-06-T2 | Compliance judgement (backed by 05-04-T2's needle guard) | Read the subtitle and all three band messages aloud | 2026-08-11: subtitle is review+email only; band messages have no purchase-if-approved promise; automated guard green |
+| No patient-facing "provisional" banner | D-04 | 05-06-T2 | Product judgment (backed by 05-05-T2's bundle zero-marker) | Confirm the results page has no "these numbers aren't final" notice | 2026-08-11: no provisional banner on patient surface; bundle zero-marker for " provisional"/" Provisional" green |
+
+**Human gate:** Andrew approved 2026-08-11 (session checkpoint). Final suite after UX polish: **726 tests / 49 files**.
+
 
 ---
 
@@ -105,5 +108,4 @@ the word "verified" — this table is read during HIPAA readiness review.
 - [x] Feedback latency < 60s — quick runs ~5s, full suite ~30–60s
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** planned 2026-08-11 — 6 plans, 15 tasks, 4 waves. Reverify after execution and set
-`wave_0_complete: true`.
+**Approval:** Andrew approved human visual gate 2026-08-11. Phase 5 requirements SCORE-01/02/03 closed. Final suite **726 tests / 49 files**.

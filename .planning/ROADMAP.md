@@ -26,7 +26,7 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - [x] **Phase 4: Mandatory Allergy Testing** - Two-option testing split; both bypasses deleted (completed 2026-08-10)
 - [x] **Phase 4.1: Testing-First Quiz Order** *(INSERTED)* - Move the testing split + required upload to the front so abandonment costs seconds, not ten minutes (completed 2026-08-11)
 - [x] **Phase 4.2: Resume In-Progress Intake** *(INSERTED)* - Browser-local (localStorage) resume so a closed tab does not lose a completed intake. No draft PHI store, no BAA needed (completed 2026-08-11)
-- [ ] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale
+- [x] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale (completed 2026-08-11)
 - [ ] **Phase 5.1: Admin-Configurable Score Scale** *(INSERTED)* - Move the band stops and clinical bracket boundaries out of code into a versioned, audited admin setting so William tunes them without a deploy
 - [ ] **Phase 6: Purchase Prerequisites** - Honor-system checkboxes and returning-patient state
 - [ ] **Phase 7: Telehealth Intake Path** - Booking-capable consult page and telehealth branching
@@ -515,7 +515,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 05-06-PLAN.md — Blocking human verification (greyscale, 375px, score-7 decoupling) and requirement closure
+- [x] 05-06-PLAN.md — Blocking human verification (greyscale, 375px, score-7 decoupling) and requirement closure
 
 **UI hint**: yes
 **Notes**: **Split this phase when planning.** SCORE-01 is ~30 minutes of string edits and is NOT
@@ -781,7 +781,7 @@ exposures today.
 | 2. Quiz Schema Foundation | 4/4 | Complete    | 2026-08-09 |
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
 | 4. Mandatory Allergy Testing | 19/19 | Complete   | 2026-08-10 |
-| 5. Preliminary Score Page | 5/6 | In Progress|  |
+| 5. Preliminary Score Page | 6/6 | Complete   | 2026-08-11 |
 | 6. Purchase Prerequisites | 0/TBD | Not started | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |
 | 8. Launch Readiness | 0/TBD | Not started | - |
