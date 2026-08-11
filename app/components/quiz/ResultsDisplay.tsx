@@ -3,6 +3,7 @@ import { type ScoreBracket } from "../../lib/quiz/scoring";
 import { getRedirectTarget, REDIRECT_FALLBACK, type QuizRedirectConfig } from "../../lib/quiz/redirects";
 import { getProductHandle, type QuizProductConfig } from "../../lib/quiz/product-links";
 import { toRelativePath } from "../../lib/quiz/navigation";
+import { getScoreScale } from "../../lib/quiz/score-scale";
 import styles from "../../styles/quiz.module.css";
 
 export interface ResultsDisplayProps {
@@ -66,6 +67,9 @@ export function ResultsDisplay({
   testingStatus,
 }: ResultsDisplayProps) {
   const [copied, setCopied] = useState(false);
+  const scale = getScoreScale();
+  const currentZone = scale.zones.find((z) => score <= z.upTo) ?? scale.zones[scale.zones.length - 1];
+  const markerPercent = scale.max > 0 ? (score / scale.max) * 100 : 0;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(symptomProfileId).then(() => {
@@ -77,8 +81,11 @@ export function ResultsDisplay({
   return (
     <div className={styles.quizResults} data-patient-state={patientState}>
       <div className={styles.quizResults__header}>
-        <h2 className={styles.quizResults__title}>Your Assessment Results</h2>
-        <p className={styles.quizResults__subtitle}>Your responses have been submitted.</p>
+        <h2 className={styles.quizResults__title}>Preliminary Score</h2>
+        <p className={styles.quizResults__subtitle}>
+          Our Clinical Team is reviewing your information, and will send you email confirmation of
+          your final results within the next 1-2 business days.
+        </p>
       </div>
 
       <div className={styles.quizResults__mainGrid}>
@@ -87,15 +94,52 @@ export function ResultsDisplay({
             <div className={styles.quizResults__scoreCircle}>
               <span className={styles.quizResults__scoreNumber}>{score}</span>
             </div>
-            <div className={styles.quizResults__severity}>
-              <span className={styles.quizResults__severityLabel}>Symptom Score:</span>
-              <span className={`${styles.quizResults__severityValue} ${
-                scoreBracket === "0-2"
-                  ? styles.quizResults__severityValueMinimal
-                  : scoreBracket === "3-6"
-                  ? styles.quizResults__severityValueMild
-                  : styles.quizResults__severityValueSevere
-              }`}>{scoreBracket}</span>
+            <div className={styles.scaleBar}>
+              <div className={styles.scaleBar__axisRow}>
+                <span className={styles.scaleBar__axisLabel}>Symptom burden</span>
+                <span className={styles.scaleBar__value}>{score} of {scale.max}</span>
+              </div>
+              <div
+                className={styles.scaleBar__track}
+                role="img"
+                aria-label={`Symptom burden position: ${currentZone.label.toLowerCase()} zone, ${score} of ${scale.max} on a 0 to ${scale.max} scale.`}
+              >
+                <div className={styles.scaleBar__zones} aria-hidden="true">
+                  {scale.zones.map((zone, index) => {
+                    const previousUpTo = index === 0 ? 0 : scale.zones[index - 1].upTo;
+                    const span = zone.upTo - previousUpTo;
+                    return (
+                      <div
+                        key={zone.tone + zone.upTo}
+                        className={styles.scaleBar__zone}
+                        data-tone={zone.tone}
+                        style={{ flex: `${span} 0 0` }}
+                      />
+                    );
+                  })}
+                </div>
+                <div
+                  className={styles.scaleBar__marker}
+                  aria-hidden="true"
+                  style={{ left: `${markerPercent}%` }}
+                />
+              </div>
+              <div className={styles.scaleBar__legend}>
+                {scale.zones.map((zone, index) => {
+                  const previousUpTo = index === 0 ? 0 : scale.zones[index - 1].upTo;
+                  const span = zone.upTo - previousUpTo;
+                  return (
+                    <span
+                      key={zone.tone + zone.upTo}
+                      className={styles.scaleBar__legendItem}
+                      style={{ flex: `${span} 0 0` }}
+                      {...(zone === currentZone ? { "data-current": "true" } : {})}
+                    >
+                      {zone.label}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
