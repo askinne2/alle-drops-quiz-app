@@ -162,6 +162,30 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 - [ ] **SCORE-03**: A colour-banded scale bar directly above the score shows where the patient falls
   on the full range (`REQ-preliminary-score-page`) — ⚠ **blocked on the score-scale decision**
 
+> **AMENDED 2026-08-11.** SCORE-02 and SCORE-03 are **no longer code-blocked.** `/gsd:discuss-phase 5`
+> resolved the score-scale question structurally: the colour stops and the clinical brackets became
+> two independent tunables, and the scale itself moved to a versioned admin setting (new Phase 5.1,
+> SCALE-01..04). Phase 5 ships a provisional default; William's answer becomes a data edit rather than
+> a code change. **Still owed:** confirmation of the provisional band values before go-live.
+
+### Admin-Configurable Score Scale
+
+- [ ] **SCALE-01**: An app-settings store holds the active score scale — the displayed range, the
+  band stops with their tones, and the clinical bracket boundaries — carrying a `scale_version` that
+  increments on every edit plus `changed_by` and `changed_at`
+  (`05-CONTEXT.md` D-01, D-02)
+- [ ] **SCALE-02**: An authorized user edits that scale from a page in the embedded Shopify admin,
+  with validation at the form: stops ascending, within the derived range, and covering it without
+  gaps. Invalid sets are rejected before they can be saved, never at render (`05-CONTEXT.md` D-02)
+- [ ] **SCALE-03**: The storefront quiz reads the active scale at runtime through `getScoreScale()`
+  and falls back to the compiled-in constant when the read fails, so no patient is ever shown or
+  bracketed by a partial configuration. All four bracket call sites
+  (`QuizContainer.tsx:203,260,601` and `payload.ts:101`) resolve to the same scale
+  (`05-CONTEXT.md` D-03)
+- [ ] **SCALE-04**: Every submission records the `scale_version` that produced its `score_bracket`,
+  so a row written under one band set stays interpretable after the bands change — ⚠ **PHI-path
+  change: adds a column to `submissions`** (`05-CONTEXT.md` D-02)
+
 ### Purchase Prerequisites & Returning Patients
 
 - [ ] **SHOP-01**: Metafield definitions exist for the `alledrops` customer namespace and Liquid
@@ -291,8 +315,12 @@ Acknowledged, not in the v1.0 roadmap.
 | RESUME-03 | Phase 4.2 | Complete (2026-08-11, verified live) |
 | RESUME-04 | Phase 4.2 | Complete (2026-08-11, verified live) |
 | SCORE-01 | Phase 5 | Pending |
-| SCORE-02 | Phase 5 | Blocked (William — score scale) |
-| SCORE-03 | Phase 5 | Blocked (William — score scale) |
+| SCORE-02 | Phase 5 | Pending (unblocked 2026-08-11 — provisional default, William tunes via Phase 5.1) |
+| SCORE-03 | Phase 5 | Pending (unblocked 2026-08-11 — provisional default, William tunes via Phase 5.1) |
+| SCALE-01 | Phase 5.1 | Pending |
+| SCALE-02 | Phase 5.1 | Pending |
+| SCALE-03 | Phase 5.1 | Pending |
+| SCALE-04 | Phase 5.1 | Pending |
 | SHOP-01 | Phase 6 | Pending |
 | SHOP-02 | Phase 6 | Pending |
 | SHOP-03 | Phase 6 | Pending |
@@ -310,14 +338,19 @@ Acknowledged, not in the v1.0 roadmap.
 | LAUNCH-07 | Phase 8 | Blocked (William — domain spelling) |
 | LAUNCH-08 | Phase 8 | Pending |
 
-**Coverage:**
-- v1 requirements: 42 total
-- Mapped to phases: 42
+**Coverage** (updated 2026-08-11):
+- v1 requirements: **46 total** (42 original + SCALE-01..04, added with Phase 5.1)
+- Mapped to phases: 46
 - Unmapped: 0 ✓
 - Duplicated across phases: 0 ✓
-- Blocked on a client decision or client action: 7 — DIAG-01, SCORE-02, SCORE-03, LAUNCH-03,
-  LAUNCH-05, LAUNCH-06, LAUNCH-07. DIAG-01 and SCORE-02/03 need answers to questions; LAUNCH-03/05/06/07
-  need client action. None of the 7 blocks the other 31.
+- Blocked on a client decision or client action: **5** — DIAG-01, LAUNCH-03, LAUNCH-05, LAUNCH-06,
+  LAUNCH-07. DIAG-01 needs an answer to a question; LAUNCH-03/05/06/07 need client action. None of
+  the 5 blocks the other 41.
+- **SCORE-02 and SCORE-03 left this list on 2026-08-11.** They were blocked on William's score-scale
+  decision. `/gsd:discuss-phase 5` resolved it structurally rather than by guessing: the colour stops
+  and clinical brackets became independent tunables, and the scale moved to a versioned admin setting
+  (Phase 5.1). William's answer is now a data edit, not a code blocker. **The obligation did not
+  vanish** — the provisional band values must be confirmed before go-live.
 
 ---
 *Requirements defined: 2026-07-29*

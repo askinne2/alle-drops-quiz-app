@@ -149,6 +149,7 @@ Andrew clicking. The tally is now six. Keep the human browser pass.
 ### Roadmap Evolution
 
 - Phase 04.1 inserted after Phase 4: Testing-First Quiz Order — move the allergy-testing split and required upload to the front of the quiz so abandonment costs 30 seconds, not 10 minutes (URGENT)
+- Phase 05.1 inserted after Phase 5: Admin-Configurable Score Scale — moves the band stops AND the clinical bracket boundaries out of code into a versioned, audited embedded-admin setting. Chosen by Andrew during `/gsd:discuss-phase 5` over a code constant and over a theme app block setting, and chosen in its wider form (including clinical brackets) over a visual-bands-only variant that would have stayed off the PHI path. Adds SCALE-01..04 and a `submissions.scale_version` column. **Side effect: unblocks SCORE-02 and SCORE-03**, which had been blocked on William's score-scale decision since the roadmap was written
 - Phase 04.2 inserted after Phase 4: Resume In-Progress Intake — **browser-local `localStorage` only.** The server draft store + emailed magic link version was scoped and deliberately DROPPED (~1+ week, two new BAA surfaces); this line originally described it and is corrected here. No draft PHI table, no email provider, no BAA implication. Partially reverses the recorded out-of-scope decision on resume — browser-local is in, cross-device stays out (URGENT)
 
 ### Decisions
