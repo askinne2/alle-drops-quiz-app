@@ -76,6 +76,54 @@ export function calculateTotalScore(questions: QuizQuestion[], answers: QuizAnsw
 }
 
 /**
+ * Theoretical maximum a single question can contribute, independent of any answer. Mirrors
+ * scoreQuestion's switch member for member — every new QuestionType must be added to BOTH
+ * switches, or getMaxScore silently omits it and understates the ceiling (05-RESEARCH.md
+ * Pitfall 1). scoreWeight is intentionally NOT applied here: it is declared on QuizQuestion but
+ * scoreQuestion never reads it (zero references outside its own declaration in types.ts), so
+ * weighting it into the ceiling would make the derived max unreachable by any real answer
+ * (05-RESEARCH.md Pitfall 2).
+ */
+export function getQuestionMaxScore(question: QuizQuestion): number {
+  switch (question.type) {
+    case "checkbox_multi":
+    case "radio_multi": {
+      const excluded = new Set(question.excludeFromScore || []);
+      return (question.options || []).filter((o) => !excluded.has(o.value)).length;
+    }
+
+    case "severity_0_3":
+      return 3;
+
+    case "frequency_0_4":
+    case "bother_0_4":
+      return 4;
+
+    case "control_0_3": {
+      const scores = (question.options || []).map((o) => o.score ?? 0);
+      return scores.length ? Math.max(...scores) : 0;
+    }
+
+    case "yesno":
+    case "text_input":
+    case "radio_single":
+    case "text_input_short":
+    case "file_multi":
+      return 0;
+
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Theoretical maximum total across a question list — the SCORE-02 ceiling.
+ */
+export function getMaxScore(questions: QuizQuestion[]): number {
+  return questions.reduce((total, question) => total + getQuestionMaxScore(question), 0);
+}
+
+/**
  * Determine score bracket from total score.
  */
 export function getScoreBracket(score: number): ScoreBracket {

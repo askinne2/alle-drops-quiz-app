@@ -266,7 +266,7 @@ function enterResumed(): void {
 async function submitAndAwaitResults(): Promise<void> {
   fireEvent.click(screen.getByRole("checkbox"));
   fireEvent.click(screen.getByRole("button", { name: "Submit" }));
-  await waitFor(() => expect(screen.getByText("Your Assessment Results")).toBeTruthy());
+  await waitFor(() => expect(screen.getByText("Preliminary Score")).toBeTruthy());
 }
 
 /** Deletes every `RESUME_PARITY_EXCLUDED_FIELDS` key from a COPY of the payload. Imports the

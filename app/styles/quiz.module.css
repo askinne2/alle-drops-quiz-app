@@ -31,6 +31,16 @@
   --quiz-color-success: #4CAF50;
   --quiz-color-warning: #FF9800;
   --quiz-color-error: #F44336;
+
+  /* Scale-bar zone tones (D-07). Five slots ship so Phase 5.1 can add a fourth or
+     fifth zone without new CSS. */
+  --quiz-color-tone-low: var(--quiz-color-success, #4CAF50);
+  --quiz-color-tone-low-mid: #CDDC39;
+  --quiz-color-tone-mid: var(--quiz-color-warning, #FF9800);
+  /* #FF5722 is the exact hex the retired legacy "Moderate" severity color class used —
+     this slot introduces zero net-new hex values. */
+  --quiz-color-tone-mid-high: #FF5722;
+  --quiz-color-tone-high: var(--quiz-color-error, #F44336);
 }
 
 /* Tablet and up - increase spacing */
@@ -945,62 +955,219 @@
   }
 }
 
-.quizResults__severity {
-  text-align: center;
-  padding: var(--quiz-spacing-md);
-  /* Use theme background with slight opacity */
+/* ==========================================================================
+   Scale bar (SCORE-03, D-05/D-06/D-07)
+   Data-driven, arbitrary-N zone visualization. Replaces the retired severity
+   chip block above. Zone color is selected by a data-tone attribute, never
+   by a per-bracket class name.
+   ========================================================================== */
+
+.scaleBar {
   background-color: rgba(var(--color-foreground, 32, 34, 35), 0.03);
   border-radius: var(--quiz-border-radius);
+  padding: var(--quiz-spacing-md);
 }
 
 @media (min-width: 750px) {
-  .quizResults__severity {
+  .scaleBar {
     padding: var(--quiz-spacing-lg);
   }
 }
 
-.quizResults__severityLabel {
-  font-size: var(--font-body-size, 1.2rem);
-  color: rgba(var(--color-foreground, 32, 34, 35), 0.6);
+.scaleBar__axisRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
   margin-bottom: var(--quiz-spacing-xs);
 }
 
+.scaleBar__axisLabel {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.3;
+  font-family: var(--font-body-family, inherit);
+  color: rgba(var(--color-foreground, 32, 34, 35), 0.75);
+}
+
 @media (min-width: 750px) {
-  .quizResults__severityLabel {
-    font-size: var(--font-body-size, 1.4rem);
-  margin-bottom: var(--quiz-spacing-sm);
+  .scaleBar__axisLabel {
+    font-size: 1.4rem;
   }
 }
 
-.quizResults__severityValue {
-  font-size: calc(var(--font-heading-scale, 1) * 1.8rem);
+.scaleBar__value {
+  font-size: 1.2rem;
   font-weight: 700;
-  margin-bottom: var(--quiz-spacing-sm);
-  text-transform: capitalize;
+  line-height: 1.3;
+  font-family: var(--font-body-family, inherit);
+  color: rgb(var(--color-foreground, 32, 34, 35));
 }
 
 @media (min-width: 750px) {
-  .quizResults__severityValue {
-    font-size: calc(var(--font-heading-scale, 1) * 2.4rem);
-    margin-bottom: var(--quiz-spacing-md);
+  .scaleBar__value {
+    font-size: 1.4rem;
   }
 }
 
-/* Severity color classes - these are specific accent colors */
-.quizResults__severityValueMinimal {
-  color: var(--quiz-color-success);
+/* The outer positioning element. No overflow and no border-radius here — both
+   live on .scaleBar__zones instead. Clipping this element would slice the
+   marker into a half-moon at score 0 and at score max. */
+.scaleBar__track {
+  position: relative;
+  height: 12px;
 }
 
-.quizResults__severityValueMild {
-  color: var(--quiz-color-warning);
+@media (min-width: 750px) {
+  .scaleBar__track {
+    height: 16px;
+  }
 }
 
-.quizResults__severityValueModerate {
-  color: #FF5722;
+.scaleBar__zones {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--quiz-border-radius);
+  overflow: hidden;
 }
 
-.quizResults__severityValueSevere {
-  color: var(--quiz-color-error);
+.scaleBar__zone {
+  height: 100%;
+  min-width: 0;
+  border-right: 2px solid rgb(var(--color-foreground, 32, 34, 35));
+}
+
+.scaleBar__zone:last-child {
+  border-right: none;
+}
+
+.scaleBar__zone[data-tone="low"] {
+  background-color: var(--quiz-color-tone-low);
+}
+
+.scaleBar__zone[data-tone="low-mid"] {
+  background-color: var(--quiz-color-tone-low-mid);
+}
+
+.scaleBar__zone[data-tone="mid"] {
+  background-color: var(--quiz-color-tone-mid);
+}
+
+.scaleBar__zone[data-tone="mid-high"] {
+  background-color: var(--quiz-color-tone-mid-high);
+}
+
+.scaleBar__zone[data-tone="high"] {
+  background-color: var(--quiz-color-tone-high);
+}
+
+.scaleBar__marker {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgb(var(--color-background, 255, 255, 255));
+  border: 3px solid rgb(var(--color-foreground, 32, 34, 35));
+  box-shadow: var(--quiz-shadow);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+@media (min-width: 750px) {
+  .scaleBar__marker {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.scaleBar__legend {
+  display: flex;
+  margin-top: var(--quiz-spacing-xs);
+}
+
+.scaleBar__legendItem {
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 1.0rem;
+  font-weight: 400;
+  line-height: 1.3;
+  color: rgba(var(--color-foreground, 32, 34, 35), 0.75);
+}
+
+@media (min-width: 750px) {
+  .scaleBar__legendItem {
+    font-size: 1.2rem;
+  }
+}
+
+/* The current-zone highlight. Attribute-driven, not a modifier class, for the
+   same reason .scaleBar__zone's tone is attribute-driven: CSS Modules hashes
+   class names, so a jsdom test can assert an attribute but not a generated
+   class name or a computed font-weight. */
+.scaleBar__legendItem[data-current="true"] {
+  font-weight: 700;
+}
+
+/* The D-06 boundary between "symptom burden" and "what this means for you".
+   This border IS the visual implementation of D-06's two-axes requirement —
+   it is not decorative and must not be removed as visual noise. */
+.scaleBar__meaningSection {
+  border-top: 2px solid rgba(var(--color-foreground, 32, 34, 35), 0.1);
+  padding-top: var(--quiz-spacing-md);
+  margin-top: var(--quiz-spacing-lg);
+}
+
+@media (min-width: 750px) {
+  .scaleBar__meaningSection {
+    padding-top: var(--quiz-spacing-lg);
+    margin-top: var(--quiz-spacing-xl);
+  }
+}
+
+.scaleBar__axisBridge {
+  margin: 0 0 var(--quiz-spacing-sm);
+  font-size: 1.3rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: rgba(var(--color-foreground, 32, 34, 35), 0.8);
+}
+
+@media (min-width: 750px) {
+  .scaleBar__axisBridge {
+    font-size: 1.4rem;
+  }
+}
+
+.scaleBar__meaningHeading {
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0 0 var(--quiz-spacing-xs);
+  color: rgba(var(--color-foreground, 32, 34, 35), 0.75);
+}
+
+@media (min-width: 750px) {
+  .scaleBar__meaningHeading {
+    font-size: 1.4rem;
+  }
+}
+
+.scaleBar__meaningContext {
+  margin: 0 0 var(--quiz-spacing-md);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: rgb(var(--color-foreground, 32, 34, 35));
+}
+
+@media (min-width: 750px) {
+  .scaleBar__meaningContext {
+    font-size: 1.3rem;
+  }
 }
 
 .quizResults__severityDescription {
@@ -1138,6 +1305,22 @@
 @media (min-width: 750px) {
   .quizResults__scoreNumber {
     font-size: 4.8rem;
+  }
+}
+
+/* Immediate burden label under the score circle — same zone vocabulary as the bar legend */
+.quizResults__scoreBurdenCaption {
+  margin: 0 0 var(--quiz-spacing-md);
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: rgb(var(--color-foreground, 32, 34, 35));
+}
+
+@media (min-width: 750px) {
+  .quizResults__scoreBurdenCaption {
+    font-size: 1.6rem;
+    margin-bottom: var(--quiz-spacing-lg);
   }
 }
 

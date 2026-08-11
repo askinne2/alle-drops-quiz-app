@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Phases 04.1 + 04.2 shipped and verified live (Fly v52, Shopify -23); next is Phase 5
-last_updated: "2026-08-11T12:48:42.365Z"
-last_activity: 2026-08-11 -- Phase 04.2 marked complete
+status: executing
+stopped_at: Phase 5 UI-SPEC approved
+last_updated: "2026-08-11T16:29:02.588Z"
+last_activity: 2026-08-11 -- Phase 5 execution started
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 5
-  total_plans: 50
+  total_plans: 56
   completed_plans: 49
-  percent: 50
+  percent: 45
 ---
 
 # Project State
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phases 04.1 + 04.2 shipped and verified live 2026-08-11. Next: Phase 5.
+**Current focus:** Phase 5 — Preliminary Score Page
 
 ## Current Position
 
-Phase: 04.2 — **COMPLETE AND SHIPPED**
-Plan: 8 of 8 executed. All six waves complete, merged, and deployed.
-Status: Phase 04.2 complete — ready for Phase 5
-Last activity: 2026-08-11 -- Phases 04.1 + 04.2 deployed together and verified on served bytes
+Phase: 5 (Preliminary Score Page) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 5
+Last activity: 2026-08-11 -- Phase 5 execution started
 
 **Branch:** merged. `main` @ `86e6b50` (PR #23 merged as `e140a8c`, superseding PR #22 which was
 closed with a pointer comment). `phase-4.2-resume-in-progress-intake` is landed; nothing outstanding
@@ -149,6 +149,7 @@ Andrew clicking. The tally is now six. Keep the human browser pass.
 ### Roadmap Evolution
 
 - Phase 04.1 inserted after Phase 4: Testing-First Quiz Order — move the allergy-testing split and required upload to the front of the quiz so abandonment costs 30 seconds, not 10 minutes (URGENT)
+- Phase 05.1 inserted after Phase 5: Admin-Configurable Score Scale — moves the band stops AND the clinical bracket boundaries out of code into a versioned, audited embedded-admin setting. Chosen by Andrew during `/gsd:discuss-phase 5` over a code constant and over a theme app block setting, and chosen in its wider form (including clinical brackets) over a visual-bands-only variant that would have stayed off the PHI path. Adds SCALE-01..04 and a `submissions.scale_version` column. **Side effect: unblocks SCORE-02 and SCORE-03**, which had been blocked on William's score-scale decision since the roadmap was written
 - Phase 04.2 inserted after Phase 4: Resume In-Progress Intake — **browser-local `localStorage` only.** The server draft store + emailed magic link version was scoped and deliberately DROPPED (~1+ week, two new BAA surfaces); this line originally described it and is corrected here. No draft PHI table, no email provider, no BAA implication. Partially reverses the recorded out-of-scope decision on resume — browser-local is in, cross-device stays out (URGENT)
 
 ### Decisions
@@ -434,9 +435,9 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T22:43:15.209Z
-Stopped at: Phase 04.2 planned — 8 plans, 6 waves, checker PASSED
-Resume file: .planning/phases/04.2-resume-in-progress-intake/04.2-01-PLAN.md
+Last session: 2026-08-11T14:26:27.425Z
+Stopped at: Phase 5 UI-SPEC approved
+Resume file: .planning/phases/05-preliminary-score-page/05-UI-SPEC.md
 
 **Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
 mid-plan. Task 1 (`e246391`, bundle rebuild) was committed inside worktree

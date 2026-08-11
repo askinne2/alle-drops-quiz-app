@@ -26,7 +26,8 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - [x] **Phase 4: Mandatory Allergy Testing** - Two-option testing split; both bypasses deleted (completed 2026-08-10)
 - [x] **Phase 4.1: Testing-First Quiz Order** *(INSERTED)* - Move the testing split + required upload to the front so abandonment costs seconds, not ten minutes (completed 2026-08-11)
 - [x] **Phase 4.2: Resume In-Progress Intake** *(INSERTED)* - Browser-local (localStorage) resume so a closed tab does not lose a completed intake. No draft PHI store, no BAA needed (completed 2026-08-11)
-- [ ] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale
+- [x] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale (completed 2026-08-11)
+- [ ] **Phase 5.1: Admin-Configurable Score Scale** *(INSERTED)* - Move the band stops and clinical bracket boundaries out of code into a versioned, audited admin setting so William tunes them without a deploy
 - [ ] **Phase 6: Purchase Prerequisites** - Honor-system checkboxes and returning-patient state
 - [ ] **Phase 7: Telehealth Intake Path** - Booking-capable consult page and telehealth branching
 - [ ] **Phase 8: Launch Readiness** - Trackers, clinical copy, BAAs, AOD infrastructure handoff
@@ -148,6 +149,7 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 02-04-PLAN.md — D-03 boundary wiring at all three score sites, phase gate, blocking human verification
+
 **Notes**: ~1 day. This is the load-bearing phase — `CON-quiz-schema-foundation-is-load-bearing`.
 Ship it before Phases 3 and 4 or accept five more ID-literal special cases across
 `QuizPartRenderer.tsx`.
@@ -198,6 +200,7 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 03-07-PLAN.md — Merge, deploy, prove the release live on served bytes, then execute the DROP COLUMN and verify by query results
+
 **UI hint**: yes
 **Notes**: ~1.5–2 days — content is trivial, the schema is the work, and Phase 2 does that work.
 The old `PART6_MEDICAL_HISTORY` (`questions.ts:222-249`) is fully replaced, not extended;
@@ -217,6 +220,7 @@ special case as part of this phase.
   1. ~~**William agrees to test-result upload, and it is priced**~~ — **CLEARED for building** by
      Andrew's explicit in-session authorization ("Execute all waves no William blocker"). The
      *pricing* conversation is still owed and now sits on the William list, not on this phase.
+
   2. **Fly.io BAA signed** — STILL OPEN. Owner: Andrew.
   3. **Production cutover to AOD's Google Cloud project** — STILL OPEN. Owner: William / AOD.
 
@@ -355,6 +359,7 @@ where they left off, instead of starting a ten-minute clinical questionnaire ove
 **Plans:** 7/8 plans executed
 
 Plans:
+
 - [x] 04.2-01-PLAN.md — Write RESUME-01..04 into REQUIREMENTS.md; build `draft-store.ts` (round-trip canary, structural schema fingerprint, 24h expiry with active cleanup, type-driven file-token strip) and its unit proofs (D-01, D-05, D-11)
 - [x] 04.2-02-PLAN.md — Extract `buildSubmitPayload` into `app/lib/quiz/payload.ts` with the locked three-field exclusion constant, and unit-prove D-10 (D-10)
 - [x] 04.2-03-PLAN.md — `ResumeOffer.tsx` (offer, in-flow Start over control, shared confirm panel, restoration notice) + four CSS classes + DOM proof of zero identity and the confirm gate (D-06, D-08)
@@ -386,6 +391,7 @@ was scoped and then deliberately dropped — see `<deferred>` below. Browser-loc
 
 - **No cross-device resume.** Start on a laptop, finish on a phone — not supported. This is the
   accepted trade.
+
 - **Does not survive a cache clear, private browsing, or a different browser on the same machine.**
 - **Does not resurrect a patient who never came back.** There is no server-side record of an
   abandoned intake, and therefore no follow-up capability. If AOD ever wants "you left something
@@ -434,6 +440,7 @@ can be moved)
 **Plans:** 4/6 plans executed
 
 Plans:
+
 - [x] 04.1-01-PLAN.md — Reorder QUIZ_PARTS to [P7, P1-P5, P6], D-06 banner, repoint three coupled index tests, add the order/score/consent guard (D-02, D-06, D-07)
 - [x] 04.1-02-PLAN.md — Hoist TESTING_ANSWER_KEYS + partitionAnswers to format.ts; add the admin Test Results section BEFORE filtering Symptom Responses in both PHI renderers (D-05, D-05a)
 - [x] 04.1-03-PLAN.md — Amend DEC-medical-history-before-testing-split in place; record the Phase 4.1 orphan-volume analysis without changing PENDING_OLM_AGE_DAYS (D-01, D-03, D-04)
@@ -489,7 +496,27 @@ Sequence 4.1 first: it is small, self-contained, and does not depend on any resu
 
   4. The displayed ceiling is computed from the scored question set, so adding a scored question
      changes it automatically rather than silently rotting
-**Plans**: TBD
+**Plans**: 6 plans in 4 waves
+
+Plans:
+**Wave 1**
+
+- [x] 05-01-PLAN.md — TDD the derived score ceiling (`getQuestionMaxScore`, `getMaxScore`) and the new `score-scale.ts` accessor module
+- [x] 05-02-PLAN.md — Retire the legacy severity CSS, add the five tone tokens and the `.scaleBar__*` family
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 05-03-PLAN.md — Rewrite `ResultsDisplay` as the Preliminary Score page; repoint the three coupled test assertions
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 05-04-PLAN.md — First dedicated `ResultsDisplay` DOM test; close D-10 with a non-vacuous assertion
+- [x] 05-05-PLAN.md — Rebuild the committed theme bundle and extend the staleness guard with measured Phase 5 markers
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [x] 05-06-PLAN.md — Blocking human verification (greyscale, 375px, score-7 decoupling) and requirement closure
+
 **UI hint**: yes
 **Notes**: **Split this phase when planning.** SCORE-01 is ~30 minutes of string edits and is NOT
 blocked — ship it early, even during Phase 1 if convenient. SCORE-02 and SCORE-03 (~3–5 h) are
@@ -498,6 +525,80 @@ silently would either resurrect a deprecated model or render almost every patien
 See "Blocked on Client Decisions" below. Note that the session-9 fix re-applied the legacy
 four-band colour classes at `quiz.module.css:295-299` — that is part of what needs deciding, not a
 precedent to follow.
+
+**AMENDED 2026-08-11 after `/gsd:discuss-phase 5`.** The split happened, and the blocker changed
+shape. Phase 5 now ships all three requirements (~1 day) reading through a `getScoreScale()` accessor
+backed by a code constant; the admin-configurable version moved to the new **Phase 5.1**. SCORE-02 and
+SCORE-03 are **no longer code-blocked** — Phase 5 ships a provisional, defensible default and William
+retunes it himself through Phase 5.1's form. His decision drops from a code blocker to a **go-live
+configuration item**, which is still a real obligation: the provisional values must be visibly marked
+provisional and confirmed before go-live.
+
+Two measured facts that settle arguments the original note left open: the theoretical max derived from
+`ALL_SCORED_QUESTIONS` is **exactly 60**, so the "0–60 model" is real and derivable rather than a
+deprecated invention; and `7+` therefore spans **54 of those 60 points**, which is why the decided
+design decouples the colour stops from the clinical brackets entirely. Full reasoning in
+`.planning/phases/05-preliminary-score-page/05-CONTEXT.md`.
+
+### Phase 5.1: Admin-Configurable Score Scale (INSERTED)
+
+**Goal**: William can retune the score scale's colour bands and its clinical bracket boundaries from
+the embedded Shopify admin, without a deploy and without making historical submissions unreadable
+**Depends on**: Phase 5 (the `getScoreScale()` accessor and the scale bar must exist before there is
+anything to configure)
+**Requirements**: SCALE-01, SCALE-02, SCALE-03, SCALE-04
+**Success Criteria** (what must be TRUE):
+
+  1. An authorized user edits the band stops, their tones, and the clinical bracket boundaries from a
+     page in the embedded Shopify admin, and the storefront quiz reflects the change without a deploy
+
+  2. Every edit increments a `scale_version` and records who changed it and when
+
+  3. Every submission stores the `scale_version` that produced its `score_bracket`, so a row written
+     under one band set is still interpretable after the bands change
+
+  4. A patient never sees or is bracketed by a partial or failed configuration read — a failed fetch
+     falls back to the compiled-in constant, and the fallback is observable
+
+  5. Invalid band sets are rejected at the form, not at render — stops must be ascending, within the
+     derived range, and cover it without gaps
+
+**Plans**: TBD
+**UI hint**: yes
+
+**Notes**: ~2–3 days. **This is a PHI-path change** — it adds a column to the `submissions` table and
+changes how `score_bracket` is derived, so CLAUDE.md's PR-review rule and the PHI self-review
+checklist both apply. The settings row itself holds no PHI.
+
+**Why this phase exists.** Discussed and chosen on 2026-08-11 during `/gsd:discuss-phase 5`. Andrew
+was offered three storage mechanisms for the score scale — a code constant, a theme app block
+setting, and this — and chose this one after seeing their costs. He was then offered a narrower
+variant limited to the *visual* bands, which would have stayed entirely off the PHI path, and chose
+the wider one that includes the clinical brackets. See
+`.planning/phases/05-preliminary-score-page/05-CONTEXT.md` D-01 through D-04.
+
+**The versioning is not optional polish.** `getScoreBracket()` output is persisted as
+`score_bracket` on every submission (`app/lib/quiz/payload.ts:110`) and selects which clinical message
+the patient reads. Making its boundaries editable without a version stamp means two patients with
+identical answers months apart carry different brackets with no record of why. `scale_version` on
+both the settings row and the submission is what keeps the clinical record honest.
+
+**Nothing here is patient-facing copy.** Editing the three clinical band explanations, the title, or
+the disclaimer through this form was offered during discussion and **declined** — that is what
+`CONSENT_VERSION` discipline exists to prevent, and the disclaimer is counsel-owned under Phase 8 /
+LAUNCH-03. This phase configures numbers and tones only.
+
+**Four call sites, one scale.** `QuizContainer.tsx:203,260,601` and `payload.ts:101` all compute the
+bracket independently. The active scale must reach all four consistently, or a resumed submission
+could be bracketed under a different band set than the one displayed to the patient.
+
+**The config read lands on a PHI-collecting page** but is same-origin from the iframe (both on
+`alle-drops-quiz-app.fly.dev`), so it introduces no third-party script and no CORS surface. The
+failure path is the design risk, not the request itself.
+
+**Sequencing:** strictly after Phase 5. Building the settings infrastructure first was offered and
+declined — it front-loads the slowest, highest-review-burden work while the currently misleading
+results page stays live.
 
 ### Phase 6: Purchase Prerequisites & Returning Patients
 
@@ -611,6 +712,15 @@ range, (c) whether the three brackets or the four legacy bands drive the colour.
 **Not blocked and separable:** SCORE-01 — the "Preliminary Score" retitle and the 1–2 business day
 review copy. Ship independently.
 
+**DOWNGRADED 2026-08-11 — no longer blocks code.** `/gsd:discuss-phase 5` resolved this by making the
+scale configurable rather than by guessing a model. Sub-question (c) is answered structurally: neither
+drives the other. The colour stops and the clinical brackets became two independent tunables, so a
+patient scoring 7 of 60 no longer renders deep in red. Sub-questions (a) and (b) get a provisional
+default in Phase 5 and William's real answer through Phase 5.1's admin form — a data edit, not a
+deploy. **What remains owed:** the provisional values must be confirmed by William before go-live, and
+until then they must be visibly marked provisional. Measured while resolving this: the derived ceiling
+is **exactly 60**, so (a) has a defensible answer already.
+
 **2. Domain spelling — gates LAUNCH-07 and the TEST-04 copy string.**
 `alledrops.com` (no R) was chosen in October 2025 *because* "AllerDrops" collides with the live
 federal `ALLERDROPS®` mark (Class 044, sublingual immunotherapy) in the same product category.
@@ -646,6 +756,7 @@ different directions:
 
 - **Phase 4.1** moves the testing split and its required upload to the front, so a patient who
   cannot produce results loses seconds instead of a completed intake. Half a day, unblocked.
+
 - **Phase 4.2** adds browser-local resume (`localStorage`). ~1–2 days, **unblocked** — no draft PHI
   store, no email provider, no BAA implication, because the draft never leaves the patient's device.
 
@@ -670,7 +781,7 @@ exposures today.
 | 2. Quiz Schema Foundation | 4/4 | Complete    | 2026-08-09 |
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
 | 4. Mandatory Allergy Testing | 19/19 | Complete   | 2026-08-10 |
-| 5. Preliminary Score Page | 0/TBD | Not started | - |
+| 5. Preliminary Score Page | 6/6 | Complete   | 2026-08-11 |
 | 6. Purchase Prerequisites | 0/TBD | Not started | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |
 | 8. Launch Readiness | 0/TBD | Not started | - |

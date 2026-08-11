@@ -53,6 +53,13 @@ const PAYLOAD_SOURCE = readFileSync(
 
 const count = (source: string, needle: string): number => source.split(needle).length - 1;
 
+// Case-insensitive variant of the same split-based counting approach (never `grep -c` — see the
+// header comment above), used only by the D-10 guard below, where the needle vocabulary is a
+// phrase a copy edit could plausibly re-case ("If Approved", "IF APPROVED") without changing its
+// meaning as an approval promise.
+const countCI = (source: string, needle: string): number =>
+  source.toLowerCase().split(needle.toLowerCase()).length - 1;
+
 // --- Absence needles, fragment-assembled ---
 
 const AUTO_SUBMIT_NEEDLE = "autoSubmit" + "0to2Attempted";
@@ -177,7 +184,30 @@ describe("ResultsDisplay.tsx is terminal: no callback props, no bypass copy (TES
     expect(count(RESULTS_DISPLAY_SOURCE, "Schedule Allergy Testing")).toBeGreaterThan(0);
   });
 
-  it('renders the "Your responses have been submitted." confirmation line', () => {
-    expect(count(RESULTS_DISPLAY_SOURCE, "Your responses have been submitted.")).toBeGreaterThan(0);
+  // Needle repointed by Phase 5 Plan 03 (SCORE-01): the original needle,
+  // "Your responses have been submitted.", was the pre-Phase-5 subtitle, retired when the page was
+  // retitled "Preliminary Score." The assertion's purpose is unchanged: proving the file still
+  // renders a submission-confirmation line rather than having lost it in a refactor.
+  it('renders the "1-2 business days" clinical-review confirmation line', () => {
+    expect(count(RESULTS_DISPLAY_SOURCE, "1-2 business days")).toBeGreaterThan(0);
+  });
+
+  // DEC-no-approval-promise-copy (D-10, 05-04-PLAN.md). 05-CONTEXT.md's D-10 read the three band
+  // messages by inspection and found no promise that the patient can purchase if/once approved;
+  // this converts that reading into a standing, non-vacuous assertion. The needle list below is
+  // the approval-promise vocabulary this project has identified so far — a reasonable proxy set,
+  // not an exhaustive semantic check of every way such a promise could be phrased.
+  it("DEC-no-approval-promise-copy: no band message promises purchase upon approval (D-10)", () => {
+    const APPROVAL_PROMISE_NEEDLES = [
+      "if approved",
+      "once approved",
+      "upon approval",
+      "you will be able to purchase",
+      "you can purchase",
+      "unlock",
+    ];
+    for (const needle of APPROVAL_PROMISE_NEEDLES) {
+      expect(countCI(RESULTS_DISPLAY_SOURCE, needle)).toBe(0);
+    }
   });
 });
