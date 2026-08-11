@@ -17,6 +17,10 @@ created: 2026-08-11
 > visualization** (the scale bar) and its **first genuinely two-axis clinical display** (D-06) —
 > both get real weight below. `ResultsDisplay` stays terminal: this phase adds display only, zero
 > new callback props (`04-CONTEXT.md` D-09, reaffirmed by `05-CONTEXT.md`'s canonical refs).
+>
+> **Revision 1** — fixes one blocking checker finding (Dimension 2, marker clipping — see
+> Component Inventory §2 and the Score Scale Data Contract) and tightens two non-blocking notes
+> (zone-boundary seam contrast, Typography summary wording). No other section changed.
 
 ---
 
@@ -55,16 +59,21 @@ already sizes itself in fixed px (88px/108px) rather than spacing tokens.
 
 ## Typography
 
-**3 sizes, 2 weights** — unchanged count from Phase 3/4/4.2. Nothing in this phase's new content
-needs a 4th size or a 3rd weight; the scale bar's own text (axis label, score readout, zone legend)
-reuses the existing Label/Caption roles at smaller assigned sizes, not new ones.
+This phase reuses the codebase's two existing heading/body type roles unchanged (Heading, Body)
+and introduces two new, smaller roles (Label, Caption) for the scale bar's own text — the axis
+labels, score readout, and zone legend have no existing role sized appropriately for them; every
+other role on this screen already reuses `.quizResults__title` / `.quizResults__subtitle` /
+`.quizResults__message`. **No new font weight is introduced.** All three weights used below (400,
+600, 700) are already declared elsewhere in `quiz.module.css` — 600 is `.quizNavigation__button`'s
+existing weight (`quiz.module.css:617`), 700 is every heading's existing weight, 400 is body
+default. Caption's current-zone highlight (§2) reuses the existing 700, not a fourth value.
 
 | Role | Size (mobile → desktop) | Weight | Line Height | Existing class this phase reuses / new class |
 |------|--------------------------|--------|-------------|-----------------------------------------------|
-| Heading (`h2` "Preliminary Score") | `calc(var(--font-heading-scale,1) * 2rem)` → `calc(var(--font-heading-scale,1) * 2.8rem)` | 700 | 1.2 | `.quizResults__title` — **unchanged class, copy only changes** |
-| Body (subtitle, band explanation `p`, disclaimer) | 1.4rem → 1.6rem–1.8rem | 400 | 1.5 → 1.6 | `.quizResults__subtitle`, `.quizResults__message p`, `.quizResults__disclaimer p` — **unchanged classes** |
-| Label (axis labels "Symptom burden" / "What this means for you", score readout "7 of 60") | 1.2rem → 1.4rem | 600 | 1.3 | **New:** `.scaleBar__axisLabel`, `.scaleBar__value`, `.scaleBar__meaningHeading` |
-| Caption (zone legend words "Low" / "Moderate" / "High") | 1.0rem → 1.2rem | 400 (700 for the current zone only — see §2) | 1.3 | **New:** `.scaleBar__legendItem` |
+| Heading (`h2` "Preliminary Score") | `calc(var(--font-heading-scale,1) * 2rem)` → `calc(var(--font-heading-scale,1) * 2.8rem)` | 700 (existing) | 1.2 | `.quizResults__title` — **unchanged class, copy only changes** |
+| Body (subtitle, band explanation `p`, disclaimer) | 1.4rem → 1.6rem–1.8rem | 400 (existing) | 1.5 → 1.6 | `.quizResults__subtitle`, `.quizResults__message p`, `.quizResults__disclaimer p` — **unchanged classes** |
+| Label (axis labels "Symptom burden" / "What this means for you", score readout "7 of 60") | 1.2rem → 1.4rem | 600 (existing, reused from `.quizNavigation__button`) | 1.3 | **New:** `.scaleBar__axisLabel`, `.scaleBar__value`, `.scaleBar__meaningHeading` |
+| Caption (zone legend words "Low" / "Moderate" / "High") | 1.0rem → 1.2rem | 400 default; 700 (existing, reused from Heading) for the current zone only — see §2 | 1.3 | **New:** `.scaleBar__legendItem` |
 
 The band-explanation `h3` (e.g. "Sublingual Immunotherapy May Significantly Help You") keeps its
 existing `.quizResults__message h3` size/weight (`calc(var(--font-heading-scale,1) * 1.6rem)` →
@@ -83,7 +92,7 @@ Zero new theme-variable dependencies. Two categories of color change:
 | Role | Value | Usage |
 |------|-------|-------|
 | Dominant (60%) | `rgb(var(--color-background, 255, 255, 255))` | Page/card background — unchanged |
-| Secondary (30%) | `rgba(var(--color-foreground, 32, 34, 35), 0.03–0.15)` | Score-circle container background, zone divider borders (see §2), the "What this means for you" section's top divider border |
+| Secondary (30%) | `rgba(var(--color-foreground, 32, 34, 35), 0.03–0.15)` | Score-circle container background, the "What this means for you" section's top divider border |
 | Accent (10%) | `rgb(var(--color-button, 0, 123, 255))` | **Unchanged reserved-for list** — the score circle's ring, the Copy button, and the primary/secondary action buttons. **Not used anywhere in the new scale bar** — the bar's own color language is the tone scale below, deliberately kept separate from the app's single accent color so the bar reads as data, not as a call to action |
 | Destructive | `var(--quiz-color-error, #F44336)` | Unchanged, not used on this page (no destructive action exists on `ResultsDisplay`) |
 
@@ -108,6 +117,18 @@ distinction, restated from D-05/D-06: `data-tone` is driven by the zone the raw 
 the 0–60 bar, never by `scoreBracket`.** The two are visually and semantically independent axes —
 do not wire the bar's tone from `scoreBracket` under any circumstance; that is the exact bug D-05
 exists to prevent (a `7+` patient's bar would render 90% red).
+
+**Zone-boundary seam color (revised — see non-blocking checker note):** the visible divider between
+adjacent zones (Component Inventory §2, Accessibility Contract §1) uses
+`rgb(var(--color-foreground, 32, 34, 35))` — the existing, fully opaque dark foreground token, not
+a translucent white. Measured against all five provisional tone hexes, an opaque near-black seam
+holds comfortably above the WCAG 1.4.11 graphical-object floor of 3:1 (approximate computed
+contrast: `low` #4CAF50 ≈ 5.8:1, `low-mid` #CDDC39 ≈ 10.4:1, `mid` #FF9800 ≈ 7.3:1, `mid-high`
+#FF5722 ≈ 5.0:1, `high` #F44336 ≈ 4.3:1 — every value clears 3:1 with margin, unlike the white seam
+this revision replaces, which failed against two of the three provisional tones). This is a
+**supplementary** non-color signal, not the primary one — see Accessibility Contract for why the
+always-visible legend text and the bold current-zone word remain the two channels this contract
+actually depends on for WCAG 1.4.1 compliance.
 
 **Accent reserved for, explicit list (unchanged from Phase 4.2, no new item added):**
 1. Selected checkbox/radio option border + background tint (other steps)
@@ -224,10 +245,14 @@ are the Phase 5 deliverable and are not provisional.
   (`flex: (zone.upTo - previousUpTo) 0 0` sums to `max` across all zones = 100% width) rather than
   computed pixel widths, so the layout stays correct at any container width without JS resize
   listeners.
-- Marker position: `left: (score / scale.max) * 100%; transform: translateX(-50%)`. Do not clamp
-  to keep the marker fully inside the track at score = 0 or score = max — a small (14–18px)
-  circular marker straddling the track's rounded end by a few px is the same trade-off any slider
-  thumb makes and needs no extra logic.
+- Marker position: `left: (score / scale.max) * 100%; transform: translate(-50%, -50%)`, computed
+  against `.scaleBar__track` (the marker's positioning ancestor), left **unclamped** — see
+  Component Inventory §2's corrected DOM shape. The marker is a *sibling* of the clipped, rounded
+  zones wrapper, not its descendant, so at score = 0 or score = max it genuinely straddles the
+  track's rounded end (a few px of the circle sits outside the colored zones) exactly like a
+  slider thumb, with nothing clipping it. **This only holds if the marker and the zones wrapper are
+  siblings under `.scaleBar__track`, never if the marker is placed inside the zones wrapper** — see
+  §2 for the exact structure.
 - Current zone (for the legend bold-weight highlight, §2 below): the first zone where
   `score <= zone.upTo`.
 
@@ -279,6 +304,14 @@ focal number) that the bar's smaller "7 of 60" readout does not replace.
 └─────────────────────────────────────────────────┘
 ```
 
+**Corrected DOM shape (revision 1 — fixes the blocking marker-clipping finding).** The rounded,
+clipped zone graphic and the marker must NOT share an `overflow: hidden` ancestor, or the marker is
+silently clipped into a half-moon at score = 0 and score = 60 — score 0 is a genuine minimal-symptom
+outcome, not an edge case, so this would render visibly broken for real patients. Fix applied:
+**move `overflow: hidden` off the `role="img"` element and onto a new inner wrapper that contains
+only the zone segments; keep the marker as that wrapper's sibling, positioned against the outer
+`role="img"` element, which keeps `position: relative` but does NOT clip.**
+
 **New class family:**
 
 - `.scaleBar` — wraps the whole block; replaces `.quizResults__severity`'s position in the DOM
@@ -291,18 +324,27 @@ focal number) that the bar's smaller "7 of 60" readout does not replace.
   - `.scaleBar__axisLabel` — "Symptom burden." Label typography role (§ Typography).
   - `.scaleBar__value` — "7 of 60." Label typography role, same size as the axis label but weight
     700 (heavier — this is the number the patient actually came for).
-- `.scaleBar__track` — the graphic itself. `display: flex`, `height: 12px` mobile / `16px`
-  desktop, `border-radius: var(--quiz-border-radius)`, `overflow: hidden` (clips the flex
-  children's square corners to the track's rounded ends), `position: relative` (marker's
-  positioning context). **`role="img"`**, `aria-label` computed per Accessibility Contract.
-  - `.scaleBar__zone` — one per config entry. `flex: <span> 0 0` (see Data Contract), full
-    track height, `background-color` from `data-tone` (below), `border-right: 2px solid rgb(var(--color-background, 255, 255, 255))`
-    on every zone except the last (the non-color boundary — see Accessibility Contract).
-    `aria-hidden="true"`.
-  - `.scaleBar__marker` — `position: absolute`, `top: 50%`, `width`/`height: 14px` mobile /
-    `18px` desktop, `border-radius: 50%`, `background: rgb(var(--color-background, 255, 255, 255))`,
+- `.scaleBar__track` — **the outer positioning element.** `position: relative`, `height: 12px`
+  mobile / `16px` desktop. **No `overflow` and no `border-radius` on this element** — both moved to
+  `.scaleBar__zones` below, which is what makes the marker's overflow safe. **`role="img"`**,
+  `aria-label` computed per Accessibility Contract, sits on this outer element.
+  - `.scaleBar__zones` — **new wrapper, direct child of `.scaleBar__track`.** `display: flex`,
+    `height: 100%`, `width: 100%`, `border-radius: var(--quiz-border-radius)`, `overflow: hidden`
+    (clips the flex children's square corners to the rounded ends — this is the only element that
+    clips). `aria-hidden="true"` (decorative, described by the parent's `aria-label`).
+    - `.scaleBar__zone` — one per config entry, a child of `.scaleBar__zones` (not of
+      `.scaleBar__track` directly). `flex: <span> 0 0` (see Data Contract), full wrapper height,
+      `background-color` from `data-tone` (below), `border-right: 2px solid rgb(var(--color-foreground, 32, 34, 35))`
+      on every zone except the last (the non-color boundary — see Color and Accessibility Contract
+      for the corrected, contrast-verified seam color).
+  - `.scaleBar__marker` — **sibling of `.scaleBar__zones`, both children of `.scaleBar__track`.**
+    `position: absolute`, `top: 50%`, `width`/`height: 14px` mobile / `18px` desktop,
+    `border-radius: 50%`, `background: rgb(var(--color-background, 255, 255, 255))`,
     `border: 3px solid rgb(var(--color-foreground, 32, 34, 35))`, `box-shadow: var(--quiz-shadow)`,
-    `transform: translate(-50%, -50%)`. `aria-hidden="true"`.
+    `transform: translate(-50%, -50%)`, `left` per the Data Contract's rendering math.
+    `aria-hidden="true"`. Because this element is a sibling of the clipped `.scaleBar__zones`
+    wrapper — not its descendant — it is never clipped by that wrapper's `overflow: hidden`,
+    regardless of `left` value.
 - `.scaleBar__legend` — flex row directly below the track, `margin-top: var(--quiz-spacing-xs)`.
   - `.scaleBar__legendItem` — one per zone, `flex: <span> 0 0` matching its zone's width exactly
     (so each label sits under its own segment), `text-align: center`, `min-width: 0`,
@@ -385,20 +427,30 @@ adds, removes, or renames a callback prop on `ResultsDisplay`.
 ## Accessibility Contract
 
 **Non-negotiable for this surface — a colour-banded bar on a clinical page fails WCAG 1.4.1 (Use
-of Color) if hue is the only channel conveying zone identity or position. Three independent
-non-color channels are required, not one:**
+of Color) if hue is the only channel conveying zone identity or position. Two independent
+non-color channels carry the actual compliance burden, with a third as a verified supplementary
+signal:**
 
-1. **Visible zone boundaries.** Each `.scaleBar__zone` (except the last) has a
-   `border-right: 2px solid rgb(var(--color-background, ...))` seam — a physical break in the bar
-   visible in grayscale, forced-colors mode, or to a colorblind viewer, not just a hue change.
-2. **Text zone labels, always visible, never color-coded themselves.** The `.scaleBar__legend`
-   row's text (`Low` / `Moderate` / `High`) is rendered in the page's normal foreground color
-   (`rgba(var(--color-foreground, ...), 0.75)`-equivalent), **never** tinted to match its zone's
-   tone. Zone identity is conveyed by the word itself and its position under the bar, not by
-   matching the legend text's color to the bar segment above it.
-3. **The current zone is bolded**, not just marked by the circular marker's position — a sighted
-   user who cannot distinguish the marker's exact pixel offset (low vision, high zoom, small
-   viewport) still gets "which zone" from the one bold word in the legend row.
+1. **Text zone labels, always visible, never color-coded themselves — primary channel.** The
+   `.scaleBar__legend` row's text (`Low` / `Moderate` / `High`) is rendered in the page's normal
+   foreground color (`rgba(var(--color-foreground, ...), 0.75)`-equivalent), **never** tinted to
+   match its zone's tone. Zone identity is conveyed by the word itself and its position under the
+   bar, not by matching the legend text's color to the bar segment above it.
+2. **The current zone is bolded — primary channel.** Not just marked by the circular marker's
+   position — a sighted user who cannot distinguish the marker's exact pixel offset (low vision,
+   high zoom, small viewport) still gets "which zone" from the one bold word in the legend row.
+   Together, channels 1 and 2 are sufficient on their own to satisfy WCAG 1.4.1 for this component
+   — zone identity never depends on perceiving hue at all.
+3. **Visible zone boundaries — supplementary channel, contrast-verified.** Each `.scaleBar__zone`
+   (except the last) has a `border-right: 2px solid rgb(var(--color-foreground, 32, 34, 35))` seam
+   — an opaque, near-black divider, not the translucent white this contract originally specified.
+   Measured against all five provisional tone hexes, this seam clears the WCAG 1.4.11 graphical-
+   object floor of 3:1 with margin on every one (approximate: `low` ≈5.8:1, `low-mid` ≈10.4:1,
+   `mid` ≈7.3:1, `mid-high` ≈5.0:1, `high` ≈4.3:1 — see Color for the full figures). This channel is
+   real and correctly contrasted, but it is explicitly supplementary: channels 1 and 2 above are
+   what this contract relies on for compliance, because a zone-boundary seam alone would still let
+   a colorblind viewer see "three regions" without necessarily identifying *which* region is which
+   without the legend text.
 4. **The marker itself is shape + border, not color-coded.** A light-fill/dark-border circle with a
    drop shadow, so it is visible against every tone in the palette (verify at build/QA time: the
    marker's `rgb(var(--color-foreground, 32, 34, 35))` border must hold ≥3:1 contrast, WCAG 1.4.11
@@ -415,9 +467,9 @@ non-color channels are required, not one:**
 - The zone legend words are likewise **plain, normal-flow text**, not hidden — a screen reader
   encountering the page linearly hears "Symptom burden, 7 of 60" followed later by "Low, Moderate,
   High" as it reaches the legend row.
-- The purely decorative graphic — `.scaleBar__track` and everything inside it (zones, marker) — is
-  wrapped in a single element carrying `role="img"` with a **self-sufficient** computed
-  `aria-label`, e.g.:
+- The purely decorative graphic — `.scaleBar__track` and everything inside it (the `.scaleBar__zones`
+  wrapper, its zones, and the marker) — is wrapped in a single element carrying `role="img"` with a
+  **self-sufficient** computed `aria-label`, e.g.:
 
   ```
   aria-label="Symptom burden position: low zone, 7 of 60 on a 0 to 60 scale."
@@ -425,7 +477,9 @@ non-color channels are required, not one:**
 
   Self-sufficient means an AT user who jumps directly to this graphic via a landmarks/images list
   (bypassing the surrounding plain text) still gets the complete picture — score, ceiling, and zone
-  name — in one string. All children of the `role="img"` element (`.scaleBar__zone`,
+  name — in one string. `role="img"` and `aria-label` live on `.scaleBar__track`, the outer element
+  (see Component Inventory §2's corrected DOM shape) — not on `.scaleBar__zones`, which is one
+  layer further in. All descendants of `.scaleBar__track` (`.scaleBar__zones`, `.scaleBar__zone`,
   `.scaleBar__marker`) carry `aria-hidden="true"`, since the parent's `aria-label` already fully
   describes them; this avoids a screen reader announcing each zone `<div>` individually as
   meaningless decoration.
@@ -475,10 +529,11 @@ comparable inline content at the same widths today).
 | Zone source | Data-driven from `getScoreScale().zones` (D-01, D-07) — never a hardcoded 3- or 4-way JSX branch, never per-bracket class names |
 | Tone selection | `data-tone` attribute on `.scaleBar__zone`, values from a fixed 5-slot palette (`low`/`low-mid`/`mid`/`mid-high`/`high`) — CSS selectors for all five ship in Phase 5 even though the provisional default only uses three |
 | Bar axis vs. clinical bracket | Fully independent (D-05/D-06). The bar's `data-tone` and the recommendation block's `scoreBracket` conditional must never share a source value or a class name |
-| Marker position | `left: (score / max) * 100%`, unclamped (small overflow at 0/max is accepted, matches standard slider-thumb behavior) |
+| DOM shape (revision 1) | `.scaleBar__track` (outer, `position: relative`, `role="img"`, no clipping) contains two children: `.scaleBar__zones` (inner, `overflow: hidden`, rounded, holds the `.scaleBar__zone` segments) and `.scaleBar__marker` (sibling of `.scaleBar__zones`, absolutely positioned against the outer track) — the marker must never be a descendant of the clipped wrapper |
+| Marker position | `left: (score / max) * 100%` against `.scaleBar__track`, unclamped — safe because the marker is a sibling of, not clipped by, `.scaleBar__zones` |
 | Zone width | Flex-proportional to point-span (`upTo[i] - upTo[i-1]`), not fixed px — correct at any container width with no resize listener |
-| Non-color signaling | Three independent channels required: visible zone-boundary seams, always-visible (never tone-tinted) legend text, and a bold current-zone legend word — plus a shape+border marker. Color alone may never be the only way a zone or position is conveyed (WCAG 1.4.1) |
-| Screen reader | `role="img"` + self-sufficient `aria-label` on the decorative graphic only; the score readout and legend text stay in normal (non-hidden) document flow so they're announced independently |
+| Non-color signaling | Legend text (always visible, never tone-tinted) and the bold current-zone word are the two channels this contract relies on for WCAG 1.4.1; the zone-boundary seam is a verified-contrast supplementary channel, not the primary one. Color alone may never be the only way a zone or position is conveyed |
+| Screen reader | `role="img"` + self-sufficient `aria-label` on `.scaleBar__track` (the outer element) only; the score readout and legend text stay in normal (non-hidden) document flow so they're announced independently |
 | Provisional band values | Visible only in source (comment/constant name/`isProvisional` field) — never as patient-facing copy, banner, or badge (D-04, explicitly not a UI element) |
 | `ResultsDisplay` prop surface | Unchanged shape (`score`, `scoreBracket`, `patientState`, `symptomProfileId`, `testingStatus`) — `getScoreScale()` is called internally (module-level accessor), not threaded in as a new prop, and is not a callback |
 | Legacy classes | `.quizResults__severity`, `.quizResults__severityLabel`, `.quizResults__severityValue` and all three tone variants plus the orphaned `Moderate` variant (4 classes total) are deleted, not deprecated-in-place |
@@ -494,7 +549,8 @@ comparable inline content at the same widths today).
 - [ ] Dimension 5 Spacing: PASS
 - [ ] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** pending — revision 1 submitted for re-review (fixes blocking Dimension 2 marker-
+clipping finding; addresses both non-blocking notes from the revision-0 review).
 
 ---
 
@@ -519,8 +575,15 @@ comparable inline content at the same widths today).
   `getRedirectTarget`/`getProductHandle` already establish, per `05-CONTEXT.md`'s Reusable Assets
   note, but Phase 5's implementation only needs the fallback constant (no config channel exists to
   read from yet — that's Phase 5.1).
+- **DOM-shape regression risk (revision 1):** because the fix for the blocking finding depends on
+  the marker being a *sibling*, not a descendant, of the clipped `.scaleBar__zones` wrapper, this is
+  worth a one-line assertion in whatever test covers this component (e.g., the marker element's
+  closest ancestor with `overflow: hidden` is not an ancestor of the marker itself, or simply:
+  `.scaleBar__marker`'s parent is `.scaleBar__track`, not `.scaleBar__zones`) — cheap to write, and
+  it is exactly the kind of structural fact a future refactor could silently break.
 
 ---
 
 *Phase: 5-preliminary-score-page*
 *UI-SPEC generated: 2026-08-11*
+*Revision 1: 2026-08-11 — fixed blocking marker-clipping finding (Dimension 2); addressed both non-blocking notes (zone-boundary seam contrast, Typography summary wording)*
