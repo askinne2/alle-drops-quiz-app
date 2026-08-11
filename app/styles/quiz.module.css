@@ -661,6 +661,82 @@
   cursor: not-allowed;
 }
 
+/* ==========================================================================
+   Start Over (D-08) — persistent in-flow control + the shared destructive
+   confirm panel used by both that control and the resume offer. The confirm
+   button copies .quizNavigation__buttonPrev's box model verbatim, swapping
+   only border-color/color to --quiz-color-error; it stays unfilled on
+   purpose (a filled red button overstates a patient-initiated, intentional
+   action).
+   ========================================================================== */
+
+.quizStartOverRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--quiz-spacing-xs);
+}
+
+.quizStartOver {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--quiz-spacing-xs);
+  padding: var(--quiz-spacing-xs) var(--quiz-spacing-sm);
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: rgba(var(--color-foreground, 32, 34, 35), 0.6);
+  font-size: var(--font-body-size, 1.2rem);
+  font-family: var(--font-body-family, inherit);
+  cursor: pointer;
+  border-radius: var(--quiz-border-radius);
+}
+
+@media (min-width: 750px) {
+  .quizStartOver {
+    font-size: var(--font-body-size, 1.4rem);
+  }
+}
+
+.quizStartOver:hover,
+.quizStartOver:focus-visible {
+  color: rgb(var(--color-foreground, 32, 34, 35));
+  text-decoration: underline;
+}
+
+.quizStartOver:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.quizStartOver__confirm {
+  padding: var(--quiz-spacing-md);
+  border: 1px solid rgba(var(--color-foreground, 32, 34, 35), 0.15);
+  border-radius: var(--quiz-border-radius);
+  margin-top: var(--quiz-spacing-sm);
+}
+
+.quizStartOver__confirmButton {
+  flex: 1;
+  padding: var(--quiz-spacing-sm) var(--quiz-spacing-md);
+  font-size: var(--font-body-size, 1.4rem);
+  font-weight: 600;
+  font-family: var(--font-body-family, inherit);
+  border: 2px solid var(--quiz-color-error);
+  border-radius: var(--quiz-border-radius);
+  cursor: pointer;
+  transition: all var(--quiz-transition);
+  min-height: 44px;
+  background-color: transparent;
+  color: var(--quiz-color-error);
+}
+
+@media (min-width: 750px) {
+  .quizStartOver__confirmButton {
+    padding: var(--quiz-spacing-md) var(--quiz-spacing-lg);
+    font-size: var(--font-body-size, 1.6rem);
+  }
+}
+
 .stateGate__separator {
   display: flex;
   align-items: center;
