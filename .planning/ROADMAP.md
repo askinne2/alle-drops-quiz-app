@@ -501,17 +501,17 @@ Sequence 4.1 first: it is small, self-contained, and does not depend on any resu
 Plans:
 **Wave 1**
 
-- [ ] 05-01-PLAN.md — TDD the derived score ceiling (`getQuestionMaxScore`, `getMaxScore`) and the new `score-scale.ts` accessor module
-- [ ] 05-02-PLAN.md — Retire the legacy severity CSS, add the five tone tokens and the `.scaleBar__*` family
+- [x] 05-01-PLAN.md — TDD the derived score ceiling (`getQuestionMaxScore`, `getMaxScore`) and the new `score-scale.ts` accessor module
+- [x] 05-02-PLAN.md — Retire the legacy severity CSS, add the five tone tokens and the `.scaleBar__*` family
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 05-03-PLAN.md — Rewrite `ResultsDisplay` as the Preliminary Score page; repoint the three coupled test assertions
+- [x] 05-03-PLAN.md — Rewrite `ResultsDisplay` as the Preliminary Score page; repoint the three coupled test assertions
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 05-04-PLAN.md — First dedicated `ResultsDisplay` DOM test; close D-10 with a non-vacuous assertion
-- [ ] 05-05-PLAN.md — Rebuild the committed theme bundle and extend the staleness guard with measured Phase 5 markers
+- [x] 05-04-PLAN.md — First dedicated `ResultsDisplay` DOM test; close D-10 with a non-vacuous assertion
+- [x] 05-05-PLAN.md — Rebuild the committed theme bundle and extend the staleness guard with measured Phase 5 markers
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -781,7 +781,7 @@ exposures today.
 | 2. Quiz Schema Foundation | 4/4 | Complete    | 2026-08-09 |
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
 | 4. Mandatory Allergy Testing | 19/19 | Complete   | 2026-08-10 |
-| 5. Preliminary Score Page | 0/TBD | Not started | - |
+| 5. Preliminary Score Page | 5/6 | In Progress|  |
 | 6. Purchase Prerequisites | 0/TBD | Not started | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |
 | 8. Launch Readiness | 0/TBD | Not started | - |
