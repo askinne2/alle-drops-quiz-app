@@ -12,7 +12,7 @@ import { PatientInfoStep, validatePatientInfoStep, type PatientInfoValues } from
 import { QuizPartRenderer, isPartComplete } from "./QuizPartRenderer";
 import { ConsentStep } from "./ConsentStep";
 import { ResultsDisplay } from "./ResultsDisplay";
-import { ResumeOffer, RestorationNotice } from "./ResumeOffer";
+import { ResumeOffer, RestorationNotice, StartOverControl } from "./ResumeOffer";
 import { QUIZ_PARTS, ALL_SCORED_QUESTIONS, ALL_ITEMS } from "../../lib/quiz/questions";
 import {
   calculateTotalScore,
@@ -23,7 +23,7 @@ import {
 import { visibleAnswers, itemsForPart, quizFlowProgress } from "../../lib/quiz/schema";
 import { type QuizAnswers } from "../../lib/quiz/types";
 import { buildSubmitPayload } from "../../lib/quiz/payload";
-import { readDraft, clearDraft, type QuizDraft } from "../../lib/quiz/draft-store";
+import { readDraft, writeDraft, clearDraft, type QuizDraft } from "../../lib/quiz/draft-store";
 import styles from "../../styles/quiz.module.css";
 
 // D-09: one path for every bracket — quiz_parts (Part 7 last) -> consent -> submitting -> results
@@ -101,9 +101,9 @@ export function QuizContainer() {
   const [startTime] = useState(() => Date.now());
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [showTestMode, setShowTestMode] = useState(false);
-  // Ephemeral, never persisted. resumedSession is currently unused for rendering in this plan
-  // (the resumed-session dropzone copy variant is plan 04.2-05's scope); showRestorationNotice
-  // drives the one-time post-resume orientation cue below.
+  // Ephemeral, never persisted. resumedSession selects the D-09/D-11 resumed-session dropzone
+  // copy variant passed down to QuizPartRenderer; showRestorationNotice drives the one-time
+  // post-resume orientation cue below.
   const [resumedSession, setResumedSession] = useState(false);
   const [showRestorationNotice, setShowRestorationNotice] = useState(false);
 
@@ -125,6 +125,40 @@ export function QuizContainer() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [step, currentPartIndex]);
+
+  // D-07: nothing is written to storage until the patient has answered a real quiz question —
+  // ROADMAP criterion 2's sharpest requirement is that an untouched page load leaves zero trace.
+  // Debounced 500ms trailing write, not a write-on-every-change: several Part 6/Part 7 questions
+  // are free text and fire onChange per keystroke, and localStorage.setItem is synchronous, so an
+  // undebounced write would block the main thread on every character typed.
+  useEffect(() => {
+    // No window (SSR) — writeDraft already no-ops without it, but skip scheduling a timer too.
+    if (typeof window === "undefined") return;
+    // Step gate: only quiz_parts and consent can ever hold a draft-worthy answer. This is also
+    // what excludes Test Mode — the Test Mode block below sets a full sample `answers` object and
+    // sets `step` to "results" in the same batch, so a QA shortcut behind ?test=1 never persists
+    // a synthetic draft. It equally keeps resume_offer/state_gate/patient_info from ever
+    // scheduling a write before the patient has engaged with a real quiz question.
+    if (step !== "quiz_parts" && step !== "consent") return;
+    // Answers gate: the state gate and patient-info typing must leave nothing on disk — identity
+    // PHI is only persisted once the patient has answered at least one clinical question. This is
+    // the gate that keeps a curious or accidental page load, and a fully-typed-but-not-yet-quizzed
+    // patient-info screen, from ever writing a name/DOB/email/phone to a shared device.
+    if (Object.keys(answers).length === 0) return;
+
+    const timer = setTimeout(() => {
+      writeDraft({
+        step: step === "consent" ? "consent" : "quiz_parts",
+        patientState,
+        patientInfo,
+        symptomProfileId,
+        currentPartIndex,
+        answers,
+      });
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [answers, currentPartIndex, step, patientState, patientInfo, symptomProfileId]);
 
   // No special-case deletion here (D-03). A hidden question's answer stays in React state so a
   // patient who flips an answer back and forth never loses typed text with no undo; `visibleAnswers`
@@ -240,6 +274,34 @@ export function QuizContainer() {
     setStep("state_gate");
   }, []);
 
+  // RESUME-03 / D-08. The persistent in-flow "Start over" control's confirmed destructive action
+  // — clears the draft AND resets every piece of in-memory state a same-session patient could
+  // have accumulated, landing on the same "state_gate" screen a patient with no draft sees today
+  // (the same user-visible outcome commitment handleStartOverFromOffer already makes). startTime
+  // is deliberately NOT reset — it has no setter, and a stale start time only affects
+  // completion_time, which is on D-10's named exclusion list from the payload-parity comparison.
+  //
+  // Ordering hazard, and why it is safe: the write effect's dependency array includes both
+  // `answers` and `step`. Because this function sets `step` to "state_gate" in the same React
+  // batch that empties `answers`, the effect's step gate short-circuits before scheduling any
+  // timer on the very next commit, so the just-cleared draft cannot be immediately rewritten.
+  const handleStartOver = useCallback(() => {
+    clearDraft();
+    setAnswers({});
+    setPatientState(null);
+    setPatientInfo({ name: "", dob: "", email: "", phone: "" });
+    setPatientInfoShowErrors(false);
+    setCurrentPartIndex(0);
+    setScore(null);
+    setScoreBracket(null);
+    setSymptomProfileId(null);
+    setConsentChecked(false);
+    setSubmissionError(null);
+    setResumedSession(false);
+    setShowRestorationNotice(false);
+    setStep("state_gate");
+  }, []);
+
   const onEligible = (state: "tennessee" | "texas") => {
     setPatientState(state);
     setStep("patient_info");
@@ -257,6 +319,9 @@ export function QuizContainer() {
     setSubmissionError(null);
     try {
       await submitPayload();
+      // D-08: clear only after a successful submission, never in the catch branch — a transient
+      // network error must not cost the patient a ten-minute questionnaire's worth of answers.
+      clearDraft();
       setStep("results");
     } catch (e) {
       setSubmissionError(e instanceof Error ? e.message : "Submit failed");
@@ -327,6 +392,14 @@ export function QuizContainer() {
         <QuizProgress fillPct={progressInfo.fillPct} label={progressInfo.label} />
       )}
 
+      {/* RESUME-03 / D-08. Visibility range traces D-07's write boundary exactly: visible
+          precisely when a draft could exist to clear (quiz_parts, consent), hidden everywhere a
+          draft cannot yet exist. Deliberately NOT inside renderNavRow — UI-SPEC §2 names
+          proximity to Previous/Next/Continue/Submit as the mis-tap risk this placement avoids. */}
+      {(step === "quiz_parts" || step === "consent") && (
+        <StartOverControl onStartOver={handleStartOver} />
+      )}
+
       <div className={styles.quizContainer__questions}>
         {showRestorationNotice && (step === "quiz_parts" || step === "consent") && (
           <RestorationNotice />
@@ -378,6 +451,7 @@ export function QuizContainer() {
               items={currentPartItems}
               answers={answers}
               onAnswerChange={handleAnswerChange}
+              resumedSession={resumedSession}
             />
             {renderNavRow(
               <>

@@ -209,8 +209,14 @@ describe("D-09 — the 04.1 upload wall survives resume", () => {
       screen.getByText("Have you already had allergy testing?")
     ).toBeTruthy();
 
-    // Dropzone empty — restored state never satisfied the file-required predicate.
-    expect(screen.getByText("No files added yet.")).toBeTruthy();
+    // Dropzone empty — restored state never satisfied the file-required predicate. Shows the
+    // D-09/D-11 resumed-session copy (wired in plan 04.2-05), not the default empty-state string,
+    // since resumedSession is now threaded down from QuizContainer into QuizPartRenderer.
+    expect(
+      screen.getByText(
+        "For your security, files aren't kept between visits. Please re-add your allergy test results below."
+      )
+    ).toBeTruthy();
 
     const nextButton = screen.getByRole("button", { name: "Next →" }) as HTMLButtonElement;
     expect(nextButton.disabled).toBe(true);
