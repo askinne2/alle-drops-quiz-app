@@ -12,6 +12,7 @@ import { PatientInfoStep, validatePatientInfoStep, type PatientInfoValues } from
 import { QuizPartRenderer, isPartComplete } from "./QuizPartRenderer";
 import { ConsentStep } from "./ConsentStep";
 import { ResultsDisplay } from "./ResultsDisplay";
+import { ResumeOffer, RestorationNotice } from "./ResumeOffer";
 import { QUIZ_PARTS, ALL_SCORED_QUESTIONS, ALL_ITEMS } from "../../lib/quiz/questions";
 import {
   calculateTotalScore,
@@ -21,7 +22,8 @@ import {
 } from "../../lib/quiz/scoring";
 import { visibleAnswers, itemsForPart, quizFlowProgress } from "../../lib/quiz/schema";
 import { type QuizAnswers } from "../../lib/quiz/types";
-import { CONSENT_VERSION } from "../../lib/consent-version";
+import { buildSubmitPayload } from "../../lib/quiz/payload";
+import { readDraft, clearDraft, type QuizDraft } from "../../lib/quiz/draft-store";
 import styles from "../../styles/quiz.module.css";
 
 // D-09: one path for every bracket — quiz_parts (Part 7 last) -> consent -> submitting -> results
@@ -29,7 +31,14 @@ import styles from "../../styles/quiz.module.css";
 // screen are gone; "results" is the sole terminal step and is only reached after a successful
 // submit, replacing both. Score and bracket are still computed on leaving the last quiz part
 // (unchanged timing) but are held in state and not displayed until "results" renders.
+//
+// "resume_offer" (Phase 4.2, RESUME-01) joins the existing unmapped set of the `progressInfo`
+// ternary below (the same set "ineligible"/"submitting"/"results"/"error" already fall into) —
+// it falls through to that ternary's final `: null` branch with ZERO edits to the ternary itself
+// or to app/lib/quiz/schema.ts's NON_PART_STEPS arithmetic. Editing the counter for this step
+// would reopen UAT defect #6, which shipped past a green suite.
 type FlowStep =
+  | "resume_offer"
   | "state_gate"
   | "patient_info"
   | "quiz_parts"
@@ -65,7 +74,16 @@ async function postQuiz(payload: Record<string, unknown>): Promise<{ success: bo
 }
 
 export function QuizContainer() {
-  const [step, setStep] = useState<FlowStep>("state_gate");
+  // Mount-time draft read (RESUME-01). The draft-store helper below collapses EVERY failure
+  // reason — storage unavailable (D-01), missing key, expired (D-05), schema mismatch, corrupt
+  // JSON, empty answers — to the identical `null`, so this is the ONE branch point for both "no
+  // draft" and "storage blocked"; there is deliberately no second storage-availability check here
+  // (UI-SPEC § Absent State requires the two reasons be indistinguishable, ideally the same code
+  // path). The `typeof window === "undefined"` guard mirrors isTestModeEnabled's own SSR guard.
+  const [initialDraft] = useState<QuizDraft | null>(() =>
+    typeof window === "undefined" ? null : readDraft()
+  );
+  const [step, setStep] = useState<FlowStep>(initialDraft ? "resume_offer" : "state_gate");
   const [patientState, setPatientState] = useState<"tennessee" | "texas" | null>(null);
   const [patientInfo, setPatientInfo] = useState<PatientInfoValues>({
     name: "",
@@ -83,6 +101,11 @@ export function QuizContainer() {
   const [startTime] = useState(() => Date.now());
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [showTestMode, setShowTestMode] = useState(false);
+  // Ephemeral, never persisted. resumedSession is currently unused for rendering in this plan
+  // (the resumed-session dropzone copy variant is plan 04.2-05's scope); showRestorationNotice
+  // drives the one-time post-resume orientation cue below.
+  const [resumedSession, setResumedSession] = useState(false);
+  const [showRestorationNotice, setShowRestorationNotice] = useState(false);
 
   const isFirstRender = useRef(true);
 
@@ -111,27 +134,20 @@ export function QuizContainer() {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   }, []);
 
+  // Thin wrapper over the pure, unit-tested buildSubmitPayload (app/lib/quiz/payload.ts). This is
+  // now the ONLY construction site for the submit payload — one implementation, so the one-sitting
+  // and resumed paths cannot diverge (D-10 / T-4.2-05).
   const buildPayload = useCallback(
-    () => {
-      if (!patientState || !symptomProfileId) throw new Error("Missing patient context");
-      const visible = visibleAnswers(ALL_ITEMS, answers);
-      const s = score ?? calculateTotalScore(ALL_SCORED_QUESTIONS, visible);
-      const b = scoreBracket ?? getScoreBracket(s);
-      return {
-        state: patientState,
-        name: patientInfo.name.trim(),
-        dob: patientInfo.dob,
-        email: patientInfo.email.trim(),
-        phone: patientInfo.phone,
-        symptom_profile_id: symptomProfileId,
-        quiz_score: s,
-        score_bracket: b,
-        quiz_date: new Date().toISOString(),
-        answers: visible,
-        completion_time: Math.round((Date.now() - startTime) / 1000),
-        consent_version: CONSENT_VERSION,
-      };
-    },
+    () =>
+      buildSubmitPayload({
+        patientState,
+        patientInfo,
+        symptomProfileId,
+        answers,
+        score,
+        scoreBracket,
+        startTime,
+      }),
     [patientState, symptomProfileId, patientInfo, answers, score, scoreBracket, startTime]
   );
 
@@ -155,6 +171,74 @@ export function QuizContainer() {
     setScoreBracket(b);
     setStep("consent");
   }, [answers]);
+
+  // RESUME-01 / D-09. Applies a restored draft to live state, then computes the landing step.
+  // Reads from initialDraft (the lazy mount-time read above), returning immediately if it is
+  // null — handleResume is only ever reachable from the resume_offer screen, which itself only
+  // renders when initialDraft is non-null, but the guard keeps this function safe standalone.
+  const handleResume = useCallback(() => {
+    const draft = initialDraft;
+    if (!draft) return;
+
+    setPatientState(draft.patientState);
+    setPatientInfo(draft.patientInfo);
+    setSymptomProfileId(draft.symptomProfileId);
+    // The draft-store read has already stripped every file_multi value, so a had_testing
+    // patient's restored answers never carry a testing_files entry (D-09/D-11).
+    setAnswers(draft.answers);
+    setResumedSession(true);
+    setShowRestorationNotice(true);
+
+    // D-09's mechanism: land on the lowest part index where isPartComplete is false, REGARDLESS
+    // of what draft.step says. After Phase 4.1 the mandatory allergy-test upload is the FIRST
+    // part (QUIZ_PARTS[0]), and the draft-store strip above means a had_testing patient's
+    // restored answers always leave that part incomplete — so this rule always lands them back
+    // on the upload screen. Without it, a draft recorded at step: "consent" would drop a resumed
+    // patient straight onto Submit with a missing required upload, breaking both the 04.1 wall
+    // (D-09) and payload parity (D-10). This is NOT a "review your answers" screen — UI-SPEC's
+    // Flow Contract explicitly forbids adding one — it is the normal part renderer at the normal
+    // position.
+    let landingIndex: number | null = null;
+    for (let i = 0; i < QUIZ_PARTS.length; i++) {
+      if (!isPartComplete(itemsForPart(QUIZ_PARTS, i), draft.answers)) {
+        landingIndex = i;
+        break;
+      }
+    }
+
+    if (landingIndex !== null) {
+      setCurrentPartIndex(landingIndex);
+      setStep("quiz_parts");
+      return;
+    }
+
+    // Every part is complete — honour draft.step. consentChecked is intentionally never restored
+    // here (it stays false on every resumed session): CONSENT_VERSION has already been bumped
+    // twice this milestone, and a pre-checked box beside text the patient never re-read is a
+    // consent integrity problem, not a convenience. score/scoreBracket are recomputed via the
+    // same chain goToConsent uses, never read off the draft — QuizDraft has no score field, so
+    // there is nothing to restore. startTime is never touched here; its existing
+    // useState(() => Date.now()) lazy initializer already gives every mount, resumed or not, a
+    // fresh clock, which is what keeps completion_time measuring minutes instead of days.
+    if (draft.step === "consent") {
+      const visible = visibleAnswers(ALL_ITEMS, draft.answers);
+      const s = calculateTotalScore(ALL_SCORED_QUESTIONS, visible);
+      const b = getScoreBracket(s);
+      setScore(s);
+      setScoreBracket(b);
+      setStep("consent");
+    } else {
+      setCurrentPartIndex(draft.currentPartIndex);
+      setStep("quiz_parts");
+    }
+  }, [initialDraft]);
+
+  // D-08. Nothing else needs resetting here — no draft state has been written into React yet at
+  // this point (the offer's Start over path never calls handleResume).
+  const handleStartOverFromOffer = useCallback(() => {
+    clearDraft();
+    setStep("state_gate");
+  }, []);
 
   const onEligible = (state: "tennessee" | "texas") => {
     setPatientState(state);
@@ -244,6 +328,14 @@ export function QuizContainer() {
       )}
 
       <div className={styles.quizContainer__questions}>
+        {showRestorationNotice && (step === "quiz_parts" || step === "consent") && (
+          <RestorationNotice />
+        )}
+
+        {step === "resume_offer" && (
+          <ResumeOffer onResume={handleResume} onStartOver={handleStartOverFromOffer} />
+        )}
+
         {step === "state_gate" && <StateGate onEligible={onEligible} onIneligible={onIneligible} />}
 
         {step === "ineligible" && <IneligibleMessage onBack={() => setStep("state_gate")} />}
@@ -293,7 +385,10 @@ export function QuizContainer() {
                   <button
                     type="button"
                     className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
-                    onClick={() => setCurrentPartIndex((i) => i - 1)}
+                    onClick={() => {
+                      setShowRestorationNotice(false);
+                      setCurrentPartIndex((i) => i - 1);
+                    }}
                   >
                     ← Previous
                   </button>
@@ -301,7 +396,10 @@ export function QuizContainer() {
                   <button
                     type="button"
                     className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
-                    onClick={() => setStep("patient_info")}
+                    onClick={() => {
+                      setShowRestorationNotice(false);
+                      setStep("patient_info");
+                    }}
                   >
                     ← Previous
                   </button>
@@ -311,7 +409,11 @@ export function QuizContainer() {
                     type="button"
                     className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
                     disabled={!isPartComplete(currentPartItems, answers)}
-                    onClick={() => isPartComplete(currentPartItems, answers) && setCurrentPartIndex((i) => i + 1)}
+                    onClick={() => {
+                      if (!isPartComplete(currentPartItems, answers)) return;
+                      setShowRestorationNotice(false);
+                      setCurrentPartIndex((i) => i + 1);
+                    }}
                   >
                     Next →
                   </button>
@@ -320,7 +422,11 @@ export function QuizContainer() {
                     type="button"
                     className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
                     disabled={!isPartComplete(currentPartItems, answers)}
-                    onClick={() => isPartComplete(currentPartItems, answers) && goToConsent()}
+                    onClick={() => {
+                      if (!isPartComplete(currentPartItems, answers)) return;
+                      setShowRestorationNotice(false);
+                      goToConsent();
+                    }}
                   >
                     Continue
                   </button>
@@ -355,6 +461,7 @@ export function QuizContainer() {
                   onClick={() => {
                     // D-09: consent's Previous no longer targets the deleted "outcome" step — it
                     // re-enters quiz_parts at the last part, the only step that now precedes consent.
+                    setShowRestorationNotice(false);
                     setCurrentPartIndex(quizPartsTotal - 1);
                     setStep("quiz_parts");
                   }}

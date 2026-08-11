@@ -46,6 +46,11 @@ const RESULTS_DISPLAY_SOURCE = readFileSync(
   "utf-8",
 );
 
+const PAYLOAD_SOURCE = readFileSync(
+  join(process.cwd(), "app", "lib", "quiz", "payload.ts"),
+  "utf-8",
+);
+
 const count = (source: string, needle: string): number => source.split(needle).length - 1;
 
 // --- Absence needles, fragment-assembled ---
@@ -122,8 +127,15 @@ describe("QuizContainer.tsx has no remaining D-09 bypass/auto-submit chain (TEST
     expect(count(QUIZ_CONTAINER_SOURCE, "handleAnswerChange")).toBeGreaterThan(0);
   });
 
-  it("still stamps CONSENT_VERSION on the submitted payload", () => {
-    expect(count(QUIZ_CONTAINER_SOURCE, "CONSENT_VERSION")).toBeGreaterThan(0);
+  // Updated by 04.2-04 (Phase 4.2): buildPayload was reduced to a thin wrapper over
+  // app/lib/quiz/payload.ts's buildSubmitPayload (D-10 — one construction site so the one-sitting
+  // and resumed paths cannot diverge). CONSENT_VERSION is stamped there now, not inline in
+  // QuizContainer.tsx; the positive control here is split into the two facts that together prove
+  // the wiring is intact: QuizContainer calls buildSubmitPayload, and buildSubmitPayload itself
+  // still stamps CONSENT_VERSION.
+  it("still stamps CONSENT_VERSION on the submitted payload (via payload.ts's buildSubmitPayload)", () => {
+    expect(count(QUIZ_CONTAINER_SOURCE, "buildSubmitPayload")).toBeGreaterThan(0);
+    expect(count(PAYLOAD_SOURCE, "CONSENT_VERSION")).toBeGreaterThan(0);
   });
 
   // NOT red-by-design: `handleProceedToPurchase` already calls `setStep("consent")` pre-change
