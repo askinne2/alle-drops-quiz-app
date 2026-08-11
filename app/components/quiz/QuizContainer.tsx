@@ -21,7 +21,8 @@ import {
 } from "../../lib/quiz/scoring";
 import { visibleAnswers, itemsForPart, quizFlowProgress } from "../../lib/quiz/schema";
 import { type QuizAnswers } from "../../lib/quiz/types";
-import { CONSENT_VERSION } from "../../lib/consent-version";
+import { buildSubmitPayload } from "../../lib/quiz/payload";
+import { readDraft, type QuizDraft } from "../../lib/quiz/draft-store";
 import styles from "../../styles/quiz.module.css";
 
 // D-09: one path for every bracket — quiz_parts (Part 7 last) -> consent -> submitting -> results
@@ -29,7 +30,14 @@ import styles from "../../styles/quiz.module.css";
 // screen are gone; "results" is the sole terminal step and is only reached after a successful
 // submit, replacing both. Score and bracket are still computed on leaving the last quiz part
 // (unchanged timing) but are held in state and not displayed until "results" renders.
+//
+// "resume_offer" (Phase 4.2, RESUME-01) joins the existing unmapped set of the `progressInfo`
+// ternary below (the same set "ineligible"/"submitting"/"results"/"error" already fall into) —
+// it falls through to that ternary's final `: null` branch with ZERO edits to the ternary itself
+// or to app/lib/quiz/schema.ts's NON_PART_STEPS arithmetic. Editing the counter for this step
+// would reopen UAT defect #6, which shipped past a green suite.
 type FlowStep =
+  | "resume_offer"
   | "state_gate"
   | "patient_info"
   | "quiz_parts"
@@ -65,7 +73,16 @@ async function postQuiz(payload: Record<string, unknown>): Promise<{ success: bo
 }
 
 export function QuizContainer() {
-  const [step, setStep] = useState<FlowStep>("state_gate");
+  // Mount-time draft read (RESUME-01). The draft-store helper below collapses EVERY failure
+  // reason — storage unavailable (D-01), missing key, expired (D-05), schema mismatch, corrupt
+  // JSON, empty answers — to the identical `null`, so this is the ONE branch point for both "no
+  // draft" and "storage blocked"; there is deliberately no second storage-availability check here
+  // (UI-SPEC § Absent State requires the two reasons be indistinguishable, ideally the same code
+  // path). The `typeof window === "undefined"` guard mirrors isTestModeEnabled's own SSR guard.
+  const [initialDraft] = useState<QuizDraft | null>(() =>
+    typeof window === "undefined" ? null : readDraft()
+  );
+  const [step, setStep] = useState<FlowStep>(initialDraft ? "resume_offer" : "state_gate");
   const [patientState, setPatientState] = useState<"tennessee" | "texas" | null>(null);
   const [patientInfo, setPatientInfo] = useState<PatientInfoValues>({
     name: "",
@@ -111,27 +128,20 @@ export function QuizContainer() {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   }, []);
 
+  // Thin wrapper over the pure, unit-tested buildSubmitPayload (app/lib/quiz/payload.ts). This is
+  // now the ONLY construction site for the submit payload — one implementation, so the one-sitting
+  // and resumed paths cannot diverge (D-10 / T-4.2-05).
   const buildPayload = useCallback(
-    () => {
-      if (!patientState || !symptomProfileId) throw new Error("Missing patient context");
-      const visible = visibleAnswers(ALL_ITEMS, answers);
-      const s = score ?? calculateTotalScore(ALL_SCORED_QUESTIONS, visible);
-      const b = scoreBracket ?? getScoreBracket(s);
-      return {
-        state: patientState,
-        name: patientInfo.name.trim(),
-        dob: patientInfo.dob,
-        email: patientInfo.email.trim(),
-        phone: patientInfo.phone,
-        symptom_profile_id: symptomProfileId,
-        quiz_score: s,
-        score_bracket: b,
-        quiz_date: new Date().toISOString(),
-        answers: visible,
-        completion_time: Math.round((Date.now() - startTime) / 1000),
-        consent_version: CONSENT_VERSION,
-      };
-    },
+    () =>
+      buildSubmitPayload({
+        patientState,
+        patientInfo,
+        symptomProfileId,
+        answers,
+        score,
+        scoreBracket,
+        startTime,
+      }),
     [patientState, symptomProfileId, patientInfo, answers, score, scoreBracket, startTime]
   );
 
