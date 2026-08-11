@@ -91,9 +91,16 @@ export function isStorageAvailable(): boolean {
  * bumped when the underlying shape changes (STATE.md's Accumulated Context). Not hashed because
  * the value never leaves the browser; a readable string is easier to debug without ever needing to
  * log it.
+ *
+ * Excludes `file_multi`-typed questions (type-driven, same discipline as `stripFileTokens`) —
+ * D-11's guarantee is that nothing about a file-upload question, including its own identity, ever
+ * lands in the serialized draft. Their answers are never persisted or restored regardless (D-09
+ * always re-requires the upload), so this exclusion costs no restoration accuracy: a schema change
+ * scoped only to a `file_multi` question can never cause a resumed draft to misrestore.
  */
 export function schemaFingerprintFor(items: QuizItem[]): string {
   return items
+    .filter((item) => !(isQuestion(item) && item.type === "file_multi"))
     .map((item) => `${item.kind}:${item.id}:${isQuestion(item) ? item.type : ""}`)
     .join("|");
 }
