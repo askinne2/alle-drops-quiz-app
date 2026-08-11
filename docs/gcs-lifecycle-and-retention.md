@@ -135,6 +135,41 @@ either case explicitly.
 
 ---
 
+## Phase 4.1 impact — abandonment becomes the common case, not the rare one
+
+**The mechanism.** Phase 4.1 moves `PART7_ALLERGY_TESTING` to index 0 of `QUIZ_PARTS`. Before 4.1,
+a patient had to complete six of seven parts — symptoms, timing, severity, impact, treatment, and
+medical history — before reaching the upload, so only a late-stage abandoner could leave a staged
+`pending/` object. After 4.1 the upload is the very first quiz part, so case 1 above ("Abandonment
+before submit") is reachable from *any* abandonment point, including a patient who opens the quiz,
+sees the upload requirement, and leaves within seconds. Orphaned PHI at rest under `pending/`
+becomes the common case rather than the rare one. Case 2 (the `had_testing` → `needs_testing` flip)
+is unchanged in kind but is now also reachable earlier in the flow.
+
+**What is NOT changing.** `PENDING_OLM_AGE_DAYS = 2` remains unchanged from its current value (see
+`:13`). The live lifecycle rule on the dev bucket — one `Delete` action, `condition: { age:
+PENDING_OLM_AGE_DAYS, matchesPrefix: ["pending/"] }` (see `## Cutover note` above) — is untouched by
+Phase 4.1. No `gcloud` mutation was run against the bucket as part of this analysis.
+
+**Why the value decision is deferred, and to whom.** Phase 4.2 (Resume In-Progress Intake) owns the
+`PENDING_OLM_AGE_DAYS` value decision, because the correct window depends on how long a resuming
+patient must still be able to find their staged file — a shorter window buys strictly less PHI at
+rest but breaks resume for a patient who returns on day 3. The two phases set this value together;
+Phase 4.1 does not tune it in isolation. Per D-04, whichever phase changes the value must **apply**
+the rule and **verify** it using plan 04-17's pattern above (apply, read the rule back with
+`gcloud`, then prove the prefix scoping against real probe objects) — never a doc-only change, never
+deferred to a human to run later, never asserted from an exit code.
+
+**The GCS mechanism constraint any 4.2 proposal must respect.** As the `### Timing caveat — OLM
+evaluation is not real-time` section above states, OLM expresses `age` in whole integer days and
+evaluates asynchronously — roughly once per day, with up to about 24 hours of latency after a
+condition is met. `age: 1` therefore means "deleted somewhere between 24 and 48 hours," and sub-day
+windows are not expressible through OLM at all. An hours-scale window needs a different mechanism
+entirely — a scheduled deletion job or signed-URL expiry — which is a new design, not a config
+tweak.
+
+---
+
 ## Reconciliation query — detecting a partial promotion (plan 04-17 Task 1's failure policy)
 
 Task 1's promotion step treats the submission as authoritative: if a GCS copy, the

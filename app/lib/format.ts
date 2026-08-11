@@ -56,3 +56,37 @@ const ANSWER_LABELS: Record<string, string> = {
 export function getAnswerLabel(key: string): string {
   return ANSWER_LABELS[key] ?? capitalize(key.replace(/_/g, ' '))
 }
+
+// Single source of truth for both PHI answer renderers (app/lib/pdf.ts and
+// app/routes/app.quiz-results.tsx) per 04.1-CONTEXT.md D-05/D-05a. ORDER is the canonical
+// clinical display order for the "Test Results" section in both renderers — do not reorder
+// without checking both call sites.
+export const TESTING_ANSWER_KEYS = ['testing_status', 'testing_year', 'testing_location', 'testing_allergens'] as const
+
+/**
+ * Pure partition of an answers object into non-testing (symptomEntries) and testing
+ * (testingEntries) entries, per 04.1-CONTEXT.md D-05/D-05a. No I/O, no logging, never throws on
+ * null/undefined input.
+ *
+ * `symptomEntries` preserves the input's own key order with testing keys removed.
+ * `testingEntries` is built by walking TESTING_ANSWER_KEYS in declared order and including a key
+ * only when present in the input — this preserves app/lib/pdf.ts's pre-existing Test Results
+ * ordering contract exactly, regardless of the input's own insertion order.
+ */
+export function partitionAnswers(
+  answers: Record<string, unknown> | null | undefined
+): { symptomEntries: Array<[string, unknown]>; testingEntries: Array<[string, unknown]> } {
+  const source = answers ?? {}
+  const testingKeySet: ReadonlySet<string> = new Set(TESTING_ANSWER_KEYS)
+
+  const symptomEntries = Object.entries(source).filter(([key]) => !testingKeySet.has(key))
+
+  const testingEntries: Array<[string, unknown]> = []
+  for (const key of TESTING_ANSWER_KEYS) {
+    if (key in source) {
+      testingEntries.push([key, source[key]])
+    }
+  }
+
+  return { symptomEntries, testingEntries }
+}

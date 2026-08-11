@@ -577,18 +577,29 @@ export function getQuestionById(id: string): QuizQuestion | undefined {
     .find((q) => q.id === id);
 }
 
-/** Ordered parts 1–7 for the main quiz flow. QuizItem[][] so a part can hold an info block (Part
+/** Ordered parts for the main quiz flow. QuizItem[][] so a part can hold an info block (Part
  *  6's no_pcp_recommendation) without a further type change. Parts 6 and 7 (medical history and
  *  the allergy-testing split) are each reached by 100% of patients — see 03-CONTEXT.md D-13 and
- *  04-CONTEXT.md D-06/D-07. */
+ *  04-CONTEXT.md D-06/D-07.
+ *
+ *  Part 7 (allergy testing) now leads the flow, per 04.1-CONTEXT.md D-02: a patient who cannot
+ *  supply test results should discover the hard upload requirement in seconds, not after a
+ *  completed intake. Exactly one element moved — Parts 1-6 keep their prior relative order, and
+ *  Part 6 (medical history) still lands immediately before consent.
+ *
+ *  Per 04.1-CONTEXT.md D-06: array position in this literal, not the `part:` field on each
+ *  question object, determines flow order. The `part:` and `order:` fields below are inert,
+ *  deliberately left unrenumbered after this reorder, and their only repo-wide consumer is
+ *  `app/lib/quiz/scoring.test.ts:102`'s `part <= 5` assertion on scored questions. A future
+ *  reader must not "fix" the resulting mismatch between `part:` values and this array's order. */
 export const QUIZ_PARTS: QuizItem[][] = [
+  PART7_ALLERGY_TESTING,
   PART1_SYMPTOM_CHECKLIST,
   PART2_TIMING_TRIGGERS,
   PART3_SEVERITY,
   PART4_IMPACT,
   PART5_TREATMENT,
   PART6_MEDICAL_HISTORY,
-  PART7_ALLERGY_TESTING,
 ];
 
 // Derived from QUIZ_PARTS so a new part can never be omitted from the payload boundary by

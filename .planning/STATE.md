@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: "Phase 4 COMPLETE and DEPLOYED. 19/19 plans. PR #20 merged (ea3dd26), Fly v51, Shopify alledrops-quiz-production-22. Migration 004 executed against alledrops_quiz_dev after backup 1786361850289. The GCP ADC credential gap is CLOSED — GCP_SA_KEY service-account credentials, proven with a live upload from the Fly VM. Outstanding: the William message (6 items) and the human browser pass, which Andrew deliberately skipped."
-last_updated: "2026-08-10T12:40:00.000Z"
-last_activity: 2026-08-10
+status: executing
+stopped_at: Phase 04.2 waves 1-5 complete (7/8 plans); awaiting ship decision on plan 04.2-08
+last_updated: "2026-08-11T09:05:02.096Z"
+last_activity: 2026-08-11 -- Wave 5 closed, UI signed off, handoff written
 progress:
   total_phases: 10
   completed_phases: 4
-  total_plans: 36
-  completed_plans: 36
+  total_plans: 50
+  completed_plans: 48
   percent: 40
 ---
 
@@ -22,14 +22,38 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 04.1 — testing-first quiz order (Phase 4 shipped 2026-08-10)
+**Current focus:** Phase 04.2 — resume-in-progress-intake (code-complete; ship decision pending)
 
 ## Current Position
 
-Phase: 04 (mandatory-allergy-testing) — COMPLETE and DEPLOYED (2026-08-10)
-Plan: 19 of 19
-Status: Ready to plan Phase 4.1
-Last activity: 2026-08-10
+Phase: 04.2 (resume-in-progress-intake) — **CODE-COMPLETE, 7 of 8 plans done, awaiting ship**
+Plan: 7 of 8 executed. Waves 1–5 complete and merged. **Only plan 04.2-08 (Wave 6) remains**, and it
+is `autonomous: false` — it is the ship plan and needs Andrew.
+Status: Awaiting Andrew's ship decision for Phase 4.1 + 4.2 together
+Last activity: 2026-08-11 -- Wave 5 closed; three rounds of UI fixes signed off ("much better!")
+
+**Branch:** `phase-4.2-resume-in-progress-intake` @ `c4ddbe0`. Forked from
+`phase-4.1-testing-first-quiz-order`, so it carries 04.1's reorder — verified present at index 0 in
+the rebuilt bundle after every rebuild this phase.
+
+**Gates at handoff:** 677 tests / 47 files green, typecheck clean, bundle deterministic across two
+builds, working tree clean.
+
+**What is NOT done:** plan 04.2-08 — merge PR #22 (4.1) + this branch, three-channel deploy
+(Fly + Shopify + served-bytes verification), and the blocking human check of both PHI renderers.
+
+**The reorder is NOT live.** Fly is still on **v51** and Shopify on
+**alledrops-quiz-production-22**, both carrying the OLD part order with allergy testing last.
+PR #22 (https://github.com/askinne2/alle-drops-quiz-app/pull/22) is open and unmerged by choice,
+overriding D-10. See `.planning/phases/04.1-testing-first-quiz-order/04.1-06-SUMMARY.md`.
+
+**⚠ Highest-risk consequence of holding — read before starting Phase 04.2.**
+`public/quiz-bundle.js` is a committed build artifact. If Phase 04.2 branches off `main` and rebuilds
+the theme bundle, the rebuild comes from a source tree that does NOT contain the `QUIZ_PARTS`
+reorder, and the shipped bundle silently reverts to allergy-testing-last while every 04.2 test still
+passes. **Branch 04.2 from `phase-4.1-testing-first-quiz-order`, or merge it in first.** The guard
+`tests/quiz-bundle-freshness.test.ts` (Phase 4.1 block) will catch this if it runs — it asserts the
+built artifact's part order — but only if 04.2's branch carries that test too.
 
 Progress: [██████████] 100% of Phase 4
 
@@ -400,6 +424,17 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T12:40:00.000Z
-Stopped at: Phase 4 COMPLETE and DEPLOYED (19/19). PR #20 merged (ea3dd26), Fly v51, Shopify alledrops-quiz-production-22, migration 004 executed, GCP ADC gap closed via GCP_SA_KEY and proven from the VM. Next: /gsd:plan-phase 4.1.
-Resume file: none — Phase 4 is closed. Next: `/gsd:plan-phase 4.1` (testing-first quiz order, ~half a day, unblocked).
+Last session: 2026-08-10T22:43:15.209Z
+Stopped at: Phase 04.2 planned — 8 plans, 6 waves, checker PASSED
+Resume file: .planning/phases/04.2-resume-in-progress-intake/04.2-01-PLAN.md
+
+**Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
+mid-plan. Task 1 (`e246391`, bundle rebuild) was committed inside worktree
+`agent-aef816fddf7804720` but never merged, and Task 2's guard test was written, green, and
+**uncommitted** — with its mandatory RED proof never run. The safe-resume gate caught this
+(production commits present, SUMMARY.md absent) before a second executor was dispatched, which
+would have duplicated the rebuild. Recovery was to resume an executor in the *same* worktree
+rather than re-execute: it ran the missing RED proof, committed Task 2, and wrote the SUMMARY.
+Lesson worth keeping: a green test is not a trusted test until it has been observed failing —
+the interrupted session left behind exactly the "passes, therefore correct" artifact this
+project has been burned by six times.
