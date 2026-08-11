@@ -378,3 +378,62 @@ describe("public/quiz-bundle.js — built QUIZ_PARTS element order proves Part 7
     expect(new Set(extractedPartIdentifiers).size).toBe(7);
   });
 });
+
+/**
+ * Phase 4.2 (resume-in-progress-intake) rebuild — plan 04.2-06.
+ *
+ * Rebuilt 2026-08-11 via `npm run build:theme`, folding in plans 04.2-01 through 04.2-05: the
+ * `draft-store.ts` browser-local persistence module, the `resume_offer` FlowStep and its
+ * `ResumeOffer`/`RestorationNotice`/`StartOverControl` components, the debounced D-07-gated write
+ * effect, the D-09/D-11 resumed-dropzone copy, and the persistent in-flow "Start over" control.
+ * Committed bundle byte size moved 195142 -> 201707 bytes (js, +6565) and 48834 -> 50431 bytes
+ * (css, +1597). Determinism was verified by running `npm run build:theme` twice in a row and
+ * confirming byte-identical SHA-256 hashes for both files
+ * (js: `218bfa509630534ab83404a4f3df8777891659d5b3653ff5a4e413bc00741d54`, css:
+ * `56da1f09197ab98874f38a67356c2e0ff311c9c15fafef72a2f6ab5a903eb8a9`) before any marker below was
+ * trusted. Every count uses `SOURCE.split(needle).length - 1`, never `grep -c` — the file's own
+ * documented trap, re-verified this session before any candidate was chosen (all five below
+ * measured 0 against the PRE-rebuild committed bundle, ruling out a vacuous match).
+ *
+ * The Phase 4/4.1 markers above CANNOT detect this staleness — none of Phase 4.2's resume UI or
+ * storage code existed when those markers were chosen, and Phase 4.1's `QUIZ_PARTS` order guard
+ * (immediately above this block) re-passed unchanged after this rebuild, confirming the reorder
+ * survived.
+ */
+describe("public/quiz-bundle.js carries Phase 4.2 (resume-in-progress-intake) content — the resume offer, draft store, and start-over control compiled in", () => {
+  it('contains the "resume_offer" FlowStep literal at least once — proves the resume offer step and its QuizContainer wiring are compiled in', () => {
+    // Measured against the pre-rebuild committed bundle (195142 bytes): 0 occurrences. Measured
+    // against the fresh rebuild (201707 bytes): 2 occurrences.
+    const needle = "resume_offer";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "alledrops_quiz_draft" localStorage key prefix at least once — proves draft-store.ts\'s DRAFT_STORAGE_KEY is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence (the quoted key string, which survives minification verbatim).
+    const needle = "alledrops_quiz_draft";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "quizStartOver" CSS class family at least once — proves the persistent in-flow Start-over control (RESUME-03) is compiled in', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 12 occurrences (the class family applied across StartOverControl plus its
+    // CSS Modules-generated selector names).
+    const needle = "quizStartOver";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the resume-offer heading "You have an unfinished assessment from earlier." at least once — proves the D-06 no-identity offer copy shipped, not a placeholder', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "You have an unfinished assessment from earlier.";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "Your previous answers have been restored." restoration-notice copy at least once — proves the one-time post-resume notice shipped', () => {
+    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
+    // fresh rebuild: 1 occurrence.
+    const needle = "Your previous answers have been restored.";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+});
