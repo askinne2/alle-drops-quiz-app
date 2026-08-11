@@ -670,15 +670,26 @@
    action).
    ========================================================================== */
 
+/* Column, not row. The confirm panel is a SIBLING of the trigger button, so a
+   `flex-direction: row` here laid the two side by side — the button collapsed to a
+   narrow wrapping column ("Start / over") and the panel took the remaining width,
+   towering over the actual question. 04.2-UI-SPEC.md requires the panel to expand
+   BELOW the row and be "width-constrained to the row rather than the full
+   question-card width." Found in Andrew's 04.2-07 browser pass. */
 .quizStartOverRow {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--quiz-spacing-xs);
   margin-top: var(--quiz-spacing-xs);
 }
 
 .quizStartOver {
   display: inline-flex;
   align-items: center;
+  /* Never wrap to two lines — it is a one-line utility link, not a block. */
+  white-space: nowrap;
+  flex-shrink: 0;
   gap: var(--quiz-spacing-xs);
   padding: var(--quiz-spacing-xs) var(--quiz-spacing-sm);
   min-height: 44px;
@@ -714,11 +725,43 @@
   outline-offset: 2px;
 }
 
+/* Compact utility panel, NOT a question card. It sits below the trigger, right-aligned,
+   and is width-capped so it never competes with the question it floats above. The
+   descendant overrides below are deliberate: StartOverConfirmPanel reuses
+   .questionCategory__title / .questionCard__subtitle / .quizNavigation__button, which
+   are sized for primary quiz content. Left unscoped, a "do you want to discard this?"
+   utility read heavier than the clinical question underneath it. */
 .quizStartOver__confirm {
-  padding: var(--quiz-spacing-md);
+  width: 100%;
+  max-width: 34rem;
+  box-sizing: border-box;
+  text-align: left;
+  padding: var(--quiz-spacing-sm) var(--quiz-spacing-md);
   border: 1px solid rgba(var(--color-foreground, 32, 34, 35), 0.15);
   border-radius: var(--quiz-border-radius);
-  margin-top: var(--quiz-spacing-sm);
+  background-color: rgb(var(--color-background, 255, 255, 255));
+}
+
+/* Heading: drop to caption-plus weight and remove the question-card divider rule. */
+.quizStartOver__confirm h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0 0 var(--quiz-spacing-xs);
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.quizStartOver__confirm p {
+  font-size: 1.3rem;
+  line-height: 1.45;
+  margin: 0 0 var(--quiz-spacing-sm);
+}
+
+/* Buttons keep the 44px accessibility floor but stop being full-size nav buttons. */
+.quizStartOver__confirm button {
+  font-size: 1.3rem;
+  padding: var(--quiz-spacing-xs) var(--quiz-spacing-sm);
+  min-height: 44px;
 }
 
 .quizStartOver__confirmButton {
