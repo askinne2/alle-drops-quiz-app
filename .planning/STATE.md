@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 04.2 planned — 8 plans, 6 waves, checker PASSED
+stopped_at: Phase 04.2 waves 1-5 complete (7/8 plans); awaiting ship decision on plan 04.2-08
 last_updated: "2026-08-11T09:05:02.096Z"
-last_activity: 2026-08-11 -- Phase 04.2 execution started
+last_activity: 2026-08-11 -- Wave 5 closed, UI signed off, handoff written
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 50
-  completed_plans: 41
+  completed_plans: 48
   percent: 40
 ---
 
@@ -22,14 +22,25 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 04.2 — resume-in-progress-intake
+**Current focus:** Phase 04.2 — resume-in-progress-intake (code-complete; ship decision pending)
 
 ## Current Position
 
-Phase: 04.2 (resume-in-progress-intake) — EXECUTING
-Plan: 1 of 8
-Status: Executing Phase 04.2
-Last activity: 2026-08-11 -- Phase 04.2 execution started
+Phase: 04.2 (resume-in-progress-intake) — **CODE-COMPLETE, 7 of 8 plans done, awaiting ship**
+Plan: 7 of 8 executed. Waves 1–5 complete and merged. **Only plan 04.2-08 (Wave 6) remains**, and it
+is `autonomous: false` — it is the ship plan and needs Andrew.
+Status: Awaiting Andrew's ship decision for Phase 4.1 + 4.2 together
+Last activity: 2026-08-11 -- Wave 5 closed; three rounds of UI fixes signed off ("much better!")
+
+**Branch:** `phase-4.2-resume-in-progress-intake` @ `c4ddbe0`. Forked from
+`phase-4.1-testing-first-quiz-order`, so it carries 04.1's reorder — verified present at index 0 in
+the rebuilt bundle after every rebuild this phase.
+
+**Gates at handoff:** 677 tests / 47 files green, typecheck clean, bundle deterministic across two
+builds, working tree clean.
+
+**What is NOT done:** plan 04.2-08 — merge PR #22 (4.1) + this branch, three-channel deploy
+(Fly + Shopify + served-bytes verification), and the blocking human check of both PHI renderers.
 
 **The reorder is NOT live.** Fly is still on **v51** and Shopify on
 **alledrops-quiz-production-22**, both carrying the OLD part order with allergy testing last.
