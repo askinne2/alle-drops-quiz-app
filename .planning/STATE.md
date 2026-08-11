@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Awaiting Phase 04.2 — Andrew chose to merge and deploy 04.1 together with 04.2
+status: executing
 stopped_at: Phase 04.2 planned — 8 plans, 6 waves, checker PASSED
-last_updated: "2026-08-10T22:43:15.214Z"
-last_activity: "2026-08-10 -- PR #22 opened, all gates green, merge + deploy deliberately held"
+last_updated: "2026-08-11T09:05:02.096Z"
+last_activity: 2026-08-11 -- Phase 04.2 execution started
 progress:
   total_phases: 10
   completed_phases: 4
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 04.2 — resume-in-progress-intake (context gathered; 04.1 held, ships with 04.2)
+**Current focus:** Phase 04.2 — resume-in-progress-intake
 
 ## Current Position
 
-Phase: 04.1 (testing-first-quiz-order) — CODE-COMPLETE, HELD (not shipped)
-Plan: 6 of 6 executed, but 04.1-06 is PARTIAL (Task 1 only; Tasks 2–3 deferred)
-Status: Awaiting Phase 04.2 — Andrew chose to merge and deploy 04.1 together with 04.2
-Last activity: 2026-08-10 -- PR #22 opened, all gates green, merge + deploy deliberately held
+Phase: 04.2 (resume-in-progress-intake) — EXECUTING
+Plan: 1 of 8
+Status: Executing Phase 04.2
+Last activity: 2026-08-11 -- Phase 04.2 execution started
 
 **The reorder is NOT live.** Fly is still on **v51** and Shopify on
 **alledrops-quiz-production-22**, both carrying the OLD part order with allergy testing last.
