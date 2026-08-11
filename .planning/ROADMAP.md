@@ -490,7 +490,16 @@ Sequence 4.1 first: it is small, self-contained, and does not depend on any resu
 
   4. The displayed ceiling is computed from the scored question set, so adding a scored question
      changes it automatically rather than silently rotting
-**Plans**: TBD
+**Plans**: 6 plans in 4 waves
+
+Plans:
+- [ ] 05-01-PLAN.md — TDD the derived score ceiling (`getQuestionMaxScore`, `getMaxScore`) and the new `score-scale.ts` accessor module
+- [ ] 05-02-PLAN.md — Retire the legacy severity CSS, add the five tone tokens and the `.scaleBar__*` family
+- [ ] 05-03-PLAN.md — Rewrite `ResultsDisplay` as the Preliminary Score page; repoint the three coupled test assertions
+- [ ] 05-04-PLAN.md — First dedicated `ResultsDisplay` DOM test; close D-10 with a non-vacuous assertion
+- [ ] 05-05-PLAN.md — Rebuild the committed theme bundle and extend the staleness guard with measured Phase 5 markers
+- [ ] 05-06-PLAN.md — Blocking human verification (greyscale, 375px, score-7 decoupling) and requirement closure
+
 **UI hint**: yes
 **Notes**: **Split this phase when planning.** SCORE-01 is ~30 minutes of string edits and is NOT
 blocked — ship it early, even during Phase 1 if convenient. SCORE-02 and SCORE-03 (~3–5 h) are
