@@ -94,6 +94,14 @@ export function ResultsDisplay({
             <div className={styles.quizResults__scoreCircle}>
               <span className={styles.quizResults__scoreNumber}>{score}</span>
             </div>
+            {/*
+              Immediate meaning for the naked number: the current symptom-burden zone label
+              (same vocabulary as the bar legend), not the clinical bracket. Keeps D-05/D-06 —
+              circle and bar stay on the raw-score axis; recommendation stays on scoreBracket.
+            */}
+            <p className={styles.quizResults__scoreBurdenCaption}>
+              {currentZone.label} symptom burden
+            </p>
             <div className={styles.scaleBar}>
               <div className={styles.scaleBar__axisRow}>
                 <span className={styles.scaleBar__axisLabel}>Symptom burden</span>
@@ -148,9 +156,17 @@ export function ResultsDisplay({
             your number on a scale" and "here is what a human recommends." The heading below is
             deliberately the same visual weight as the bar's axis label — do not "promote" it to a
             heading element or delete the border as decoration in a future tidy-up.
+            The bridge sentence teaches the two axes before the clinical paragraph, so a Low bar
+            above a SLIT recommendation (score 7 / bracket 7+) does not read as a contradiction.
           */}
           <div className={styles.scaleBar__meaningSection}>
+            <p className={styles.scaleBar__axisBridge}>
+              The bar shows how many symptoms you reported. Below is what that usually means for care.
+            </p>
             <p className={styles.scaleBar__meaningHeading}>What this means for you</p>
+            <p className={styles.scaleBar__meaningContext}>
+              {currentZone.label} on the symptom scale
+            </p>
 
             {scoreBracket === "0-2" && (
               <div className={styles.quizResults__recommendation}>

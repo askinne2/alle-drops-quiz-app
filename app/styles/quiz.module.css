@@ -1128,17 +1128,45 @@
   }
 }
 
+.scaleBar__axisBridge {
+  margin: 0 0 var(--quiz-spacing-sm);
+  font-size: 1.3rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: rgba(var(--color-foreground, 32, 34, 35), 0.8);
+}
+
+@media (min-width: 750px) {
+  .scaleBar__axisBridge {
+    font-size: 1.4rem;
+  }
+}
+
 .scaleBar__meaningHeading {
   font-size: 1.2rem;
   font-weight: 600;
   line-height: 1.3;
-  margin: 0 0 var(--quiz-spacing-sm);
+  margin: 0 0 var(--quiz-spacing-xs);
   color: rgba(var(--color-foreground, 32, 34, 35), 0.75);
 }
 
 @media (min-width: 750px) {
   .scaleBar__meaningHeading {
     font-size: 1.4rem;
+  }
+}
+
+.scaleBar__meaningContext {
+  margin: 0 0 var(--quiz-spacing-md);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: rgb(var(--color-foreground, 32, 34, 35));
+}
+
+@media (min-width: 750px) {
+  .scaleBar__meaningContext {
+    font-size: 1.3rem;
   }
 }
 
@@ -1277,6 +1305,22 @@
 @media (min-width: 750px) {
   .quizResults__scoreNumber {
     font-size: 4.8rem;
+  }
+}
+
+/* Immediate burden label under the score circle — same zone vocabulary as the bar legend */
+.quizResults__scoreBurdenCaption {
+  margin: 0 0 var(--quiz-spacing-md);
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: rgb(var(--color-foreground, 32, 34, 35));
+}
+
+@media (min-width: 750px) {
+  .quizResults__scoreBurdenCaption {
+    font-size: 1.6rem;
+    margin-bottom: var(--quiz-spacing-lg);
   }
 }
 
