@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Phases 04.1 + 04.2 shipped and verified live (Fly v52, Shopify -23); next is Phase 5
-last_updated: "2026-08-11T12:48:42.365Z"
-last_activity: 2026-08-11 -- Phase 04.2 marked complete
+stopped_at: Phase 5 context gathered
+last_updated: "2026-08-11T14:03:35.244Z"
+last_activity: 2026-08-11 -- Phases 04.1 + 04.2 deployed together and verified on served bytes
 progress:
   total_phases: 10
   completed_phases: 5
@@ -434,9 +434,9 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-10T22:43:15.209Z
-Stopped at: Phase 04.2 planned — 8 plans, 6 waves, checker PASSED
-Resume file: .planning/phases/04.2-resume-in-progress-intake/04.2-01-PLAN.md
+Last session: 2026-08-11T14:03:35.237Z
+Stopped at: Phase 5 context gathered
+Resume file: .planning/phases/05-preliminary-score-page/05-CONTEXT.md
 
 **Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
 mid-plan. Task 1 (`e246391`, bundle rebuild) was committed inside worktree
