@@ -149,6 +149,7 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 02-04-PLAN.md — D-03 boundary wiring at all three score sites, phase gate, blocking human verification
+
 **Notes**: ~1 day. This is the load-bearing phase — `CON-quiz-schema-foundation-is-load-bearing`.
 Ship it before Phases 3 and 4 or accept five more ID-literal special cases across
 `QuizPartRenderer.tsx`.
@@ -199,6 +200,7 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 03-07-PLAN.md — Merge, deploy, prove the release live on served bytes, then execute the DROP COLUMN and verify by query results
+
 **UI hint**: yes
 **Notes**: ~1.5–2 days — content is trivial, the schema is the work, and Phase 2 does that work.
 The old `PART6_MEDICAL_HISTORY` (`questions.ts:222-249`) is fully replaced, not extended;
@@ -218,6 +220,7 @@ special case as part of this phase.
   1. ~~**William agrees to test-result upload, and it is priced**~~ — **CLEARED for building** by
      Andrew's explicit in-session authorization ("Execute all waves no William blocker"). The
      *pricing* conversation is still owed and now sits on the William list, not on this phase.
+
   2. **Fly.io BAA signed** — STILL OPEN. Owner: Andrew.
   3. **Production cutover to AOD's Google Cloud project** — STILL OPEN. Owner: William / AOD.
 
@@ -356,6 +359,7 @@ where they left off, instead of starting a ten-minute clinical questionnaire ove
 **Plans:** 7/8 plans executed
 
 Plans:
+
 - [x] 04.2-01-PLAN.md — Write RESUME-01..04 into REQUIREMENTS.md; build `draft-store.ts` (round-trip canary, structural schema fingerprint, 24h expiry with active cleanup, type-driven file-token strip) and its unit proofs (D-01, D-05, D-11)
 - [x] 04.2-02-PLAN.md — Extract `buildSubmitPayload` into `app/lib/quiz/payload.ts` with the locked three-field exclusion constant, and unit-prove D-10 (D-10)
 - [x] 04.2-03-PLAN.md — `ResumeOffer.tsx` (offer, in-flow Start over control, shared confirm panel, restoration notice) + four CSS classes + DOM proof of zero identity and the confirm gate (D-06, D-08)
@@ -387,6 +391,7 @@ was scoped and then deliberately dropped — see `<deferred>` below. Browser-loc
 
 - **No cross-device resume.** Start on a laptop, finish on a phone — not supported. This is the
   accepted trade.
+
 - **Does not survive a cache clear, private browsing, or a different browser on the same machine.**
 - **Does not resurrect a patient who never came back.** There is no server-side record of an
   abandoned intake, and therefore no follow-up capability. If AOD ever wants "you left something
@@ -435,6 +440,7 @@ can be moved)
 **Plans:** 4/6 plans executed
 
 Plans:
+
 - [x] 04.1-01-PLAN.md — Reorder QUIZ_PARTS to [P7, P1-P5, P6], D-06 banner, repoint three coupled index tests, add the order/score/consent guard (D-02, D-06, D-07)
 - [x] 04.1-02-PLAN.md — Hoist TESTING_ANSWER_KEYS + partitionAnswers to format.ts; add the admin Test Results section BEFORE filtering Symptom Responses in both PHI renderers (D-05, D-05a)
 - [x] 04.1-03-PLAN.md — Amend DEC-medical-history-before-testing-split in place; record the Phase 4.1 orphan-volume analysis without changing PENDING_OLM_AGE_DAYS (D-01, D-03, D-04)
@@ -493,11 +499,22 @@ Sequence 4.1 first: it is small, self-contained, and does not depend on any resu
 **Plans**: 6 plans in 4 waves
 
 Plans:
+**Wave 1**
+
 - [ ] 05-01-PLAN.md — TDD the derived score ceiling (`getQuestionMaxScore`, `getMaxScore`) and the new `score-scale.ts` accessor module
 - [ ] 05-02-PLAN.md — Retire the legacy severity CSS, add the five tone tokens and the `.scaleBar__*` family
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 05-03-PLAN.md — Rewrite `ResultsDisplay` as the Preliminary Score page; repoint the three coupled test assertions
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 05-04-PLAN.md — First dedicated `ResultsDisplay` DOM test; close D-10 with a non-vacuous assertion
 - [ ] 05-05-PLAN.md — Rebuild the committed theme bundle and extend the staleness guard with measured Phase 5 markers
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 05-06-PLAN.md — Blocking human verification (greyscale, 375px, score-7 decoupling) and requirement closure
 
 **UI hint**: yes
@@ -739,6 +756,7 @@ different directions:
 
 - **Phase 4.1** moves the testing split and its required upload to the front, so a patient who
   cannot produce results loses seconds instead of a completed intake. Half a day, unblocked.
+
 - **Phase 4.2** adds browser-local resume (`localStorage`). ~1–2 days, **unblocked** — no draft PHI
   store, no email provider, no BAA implication, because the draft never leaves the patient's device.
 

@@ -712,7 +712,7 @@ is collected or stored. Phase 5.1 (not this phase) is where the PHI-path review 
 `[VERIFIED: codebase]` by direct file read, not inference. The two entries above are the only points
 where this research made a judgment call beyond what CONTEXT.md/UI-SPEC explicitly locked.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does the planner want the max-score functions exposed for reuse elsewhere (e.g., a future admin
    UI showing "X of 60"), or kept as an internal implementation detail of `score-scale.ts`?**
@@ -723,6 +723,7 @@ where this research made a judgment call beyond what CONTEXT.md/UI-SPEC explicit
    - Recommendation: export `getMaxScore`/`getQuestionMaxScore` from `scoring.ts` as public API (not
      module-private) so Phase 5.1 has a clean import path already proven correct by Phase 5's tests,
      rather than needing to re-derive or duplicate the logic.
+   - **RESOLVED:** exported as public API — see `05-01-PLAN.md` Task 2.
 
 ## Sources
 
