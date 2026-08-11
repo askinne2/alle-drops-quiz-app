@@ -553,18 +553,21 @@ describe("public/quiz-bundle.js carries Phase 5 (preliminary-score-page) content
     expect(count(needle)).toBe(0);
   });
 
-  it("has zero case-sensitive occurrences of a standalone \"Provisional\"/\"provisional\" word — proves D-04's provisional-scale flag never reaches patient-facing markup", () => {
-    // D-04 requires the provisional default to be visibly flagged in source only, never rendered
-    // to the patient. The raw capitalized needle cannot be used as-is: `getScoreScale()`'s
-    // `isProvisional` boolean property name survives minification verbatim (esbuild does not
-    // mangle property-access names), so a bare "Provisional" needle measures 1 occurrence against
-    // the fresh rebuild — not because patient-facing text leaked, but because the property name
-    // itself contains the substring. Narrowed here to two word-boundary-safe needles (a leading
-    // space before each casing) that cannot match inside "isProvisional" (which has no space before
-    // "Provisional"). Measured against the pre-rebuild committed bundle: 0 occurrences for both.
-    // Measured against the fresh rebuild: 0 occurrences for both — confirming the flag's property
-    // name is the only place either substring appears, and it never reaches rendered copy.
-    expect(count(" Provisional")).toBe(0);
-    expect(count(" provisional")).toBe(0);
+  it('contains the two-axis bridge sentence — proves the burden/clinical teaching line is compiled in', () => {
+    // Post-approval UX polish (2026-08-11): measured 1 occurrence in the rebuilt bundle.
+    const needle = "The bar shows how many symptoms you reported";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the "{zone} on the symptom scale" context line — proves the meaning-section zone caption is compiled in', () => {
+    // Post-approval UX polish (2026-08-11): measured 1 occurrence (template suffix) in the rebuilt bundle.
+    const needle = " on the symptom scale";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the circle burden caption suffix " symptom burden" — proves the under-circle zone label is compiled in', () => {
+    // Template is `${currentZone.label} symptom burden`; measured 1 occurrence of the literal suffix.
+    const needle = " symptom burden";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
   });
 });

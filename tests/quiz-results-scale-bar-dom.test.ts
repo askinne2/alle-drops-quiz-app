@@ -188,6 +188,31 @@ describe("D-05 bar/bracket independence (load-bearing)", () => {
   });
 });
 
+describe("UX — circle caption and two-axis bridge", () => {
+  it('shows "{zone} symptom burden" under the circle, driven by raw score not scoreBracket', () => {
+    renderResults({ score: 7, scoreBracket: "7+" });
+    expect(screen.getByText("Low symptom burden")).toBeTruthy();
+
+    cleanup();
+    renderResults({ score: 45, scoreBracket: "7+" });
+    expect(screen.getByText("High symptom burden")).toBeTruthy();
+  });
+
+  it("renders the two-axis bridge sentence that separates burden from clinical meaning", () => {
+    renderResults();
+    expect(
+      screen.getByText(
+        "The bar shows how many symptoms you reported. Below is what that usually means for care.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it('renders "{zone} on the symptom scale" under the locked meaning heading', () => {
+    renderResults({ score: 7, scoreBracket: "7+" });
+    expect(screen.getByText("Low on the symptom scale")).toBeTruthy();
+  });
+});
+
 describe("DOM structure — the marker-clipping regression guard", () => {
   it("the marker is a sibling of the zones wrapper under the track, never its descendant", () => {
     const { container } = renderResults();
