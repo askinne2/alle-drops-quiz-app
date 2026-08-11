@@ -177,7 +177,11 @@ describe("ResultsDisplay.tsx is terminal: no callback props, no bypass copy (TES
     expect(count(RESULTS_DISPLAY_SOURCE, "Schedule Allergy Testing")).toBeGreaterThan(0);
   });
 
-  it('renders the "Your responses have been submitted." confirmation line', () => {
-    expect(count(RESULTS_DISPLAY_SOURCE, "Your responses have been submitted.")).toBeGreaterThan(0);
+  // Needle repointed by Phase 5 Plan 03 (SCORE-01): the original needle,
+  // "Your responses have been submitted.", was the pre-Phase-5 subtitle, retired when the page was
+  // retitled "Preliminary Score." The assertion's purpose is unchanged: proving the file still
+  // renders a submission-confirmation line rather than having lost it in a refactor.
+  it('renders the "1-2 business days" clinical-review confirmation line', () => {
+    expect(count(RESULTS_DISPLAY_SOURCE, "1-2 business days")).toBeGreaterThan(0);
   });
 });

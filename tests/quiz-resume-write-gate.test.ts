@@ -209,7 +209,7 @@ describe("D-08 — a successful submission clears the draft", () => {
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "Submit" }));
 
-    await waitFor(() => expect(screen.getByText("Your Assessment Results")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Preliminary Score")).toBeTruthy());
     expect(window.localStorage.getItem(DRAFT_STORAGE_KEY)).toBeNull();
   });
 });
