@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 5 UI-SPEC approved
-last_updated: "2026-08-11T16:25:36.105Z"
-last_activity: 2026-08-11 -- Phase 5 planning complete
+last_updated: "2026-08-11T16:29:02.588Z"
+last_activity: 2026-08-11 -- Phase 5 execution started
 progress:
   total_phases: 11
   completed_phases: 5
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phases 04.1 + 04.2 shipped and verified live 2026-08-11. Next: Phase 5.
+**Current focus:** Phase 5 — Preliminary Score Page
 
 ## Current Position
 
-Phase: 04.2 — **COMPLETE AND SHIPPED**
-Plan: 8 of 8 executed. All six waves complete, merged, and deployed.
-Status: Ready to execute
-Last activity: 2026-08-11 -- Phase 5 planning complete
+Phase: 5 (Preliminary Score Page) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 5
+Last activity: 2026-08-11 -- Phase 5 execution started
 
 **Branch:** merged. `main` @ `86e6b50` (PR #23 merged as `e140a8c`, superseding PR #22 which was
 closed with a pointer comment). `phase-4.2-resume-in-progress-intake` is landed; nothing outstanding
