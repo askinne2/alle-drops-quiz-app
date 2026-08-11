@@ -101,9 +101,9 @@ export function QuizContainer() {
   const [startTime] = useState(() => Date.now());
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [showTestMode, setShowTestMode] = useState(false);
-  // Ephemeral, never persisted. resumedSession is currently unused for rendering in this plan
-  // (the resumed-session dropzone copy variant is plan 04.2-05's scope); showRestorationNotice
-  // drives the one-time post-resume orientation cue below.
+  // Ephemeral, never persisted. resumedSession selects the D-09/D-11 resumed-session dropzone
+  // copy variant passed down to QuizPartRenderer; showRestorationNotice drives the one-time
+  // post-resume orientation cue below.
   const [resumedSession, setResumedSession] = useState(false);
   const [showRestorationNotice, setShowRestorationNotice] = useState(false);
 
@@ -415,6 +415,7 @@ export function QuizContainer() {
               items={currentPartItems}
               answers={answers}
               onAnswerChange={handleAnswerChange}
+              resumedSession={resumedSession}
             />
             {renderNavRow(
               <>

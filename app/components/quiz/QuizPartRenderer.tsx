@@ -15,6 +15,10 @@ interface QuizPartRendererProps {
   answers: QuizAnswers;
   onAnswerChange: (questionId: string, value: string | string[] | number) => void;
   disabled?: boolean;
+  /** D-09/D-11 (Phase 4.2). True only on a resumed session — selects the dropzone empty-state
+   *  copy that explains the file specifically was not kept, rather than the default "No files
+   *  added yet." string. Mutually exclusive with the default string; never renders both. */
+  resumedSession?: boolean;
 }
 
 const FREQUENCY_LABELS = ["Not at all", "Rarely", "Sometimes", "Often", "Very often"] as const;
@@ -316,7 +320,13 @@ function isGateItem(item: QuizItem, nextItem: QuizItem | undefined): boolean {
   return nextItem.showIf?.questionId === item.id;
 }
 
-export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = false }: QuizPartRendererProps) {
+export function QuizPartRenderer({
+  items,
+  answers,
+  onAnswerChange,
+  disabled = false,
+  resumedSession = false,
+}: QuizPartRendererProps) {
   const visible = visibleItems(items, answers);
 
   // file_multi (04-16) local state — kept at THIS component's level, not per-item, so it survives
@@ -767,7 +777,11 @@ export function QuizPartRenderer({ items, answers, onAnswerChange, disabled = fa
 
                 <div aria-live="polite">
                   {entries.length === 0 ? (
-                    <p className={styles.fileUpload__empty}>No files added yet.</p>
+                    <p className={styles.fileUpload__empty}>
+                      {resumedSession
+                        ? "For your security, files aren't kept between visits. Please re-add your allergy test results below."
+                        : "No files added yet."}
+                    </p>
                   ) : (
                     <ul role="list" className={styles.fileUpload__list}>
                       {entries.map((entry) => (
