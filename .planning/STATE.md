@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 04.2 waves 1-5 complete (7/8 plans); awaiting ship decision on plan 04.2-08
-last_updated: "2026-08-11T09:05:02.096Z"
-last_activity: 2026-08-11 -- Wave 5 closed, UI signed off, handoff written
+status: completed
+stopped_at: Phases 04.1 + 04.2 shipped and verified live (Fly v52, Shopify -23); next is Phase 5
+last_updated: "2026-08-11T12:48:42.365Z"
+last_activity: 2026-08-11 -- Phase 04.2 marked complete
 progress:
   total_phases: 10
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 50
-  completed_plans: 48
-  percent: 40
+  completed_plans: 49
+  percent: 50
 ---
 
 # Project State
@@ -22,57 +22,67 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 04.2 — resume-in-progress-intake (code-complete; ship decision pending)
+**Current focus:** Phases 04.1 + 04.2 shipped and verified live 2026-08-11. Next: Phase 5.
 
 ## Current Position
 
-Phase: 04.2 (resume-in-progress-intake) — **CODE-COMPLETE, 7 of 8 plans done, awaiting ship**
-Plan: 7 of 8 executed. Waves 1–5 complete and merged. **Only plan 04.2-08 (Wave 6) remains**, and it
-is `autonomous: false` — it is the ship plan and needs Andrew.
-Status: Awaiting Andrew's ship decision for Phase 4.1 + 4.2 together
-Last activity: 2026-08-11 -- Wave 5 closed; three rounds of UI fixes signed off ("much better!")
+Phase: 04.2 — **COMPLETE AND SHIPPED**
+Plan: 8 of 8 executed. All six waves complete, merged, and deployed.
+Status: Phase 04.2 complete — ready for Phase 5
+Last activity: 2026-08-11 -- Phases 04.1 + 04.2 deployed together and verified on served bytes
 
-**Branch:** `phase-4.2-resume-in-progress-intake` @ `c4ddbe0`. Forked from
-`phase-4.1-testing-first-quiz-order`, so it carries 04.1's reorder — verified present at index 0 in
-the rebuilt bundle after every rebuild this phase.
+**Branch:** merged. `main` @ `86e6b50` (PR #23 merged as `e140a8c`, superseding PR #22 which was
+closed with a pointer comment). `phase-4.2-resume-in-progress-intake` is landed; nothing outstanding
+on it.
 
-**Gates at handoff:** 677 tests / 47 files green, typecheck clean, bundle deterministic across two
-builds, working tree clean.
+**Gates at ship:** 677 tests / 47 files green, typecheck exit 0, build exit 0, theme bundle
+deterministic across two builds (SHA-256 `a3b0503839…56b7c0`), working tree clean after rebuild,
+zero new dependencies, zero DDL.
 
-**What is NOT done:** plan 04.2-08 — merge PR #22 (4.1) + this branch, three-channel deploy
-(Fly + Shopify + served-bytes verification), and the blocking human check of both PHI renderers.
+**The reorder IS live.** Both phases shipped together on 2026-08-11 through all three channels.
+Full deploy record: `.planning/phases/04.2-resume-in-progress-intake/04.2-08-SUMMARY.md`.
 
-**The reorder is NOT live.** Fly is still on **v51** and Shopify on
-**alledrops-quiz-production-22**, both carrying the OLD part order with allergy testing last.
-PR #22 (https://github.com/askinne2/alle-drops-quiz-app/pull/22) is open and unmerged by choice,
-overriding D-10. See `.planning/phases/04.1-testing-first-quiz-order/04.1-06-SUMMARY.md`.
+**Phase 04.1 + 04.2 deploy verification (2026-08-11), all on served bytes rather than exit codes:**
 
-**⚠ Highest-risk consequence of holding — read before starting Phase 04.2.**
-`public/quiz-bundle.js` is a committed build artifact. If Phase 04.2 branches off `main` and rebuilds
-the theme bundle, the rebuild comes from a source tree that does NOT contain the `QUIZ_PARTS`
-reorder, and the shipped bundle silently reverts to allergy-testing-last while every 04.2 test still
-passes. **Branch 04.2 from `phase-4.1-testing-first-quiz-order`, or merge it in first.** The guard
-`tests/quiz-bundle-freshness.test.ts` (Phase 4.1 block) will catch this if it runs — it asserts the
-built artifact's part order — but only if 04.2's branch carries that test too.
+| | v51 | v52 |
+|---|---|---|
+| served `/quiz-bundle-js` | 195,142 B | **201,707 B**, SHA-256 identical to the committed artifact |
+| `resume_offer` | 0 | **2** |
+| `alledrops_quiz_draft` | 0 | **1** |
+| `quizStartOver` | 0 | **12** |
+| `"You have an unfinished assessment from earlier."` | 0 | **1** |
+| `"Your previous answers have been restored."` | 0 | **1** |
+| served `QUIZ_PARTS` element 0 | — | **`fs` = the `testing_status` head** |
 
-Progress: [██████████] 100% of Phase 4
+`/health` 200. Shopify **alledrops-quiz-production-22 → -23**. Andrew confirmed both PHI renderers on
+the deployed app (admin detail view + clinical PDF, all four Part 7 fields present exactly once in
+each, uploaded JPEG embedded in a 316,454 B PDF), **closing Phase 4.1's owed D-05a criterion**. He
+also confirmed on the live storefront that allergy testing is first and that resume prompts after
+navigating away and returning. Verdict: "approved."
 
-Codebase baseline: `main` @ `ea3dd26` (merge of `phase-4-mandatory-allergy-testing`, PR #20),
-**558 tests / 37 files passing**, typecheck clean, build clean, theme bundle byte-identical to the
-committed artifact. Deployed to Fly (`alle-drops-quiz-app`, iad) release **v51**; Shopify app version
-**alledrops-quiz-production-22**. Phase 1 shipped DEF-01..04 plus three security fixes. Phase 2 made
+Note: STATE.md previously recorded the v51 served length as 195,102 B. The live measurement is
+**195,142 B**; the older figure was wrong and the table above supersedes it.
+
+Progress: [██████████] 100% of Phases 4, 4.1, and 4.2
+
+Codebase baseline: `main` @ `86e6b50`, **677 tests / 47 files passing**, typecheck clean, build clean,
+theme bundle byte-identical to the committed artifact and to the bytes Fly serves. Deployed to Fly
+(`alle-drops-quiz-app`, iad) release **v52**; Shopify app version
+**alledrops-quiz-production-23**. Phase 1 shipped DEF-01..04 plus three security fixes. Phase 2 made
 the quiz schema declarative (`required`, `showIf`, info blocks). Phase 3 replaced the vestigial Part 6
 medical-history checklist with a mandatory HIST-01..04/DIAG-01 section, removed both no-testing
 bypasses, and closed the asymmetric app-code/DDL migration for the two legacy PHI columns. Phase 4
 added the Part 7 testing split with a required multi-file upload, the app's first binary PHI path
 (GCS staging → promotion → `submission_files` → retrieval on three surfaces), and closed a live
 TEST-07 defect where 0–2 bracket patients auto-submitted with a `consent_version` they never saw.
+Phase 4.1 moved the testing split to the front of the flow; Phase 4.2 added browser-local resume
+(no draft PHI store, no new BAA surface) — both shipped together in v52.
 
 **Phase 4 deploy verification (2026-08-10), all on served bytes rather than exit codes:**
 
 | | v50 | v51 |
 |---|---|---|
-| served `/quiz-bundle-js` | 186,738 B | **195,102 B**, byte-identical to the committed artifact |
+| served `/quiz-bundle-js` | 186,738 B | **195,142 B**, byte-identical to the committed artifact |
 | `fileUpload__dropzone` | 0 | **9** |
 | `testing_status` | 0 | **7** |
 | `testing_files` | 0 | **1** |

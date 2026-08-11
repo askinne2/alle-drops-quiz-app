@@ -24,8 +24,8 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - [x] **Phase 2: Quiz Schema Foundation** - `required`, `showIf`, and static-info question types (completed 2026-08-09)
 - [x] **Phase 3: Mandatory Medical History** - Rebuilt history section every patient passes through (completed 2026-08-09)
 - [x] **Phase 4: Mandatory Allergy Testing** - Two-option testing split; both bypasses deleted (completed 2026-08-10)
-- [ ] **Phase 4.1: Testing-First Quiz Order** *(INSERTED)* - Move the testing split + required upload to the front so abandonment costs seconds, not ten minutes
-- [ ] **Phase 4.2: Resume In-Progress Intake** *(INSERTED)* - Browser-local (localStorage) resume so a closed tab does not lose a completed intake. No draft PHI store, no BAA needed
+- [x] **Phase 4.1: Testing-First Quiz Order** *(INSERTED)* - Move the testing split + required upload to the front so abandonment costs seconds, not ten minutes (completed 2026-08-11)
+- [x] **Phase 4.2: Resume In-Progress Intake** *(INSERTED)* - Browser-local (localStorage) resume so a closed tab does not lose a completed intake. No draft PHI store, no BAA needed (completed 2026-08-11)
 - [ ] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale
 - [ ] **Phase 6: Purchase Prerequisites** - Honor-system checkboxes and returning-patient state
 - [ ] **Phase 7: Telehealth Intake Path** - Booking-capable consult page and telehealth branching
@@ -362,7 +362,7 @@ Plans:
 - [x] 04.2-05-PLAN.md — QuizContainer write path: debounced D-07-gated write, clear-on-successful-submit, in-flow Start over reset, D-09 dropzone copy, and D-11's no-staging-token test (D-07, D-08, D-09, D-11)
 - [x] 04.2-06-PLAN.md — DOM-level end-to-end D-10 parity proof (the phase's load-bearing deliverable) plus the theme-bundle rebuild with measured Phase 4.2 freshness markers, keeping 04.1's order guard green (D-10)
 - [x] 04.2-07-PLAN.md — Blocking human browser pass in the third-party-frame condition on provably-fresh served bytes, plus the Safari/WebKit D-03 measurement (D-01, D-03)
-- [ ] 04.2-08-PLAN.md — Ship 04.1 and 04.2 together: merge, three-channel deploy, served-bytes verification, and Phase 4.1's owed D-05a PHI-renderer confirmation
+- [x] 04.2-08-PLAN.md — Ship 04.1 and 04.2 together: merge, three-channel deploy, served-bytes verification, and Phase 4.1's owed D-05a PHI-renderer confirmation
 
 **UI hint**: yes
 
@@ -439,7 +439,7 @@ Plans:
 - [x] 04.1-03-PLAN.md — Amend DEC-medical-history-before-testing-split in place; record the Phase 4.1 orphan-volume analysis without changing PENDING_OLM_AGE_DAYS (D-01, D-03, D-04)
 - [x] 04.1-04-PLAN.md — Rebuild and commit quiz-bundle.js + .css together; add the built-artifact part-order guard (D-09, mechanism corrected)
 - [x] 04.1-05-PLAN.md — Blocking human browser pass over the reordered quiz against provably-fresh served bytes (D-08)
-- [ ] 04.1-06-PLAN.md — Merge, three-channel deploy, served-bytes verification, and the blocking human check of both PHI renderers on the deployed app (D-10, D-05a)
+- [x] 04.1-06-PLAN.md — Merge, three-channel deploy, served-bytes verification, and the blocking human check of both PHI renderers on the deployed app (D-10, D-05a)
 
 **UI hint**: yes
 
