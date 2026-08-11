@@ -143,47 +143,57 @@ export function ResultsDisplay({
             </div>
           </div>
 
-          {scoreBracket === "0-2" && (
-            <div className={styles.quizResults__recommendation}>
-              <div className={styles.quizResults__message}>
-                <h3>Your Symptoms Appear Mild and Well-Controlled</h3>
-                <p>
-                  Based on your responses, your allergy symptoms appear to be mild and well-controlled. Continue your
-                  current management approach with over-the-counter medications as needed. However, if your symptoms
-                  worsen, occur more frequently, or begin to interfere with your daily activities, consider completing
-                  this questionnaire again or scheduling an appointment with an allergist.
-                </p>
-              </div>
-            </div>
-          )}
+          {/*
+            D-06's two-axes boundary: the wrapper's top border is the visual line between "here is
+            your number on a scale" and "here is what a human recommends." The heading below is
+            deliberately the same visual weight as the bar's axis label — do not "promote" it to a
+            heading element or delete the border as decoration in a future tidy-up.
+          */}
+          <div className={styles.scaleBar__meaningSection}>
+            <p className={styles.scaleBar__meaningHeading}>What this means for you</p>
 
-          {scoreBracket === "3-6" && (
-            <div className={styles.quizResults__recommendation}>
-              <div className={styles.quizResults__message}>
-                <h3>You May Benefit From Seeing an Allergist</h3>
-                <p>
-                  Based on your responses, you may benefit from seeing an allergist. While your symptoms are not
-                  severe, they are affecting your daily life and could be better controlled. An allergist can help
-                  identify your triggers and optimize your treatment plan.
-                </p>
+            {scoreBracket === "0-2" && (
+              <div className={styles.quizResults__recommendation}>
+                <div className={styles.quizResults__message}>
+                  <h3>Your Symptoms Appear Mild and Well-Controlled</h3>
+                  <p>
+                    Based on your responses, your allergy symptoms appear to be mild and well-controlled. Continue your
+                    current management approach with over-the-counter medications as needed. However, if your symptoms
+                    worsen, occur more frequently, or begin to interfere with your daily activities, consider completing
+                    this questionnaire again or scheduling an appointment with an allergist.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {scoreBracket === "7+" && (
-            <div className={styles.quizResults__recommendation}>
-              <div className={styles.quizResults__message}>
-                <h3>Sublingual Immunotherapy May Significantly Help You</h3>
-                <p>
-                  Based on your responses, you would likely benefit from beginning sublingual immunotherapy. Your
-                  symptoms are moderate-to-severe, significantly affecting your quality of life, or not adequately
-                  controlled with current treatment. An allergist can perform testing to identify your specific triggers
-                  and develop a comprehensive treatment plan, which may include prescription medications or
-                  immunotherapy.
-                </p>
+            {scoreBracket === "3-6" && (
+              <div className={styles.quizResults__recommendation}>
+                <div className={styles.quizResults__message}>
+                  <h3>You May Benefit From Seeing an Allergist</h3>
+                  <p>
+                    Based on your responses, you may benefit from seeing an allergist. While your symptoms are not
+                    severe, they are affecting your daily life and could be better controlled. An allergist can help
+                    identify your triggers and optimize your treatment plan.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {scoreBracket === "7+" && (
+              <div className={styles.quizResults__recommendation}>
+                <div className={styles.quizResults__message}>
+                  <h3>Sublingual Immunotherapy May Significantly Help You</h3>
+                  <p>
+                    Based on your responses, you would likely benefit from beginning sublingual immunotherapy. Your
+                    symptoms are moderate-to-severe, significantly affecting your quality of life, or not adequately
+                    controlled with current treatment. An allergist can perform testing to identify your specific triggers
+                    and develop a comprehensive treatment plan, which may include prescription medications or
+                    immunotherapy.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/*
             One shared action area, conditioned on testingStatus and independent of scoreBracket
