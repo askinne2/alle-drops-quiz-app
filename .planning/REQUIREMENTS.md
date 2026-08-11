@@ -130,18 +130,18 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 
 ### Resume In-Progress Intake
 
-- [ ] **RESUME-01**: A patient who has begun answering quiz questions and returns to the quiz page
+- [x] **RESUME-01**: A patient who has begun answering quiz questions and returns to the quiz page
   in the same browser is offered a neutral, identity-free choice to resume their prior answers or
   start over. The offer screen carries no name, DOB, email, phone, initials, avatar, or elapsed
   time (`REQ-browser-local-resume-offer`)
-- [ ] **RESUME-02**: Nothing is written to browser storage before the patient's first real answer
+- [x] **RESUME-02**: Nothing is written to browser storage before the patient's first real answer
   to a quiz question. The state gate and patient-info steps produce no draft under any
   circumstance, so an untouched page load leaves no trace (`REQ-resume-write-gate`)
-- [ ] **RESUME-03**: The draft is cleared automatically on successful submission and by an
+- [x] **RESUME-03**: The draft is cleared automatically on successful submission and by an
   explicit, persistent "Start over" control visible during the quiz parts and consent, gated
   behind a confirmation whose safe option is rendered first and receives focus
   (`REQ-resume-clear-controls`)
-- [ ] **RESUME-04**: (a) A draft older than 24 hours is treated as absent and silently cleared,
+- [x] **RESUME-04**: (a) A draft older than 24 hours is treated as absent and silently cleared,
   with no countdown and no "expires in" copy. (b) Resuming restores every quiz answer but always
   re-requires the allergy-test file upload — no staging token or file reference is ever persisted
   or restored, and restored state can never satisfy the mandatory-upload predicate. (c) The
@@ -286,10 +286,10 @@ Acknowledged, not in the v1.0 roadmap.
 | TEST-05 | Phase 4 | Complete |
 | TEST-06 | Phase 8 (reassigned 2026-08-09 from Phase 4 — content is Shopify Admin-managed, not in either repo; see requirement note) | Pending |
 | TEST-07 | Phase 4 | Complete |
-| RESUME-01 | Phase 4.2 | Pending |
-| RESUME-02 | Phase 4.2 | Pending |
-| RESUME-03 | Phase 4.2 | Pending |
-| RESUME-04 | Phase 4.2 | Pending |
+| RESUME-01 | Phase 4.2 | Complete (2026-08-11, verified live) |
+| RESUME-02 | Phase 4.2 | Complete (2026-08-11, verified live) |
+| RESUME-03 | Phase 4.2 | Complete (2026-08-11, verified live) |
+| RESUME-04 | Phase 4.2 | Complete (2026-08-11, verified live) |
 | SCORE-01 | Phase 5 | Pending |
 | SCORE-02 | Phase 5 | Blocked (William — score scale) |
 | SCORE-03 | Phase 5 | Blocked (William — score scale) |

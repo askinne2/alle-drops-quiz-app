@@ -438,7 +438,7 @@ Plans:
 - [x] 04.1-02-PLAN.md — Hoist TESTING_ANSWER_KEYS + partitionAnswers to format.ts; add the admin Test Results section BEFORE filtering Symptom Responses in both PHI renderers (D-05, D-05a)
 - [x] 04.1-03-PLAN.md — Amend DEC-medical-history-before-testing-split in place; record the Phase 4.1 orphan-volume analysis without changing PENDING_OLM_AGE_DAYS (D-01, D-03, D-04)
 - [x] 04.1-04-PLAN.md — Rebuild and commit quiz-bundle.js + .css together; add the built-artifact part-order guard (D-09, mechanism corrected)
-- [ ] 04.1-05-PLAN.md — Blocking human browser pass over the reordered quiz against provably-fresh served bytes (D-08)
+- [x] 04.1-05-PLAN.md — Blocking human browser pass over the reordered quiz against provably-fresh served bytes (D-08)
 - [ ] 04.1-06-PLAN.md — Merge, three-channel deploy, served-bytes verification, and the blocking human check of both PHI renderers on the deployed app (D-10, D-05a)
 
 **UI hint**: yes
