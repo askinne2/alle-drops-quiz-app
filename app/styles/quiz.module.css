@@ -679,7 +679,9 @@
 .quizStartOverRow {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  /* Stretch so the confirm panel below runs full width; the trigger itself opts
+     back out with align-self below. */
+  align-items: stretch;
   gap: var(--quiz-spacing-xs);
   margin-top: var(--quiz-spacing-xs);
 }
@@ -687,6 +689,9 @@
 .quizStartOver {
   display: inline-flex;
   align-items: center;
+  /* Opt out of the row's `stretch` — the trigger stays a small right-aligned link
+     even though the confirm panel below it is full width. */
+  align-self: flex-end;
   /* Never wrap to two lines — it is a one-line utility link, not a block. */
   white-space: nowrap;
   flex-shrink: 0;
@@ -731,15 +736,21 @@
    .questionCategory__title / .questionCard__subtitle / .quizNavigation__button, which
    are sized for primary quiz content. Left unscoped, a "do you want to discard this?"
    utility read heavier than the clinical question underneath it. */
+/* Full width, and visually marked as NOT a quiz question — the same device this
+   codebase already uses for supplementary blocks: a subtle tint plus a 3px left
+   accent rule (.infoBlockCard), and the dropzone's matching 0.02 tint. The accent
+   here is --quiz-color-error rather than the button colour, because this block is
+   destructive rather than informational. */
 .quizStartOver__confirm {
   width: 100%;
-  max-width: 34rem;
   box-sizing: border-box;
   text-align: left;
-  padding: var(--quiz-spacing-sm) var(--quiz-spacing-md);
-  border: 1px solid rgba(var(--color-foreground, 32, 34, 35), 0.15);
+  padding: var(--quiz-spacing-md);
+  margin-bottom: var(--quiz-spacing-md);
+  border: 1px solid rgba(var(--color-foreground, 32, 34, 35), 0.12);
+  border-left: 3px solid var(--quiz-color-error, #f44336);
   border-radius: var(--quiz-border-radius);
-  background-color: rgb(var(--color-background, 255, 255, 255));
+  background-color: rgba(var(--color-foreground, 32, 34, 35), 0.02);
 }
 
 /* Heading: drop to caption-plus weight and remove the question-card divider rule. */
@@ -762,6 +773,15 @@
   font-size: 1.3rem;
   padding: var(--quiz-spacing-xs) var(--quiz-spacing-sm);
   min-height: 44px;
+}
+
+/* Side by side once there is room, mirroring the existing Previous/Next row, so a
+   full-width panel does not become a tall stack. Stays stacked on mobile. */
+@media (min-width: 750px) {
+  .quizStartOver__confirm .questionCard__optionsVertical {
+    flex-direction: row;
+    gap: var(--quiz-spacing-sm);
+  }
 }
 
 .quizStartOver__confirmButton {
