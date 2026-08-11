@@ -12,7 +12,7 @@ import { PatientInfoStep, validatePatientInfoStep, type PatientInfoValues } from
 import { QuizPartRenderer, isPartComplete } from "./QuizPartRenderer";
 import { ConsentStep } from "./ConsentStep";
 import { ResultsDisplay } from "./ResultsDisplay";
-import { ResumeOffer, RestorationNotice } from "./ResumeOffer";
+import { ResumeOffer, RestorationNotice, StartOverControl } from "./ResumeOffer";
 import { QUIZ_PARTS, ALL_SCORED_QUESTIONS, ALL_ITEMS } from "../../lib/quiz/questions";
 import {
   calculateTotalScore,
@@ -274,6 +274,34 @@ export function QuizContainer() {
     setStep("state_gate");
   }, []);
 
+  // RESUME-03 / D-08. The persistent in-flow "Start over" control's confirmed destructive action
+  // — clears the draft AND resets every piece of in-memory state a same-session patient could
+  // have accumulated, landing on the same "state_gate" screen a patient with no draft sees today
+  // (the same user-visible outcome commitment handleStartOverFromOffer already makes). startTime
+  // is deliberately NOT reset — it has no setter, and a stale start time only affects
+  // completion_time, which is on D-10's named exclusion list from the payload-parity comparison.
+  //
+  // Ordering hazard, and why it is safe: the write effect's dependency array includes both
+  // `answers` and `step`. Because this function sets `step` to "state_gate" in the same React
+  // batch that empties `answers`, the effect's step gate short-circuits before scheduling any
+  // timer on the very next commit, so the just-cleared draft cannot be immediately rewritten.
+  const handleStartOver = useCallback(() => {
+    clearDraft();
+    setAnswers({});
+    setPatientState(null);
+    setPatientInfo({ name: "", dob: "", email: "", phone: "" });
+    setPatientInfoShowErrors(false);
+    setCurrentPartIndex(0);
+    setScore(null);
+    setScoreBracket(null);
+    setSymptomProfileId(null);
+    setConsentChecked(false);
+    setSubmissionError(null);
+    setResumedSession(false);
+    setShowRestorationNotice(false);
+    setStep("state_gate");
+  }, []);
+
   const onEligible = (state: "tennessee" | "texas") => {
     setPatientState(state);
     setStep("patient_info");
@@ -362,6 +390,14 @@ export function QuizContainer() {
     <div className={styles.quizContainer} data-alledrops-quiz>
       {progressInfo && (
         <QuizProgress fillPct={progressInfo.fillPct} label={progressInfo.label} />
+      )}
+
+      {/* RESUME-03 / D-08. Visibility range traces D-07's write boundary exactly: visible
+          precisely when a draft could exist to clear (quiz_parts, consent), hidden everywhere a
+          draft cannot yet exist. Deliberately NOT inside renderNavRow — UI-SPEC §2 names
+          proximity to Previous/Next/Continue/Submit as the mis-tap risk this placement avoids. */}
+      {(step === "quiz_parts" || step === "consent") && (
+        <StartOverControl onStartOver={handleStartOver} />
       )}
 
       <div className={styles.quizContainer__questions}>
