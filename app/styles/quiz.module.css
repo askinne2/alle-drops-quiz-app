@@ -31,6 +31,16 @@
   --quiz-color-success: #4CAF50;
   --quiz-color-warning: #FF9800;
   --quiz-color-error: #F44336;
+
+  /* Scale-bar zone tones (D-07). Five slots ship so Phase 5.1 can add a fourth or
+     fifth zone without new CSS. */
+  --quiz-color-tone-low: var(--quiz-color-success, #4CAF50);
+  --quiz-color-tone-low-mid: #CDDC39;
+  --quiz-color-tone-mid: var(--quiz-color-warning, #FF9800);
+  /* #FF5722 is the exact hex the retired legacy "Moderate" severity color class used —
+     this slot introduces zero net-new hex values. */
+  --quiz-color-tone-mid-high: #FF5722;
+  --quiz-color-tone-high: var(--quiz-color-error, #F44336);
 }
 
 /* Tablet and up - increase spacing */
@@ -943,64 +953,6 @@
   .quizResults__scoreMax {
     font-size: var(--font-body-size, 1.6rem);
   }
-}
-
-.quizResults__severity {
-  text-align: center;
-  padding: var(--quiz-spacing-md);
-  /* Use theme background with slight opacity */
-  background-color: rgba(var(--color-foreground, 32, 34, 35), 0.03);
-  border-radius: var(--quiz-border-radius);
-}
-
-@media (min-width: 750px) {
-  .quizResults__severity {
-    padding: var(--quiz-spacing-lg);
-  }
-}
-
-.quizResults__severityLabel {
-  font-size: var(--font-body-size, 1.2rem);
-  color: rgba(var(--color-foreground, 32, 34, 35), 0.6);
-  margin-bottom: var(--quiz-spacing-xs);
-}
-
-@media (min-width: 750px) {
-  .quizResults__severityLabel {
-    font-size: var(--font-body-size, 1.4rem);
-  margin-bottom: var(--quiz-spacing-sm);
-  }
-}
-
-.quizResults__severityValue {
-  font-size: calc(var(--font-heading-scale, 1) * 1.8rem);
-  font-weight: 700;
-  margin-bottom: var(--quiz-spacing-sm);
-  text-transform: capitalize;
-}
-
-@media (min-width: 750px) {
-  .quizResults__severityValue {
-    font-size: calc(var(--font-heading-scale, 1) * 2.4rem);
-    margin-bottom: var(--quiz-spacing-md);
-  }
-}
-
-/* Severity color classes - these are specific accent colors */
-.quizResults__severityValueMinimal {
-  color: var(--quiz-color-success);
-}
-
-.quizResults__severityValueMild {
-  color: var(--quiz-color-warning);
-}
-
-.quizResults__severityValueModerate {
-  color: #FF5722;
-}
-
-.quizResults__severityValueSevere {
-  color: var(--quiz-color-error);
 }
 
 .quizResults__severityDescription {
