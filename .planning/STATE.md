@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5 UI-SPEC approved
-last_updated: "2026-08-11T16:29:02.588Z"
-last_activity: 2026-08-11 -- Phase 5 execution started
+stopped_at: Phase 5 shipped and deployed; Phase 5.1 removed; Phase 6 not started
+last_updated: "2026-08-12T09:58:00.000Z"
+last_activity: 2026-08-12 -- Phase 5.1 removed, scale bar aligned to clinical brackets, deployed
 progress:
-  total_phases: 11
-  completed_phases: 5
+  total_phases: 10
+  completed_phases: 7
   total_plans: 56
-  completed_plans: 49
-  percent: 45
+  completed_plans: 55
+  percent: 70
 ---
 
 # Project State
@@ -22,22 +22,49 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 5 — Preliminary Score Page
+**Current focus:** Phase 6 — Purchase Prerequisites & Returning Patients (not started). Phase 8's
+LAUNCH-01 / LAUNCH-02 run in parallel and are older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 5 (Preliminary Score Page) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 5
-Last activity: 2026-08-11 -- Phase 5 execution started
+Phase: 5 (Preliminary Score Page) — COMPLETE, shipped and deployed
+Plan: 6 of 6 complete
+Status: Between phases. Phase 6 has no CONTEXT, no plans, nothing started.
+Last activity: 2026-08-12 -- Phase 5.1 removed, scale bar aligned to clinical brackets, deployed
 
-**Branch:** merged. `main` @ `86e6b50` (PR #23 merged as `e140a8c`, superseding PR #22 which was
-closed with a pointer comment). `phase-4.2-resume-in-progress-intake` is landed; nothing outstanding
-on it.
+**Branch:** `main` @ `196720e`. Nothing outstanding. PRs #25 and #26 merged and deployed on
+2026-08-12. `HANDOFF.md` carries uncommitted edits that predate the 2026-08-12 session and were
+deliberately not touched by it.
 
-**Gates at ship:** 677 tests / 47 files green, typecheck exit 0, build exit 0, theme bundle
-deterministic across two builds (SHA-256 `a3b0503839…56b7c0`), working tree clean after rebuild,
-zero new dependencies, zero DDL.
+**Gates at ship (2026-08-12):** 734 tests / 49 files green, typecheck exit 0, theme bundle rebuilt
+in-commit and byte-identical to the bytes Fly serves (203,797 B measured on the live
+`/quiz-bundle-js`), zero new dependencies, zero DDL.
+
+### Open Now (read before picking up Phase 6)
+
+1. **Provisional colour stops are unconfirmed.** `PROVISIONAL_SCORE_SCALE` in
+   `app/lib/quiz/score-scale.ts` still carries `isProvisional: true`. Andrew emailed William on
+   2026-08-12 asking about the colour stops, but that email describes the **previous** design (a
+   linear 0–60 bar with independent 20/40/60 stops). The deployed page is already a version past it:
+   colour now tracks the clinical brackets 1:1, three equal-width bands, marker interpolated within
+   its band. William's reply may change the arrangement again. Applying whatever he says is an edit
+   to the `zones` array plus a deploy — no phase, no migration.
+
+2. **LAUNCH-01 and LAUNCH-02 are live patient-facing exposures and still Pending.** Roadmap
+   sequencing constraint 6 says start them immediately; they have been open since the roadmap was
+   written. LAUNCH-02 (Test Mode button) was demonstrated live on 2026-08-12 via
+   `/quiz-embed?test=1` on the deployed app — whether the storefront exposes it depends on the
+   `enable_test_mode` theme-block toggle, which has not been checked. Both are Andrew-owned and
+   theme-level, not code.
+
+3. **Phase 6 starts with SHOP-01 as a spike**, not as an implementation plan. No metafield
+   definition exists anywhere in the repo, so Liquid readability of
+   `customer.metafields.alledrops.quiz_count` is unverified — and SHOP-02 / SHOP-03 both depend on
+   the answer.
+
+4. **04-19 is the one outstanding plan** (55 of 56 complete). It is the Phase 4 human-UAT plan,
+   `autonomous: false`, blocked on the Fly.io BAA, the production GCP cutover, and William. Not
+   startable and not a gap.
 
 **The reorder IS live.** Both phases shipped together on 2026-08-11 through all three channels.
 Full deploy record: `.planning/phases/04.2-resume-in-progress-intake/04.2-08-SUMMARY.md`.
@@ -65,10 +92,11 @@ Note: STATE.md previously recorded the v51 served length as 195,102 B. The live 
 
 Progress: [██████████] 100% of Phases 4, 4.1, and 4.2
 
-Codebase baseline: `main` @ `86e6b50`, **677 tests / 47 files passing**, typecheck clean, build clean,
-theme bundle byte-identical to the committed artifact and to the bytes Fly serves. Deployed to Fly
-(`alle-drops-quiz-app`, iad) release **v52**; Shopify app version
-**alledrops-quiz-production-23**. Phase 1 shipped DEF-01..04 plus three security fixes. Phase 2 made
+Codebase baseline (superseded 2026-08-12 — see "Current Position" above for the live figures;
+retained because the phase narrative below is still accurate): `main` @ `86e6b50`, **677 tests / 47
+files passing**, typecheck clean, build clean, theme bundle byte-identical to the committed artifact
+and to the bytes Fly serves. Deployed to Fly (`alle-drops-quiz-app`, iad) release **v52**; Shopify
+app version **alledrops-quiz-production-23**. Phase 1 shipped DEF-01..04 plus three security fixes. Phase 2 made
 the quiz schema declarative (`required`, `showIf`, info blocks). Phase 3 replaced the vestigial Part 6
 medical-history checklist with a mandatory HIST-01..04/DIAG-01 section, removed both no-testing
 bypasses, and closed the asymmetric app-code/DDL migration for the two legacy PHI columns. Phase 4
@@ -77,6 +105,41 @@ added the Part 7 testing split with a required multi-file upload, the app's firs
 TEST-07 defect where 0–2 bracket patients auto-submitted with a `consent_version` they never saw.
 Phase 4.1 moved the testing split to the front of the flow; Phase 4.2 added browser-local resume
 (no draft PHI store, no new BAA surface) — both shipped together in v52.
+
+Phase 5 retitled the terminal screen to "Preliminary Score", added the 1–2 business day clinical
+review sentence, derived the score ceiling from `ALL_SCORED_QUESTIONS` rather than hardcoding it
+(measured: exactly 60), and replaced the retired `Symptom Score: 7+` chip with a data-driven colour
+scale bar. It shipped on 2026-08-11 reading through a `getScoreScale()` accessor backed by a code
+constant.
+
+**Phase 5 amended twice on 2026-08-12, both deployed the same day.** First, colour stops were aligned
+to the clinical brackets 1:1 (zones now read from `SCORE_BRACKETS`, rendered as three equal-width
+bands with the marker interpolated inside its own band). This deliberately reverses D-05, which had
+decoupled them — what D-05 protected against was a bar rendering 90% red, and that protection moved
+into the equal-width rendering rather than disappearing. Reverting either half alone reintroduces the
+90%-red bar. Second, the "What this means for you" heading and the "{zone} on the symptom scale"
+context line were removed as redundant; D-06's two-axis labelling now rests entirely on the bridge
+sentence, and both the DOM test and the bundle marker were repointed onto it. Measured and accepted
+limitation: scores 6, 7 and 8 land ~3px apart on the orange/red seam, so the 6→7 clinical threshold
+produces no visible marker movement — colour, the bolded legend label, and the recommendation copy
+carry it. Full reasoning lives above the calculation in `ResultsDisplay.tsx` and above
+`PROVISIONAL_SCORE_SCALE` in `score-scale.ts`.
+
+**Phase 5 deploy verification (2026-08-12), on served bytes rather than exit codes:**
+
+| | before | after |
+|---|---|---|
+| served `/quiz-bundle-js` | 204,105 B | **203,797 B**, byte-identical to the committed artifact |
+| `flex:"1 0 0"` (equal-width zones) | 0 | **2** |
+| `"What this means for you"` | 1 | **0** |
+| `" on the symptom scale"` | 1 | **0** |
+| bridge sentence | 1 | **1** |
+
+`/health` 200. Confirmed on the live deployed page via `/quiz-embed?test=1`: at the synthetic score
+of 30 of 60 the bar renders three equal bands, marker in the red third, "High symptom burden", "High"
+bolded in the legend, and the 7+ recommendation below. Fly's rollout printed a "not listening on the
+expected address" warning on both deploys — false alarm both times; health and all endpoints
+returned 200.
 
 **Phase 4 deploy verification (2026-08-10), all on served bytes rather than exit codes:**
 
