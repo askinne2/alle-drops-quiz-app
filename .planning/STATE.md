@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 6 context gathered
-last_updated: "2026-08-12T10:54:40.277Z"
-last_activity: 2026-08-12 -- Phase 6 CONTEXT.md written (11 decisions); SHOP-01 spike recorded
+status: completed
+stopped_at: Phase 6 UI-SPEC approved
+last_updated: "2026-08-12T11:10:00.016Z"
+last_activity: 2026-08-12 -- Phase 6 CONTEXT.md written; SHOP-01 spike recorded
 progress:
   total_phases: 10
-  completed_phases: 7
+  completed_phases: 6
   total_plans: 56
   completed_plans: 55
-  percent: 70
+  percent: 60
 ---
 
 # Project State
@@ -518,9 +518,9 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-12T10:54:40.271Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-purchase-prerequisites/06-CONTEXT.md
+Last session: 2026-08-12T11:10:00.011Z
+Stopped at: Phase 6 UI-SPEC approved
+Resume file: .planning/phases/06-purchase-prerequisites/06-UI-SPEC.md
 
 **Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
 mid-plan. Task 1 (`e246391`, bundle rebuild) was committed inside worktree
