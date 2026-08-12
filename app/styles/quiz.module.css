@@ -1128,8 +1128,15 @@
   }
 }
 
+/* The bridge sentence is now the ONLY thing between the bar and the clinical recommendation, so it
+   carries the gap that .scaleBar__meaningContext used to hold — hence md, not the sm it had while
+   two elements sat below it. Retired together on 2026-08-12: .scaleBar__meaningHeading ("What this
+   means for you") and .scaleBar__meaningContext ("{zone} on the symptom scale"). They are deleted
+   rather than left orphaned, because this file already carried one orphaned class family for two
+   phases (the legacy quizResults__severityValue* set that D-07 finally retired) and a dead rule is
+   indistinguishable from a rule whose markup regressed. */
 .scaleBar__axisBridge {
-  margin: 0 0 var(--quiz-spacing-sm);
+  margin: 0 0 var(--quiz-spacing-md);
   font-size: 1.3rem;
   font-weight: 400;
   line-height: 1.45;
@@ -1139,34 +1146,6 @@
 @media (min-width: 750px) {
   .scaleBar__axisBridge {
     font-size: 1.4rem;
-  }
-}
-
-.scaleBar__meaningHeading {
-  font-size: 1.2rem;
-  font-weight: 600;
-  line-height: 1.3;
-  margin: 0 0 var(--quiz-spacing-xs);
-  color: rgba(var(--color-foreground, 32, 34, 35), 0.75);
-}
-
-@media (min-width: 750px) {
-  .scaleBar__meaningHeading {
-    font-size: 1.4rem;
-  }
-}
-
-.scaleBar__meaningContext {
-  margin: 0 0 var(--quiz-spacing-md);
-  font-size: 1.2rem;
-  font-weight: 600;
-  line-height: 1.3;
-  color: rgb(var(--color-foreground, 32, 34, 35));
-}
-
-@media (min-width: 750px) {
-  .scaleBar__meaningContext {
-    font-size: 1.3rem;
   }
 }
 

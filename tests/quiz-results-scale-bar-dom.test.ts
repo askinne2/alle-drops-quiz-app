@@ -291,9 +291,16 @@ describe("UX — circle caption and two-axis bridge", () => {
     ).toBeTruthy();
   });
 
-  it('renders "{zone} on the symptom scale" under the locked meaning heading', () => {
-    renderResults({ score: 1, scoreBracket: "0-2" });
-    expect(screen.getByText("Low on the symptom scale")).toBeTruthy();
+  // REPLACED 2026-08-12. This asserted the "{zone} on the symptom scale" context line, removed on
+  // Andrew's call: with the zones aligned to the clinical brackets it was the third statement of
+  // the same word inside two inches. The inverted assertion stays, because a silent reappearance
+  // would restore exactly the repetition that was deliberately cut.
+  it('does not repeat the zone label a third time under the bar — "on the symptom scale" is gone', () => {
+    const { container } = renderResults({ score: 1, scoreBracket: "0-2" });
+    expect(container.textContent ?? "").not.toContain("on the symptom scale");
+    // The two legitimate appearances still stand: the circle caption and the bolded legend item.
+    expect(screen.getByText("Low symptom burden")).toBeTruthy();
+    expect(getScaleBarParts(container).currentLegendItem?.textContent).toBe("Low");
   });
 });
 
@@ -355,11 +362,30 @@ describe("Edge scores", () => {
 });
 
 describe("D-06 two-axis labelling", () => {
-  it('renders "What this means for you" exactly once, for all three bracket values', () => {
+  /*
+    AMENDED 2026-08-12. This block asserted that the "What this means for you" heading rendered
+    exactly once per bracket. The heading was removed on Andrew's call — it sat between two
+    sentences that already carried its meaning.
+
+    D-06's actual requirement is that the burden axis and the clinical axis are LABELLED as two
+    different things, not that a specific heading element exists. That requirement now rests
+    entirely on the bridge sentence, which names both axes in order and hands off to the clinical
+    paragraph. So the assertion moves onto the load-bearing element instead of the deleted one: if
+    the bridge sentence is ever cut as redundant prose, the two axes lose their only label and this
+    fails.
+  */
+  it("labels both axes exactly once per bracket, via the bridge sentence", () => {
     for (const bracket of ["0-2", "3-6", "7+"] as const) {
       const { container, unmount } = renderResults({ scoreBracket: bracket });
-      const count = (container.textContent ?? "").split("What this means for you").length - 1;
-      expect(count).toBe(1);
+      const text = container.textContent ?? "";
+
+      // The burden axis, then the clinical axis, in that order, in one sentence.
+      expect(text.split("The bar shows how many symptoms you reported").length - 1).toBe(1);
+      expect(text.split("what that usually means for care").length - 1).toBe(1);
+
+      // The retired heading must not come back.
+      expect(text).not.toContain("What this means for you");
+
       unmount();
     }
   });

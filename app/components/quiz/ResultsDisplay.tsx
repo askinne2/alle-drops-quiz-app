@@ -184,20 +184,27 @@ export function ResultsDisplay({
           </div>
 
           {/*
-            D-06's two-axes boundary: the wrapper's top border is the visual line between "here is
-            your number on a scale" and "here is what a human recommends." The heading below is
-            deliberately the same visual weight as the bar's axis label — do not "promote" it to a
-            heading element or delete the border as decoration in a future tidy-up.
-            The bridge sentence teaches the two axes before the clinical paragraph, so a Low bar
-            above a SLIT recommendation (score 7 / bracket 7+) does not read as a contradiction.
+            D-06's two-axes boundary. The wrapper's top border is the visual line between "here is
+            your number on a scale" and "here is what a human recommends" — it is not decoration and
+            must not be removed in a future tidy-up.
+
+            AMENDED 2026-08-12. D-06 originally required a separate "What this means for you"
+            heading here, with a "{zone} on the symptom scale" context line under it. Both were
+            removed on Andrew's call after seeing the shipped page: with the zones now aligned to
+            the clinical brackets, the context line was the third appearance of the same word within
+            about two inches — "High symptom burden" under the circle, the bolded "High" in the
+            legend, then "High on the symptom scale" — and the heading sat between two sentences
+            that already said what it said.
+
+            D-06's requirement is still met, by the bridge sentence instead of by a heading: it
+            names both axes in order ("The bar shows how many symptoms you reported" / "Below is
+            what that usually means for care") and hands off directly to the clinical paragraph. If
+            that sentence is ever cut, the two axes lose their only label and something must replace
+            it — do not delete it as redundant prose.
           */}
           <div className={styles.scaleBar__meaningSection}>
             <p className={styles.scaleBar__axisBridge}>
               The bar shows how many symptoms you reported. Below is what that usually means for care.
-            </p>
-            <p className={styles.scaleBar__meaningHeading}>What this means for you</p>
-            <p className={styles.scaleBar__meaningContext}>
-              {currentZone.label} on the symptom scale
             </p>
 
             {scoreBracket === "0-2" && (
