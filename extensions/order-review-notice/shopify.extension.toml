@@ -1,0 +1,19 @@
+# Learn more about configuring your checkout UI extension:
+# https://shopify.dev/docs/api/checkout-ui-extensions/latest/configuration
+
+# Match quiz-history api_version (D-09 / Pattern 4). Static notice — no network/api capabilities.
+api_version = "2026-01"
+
+[[extensions]]
+name = "Order review notice"
+handle = "order-review-notice"
+type = "ui_extension"
+uid = "b1ff6dad-25d2-456c-7596-876036809252b40ec379"
+
+[[extensions.targeting]]
+module = "./src/ThankYou.jsx"
+target = "purchase.thank-you.block.render"
+
+[[extensions.targeting]]
+module = "./src/OrderStatus.jsx"
+target = "customer-account.order-status.block.render"
