@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: SHOP-01 spike recorded; Phase 6 ready to discuss (no CONTEXT, no plans)
-last_updated: "2026-08-12T00:00:00.000Z"
-last_activity: 2026-08-12 -- SHOP-01 spike result recorded, LAUNCH-02 marked satisfied, LAUNCH-03 text corrected
+stopped_at: Phase 6 context gathered
+last_updated: "2026-08-12T10:54:40.277Z"
+last_activity: 2026-08-12 -- Phase 6 CONTEXT.md written (11 decisions); SHOP-01 spike recorded
 progress:
   total_phases: 10
   completed_phases: 7
@@ -22,16 +22,23 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 6 — Purchase Prerequisites & Returning Patients (not started). Phase 8's
-LAUNCH-01 / LAUNCH-02 run in parallel and are older than Phase 6 — see "Open Now" below.
+**Current focus:** Phase 6 — Purchase Prerequisites & Returning Patients. CONTEXT.md gathered
+2026-08-12 (11 decisions, D-01..D-11); next step is `/gsd:plan-phase 6`. Phase 8's LAUNCH-01 runs in
+parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 5 (Preliminary Score Page) — COMPLETE, shipped and deployed
-Plan: 6 of 6 complete
-Status: Between phases. Phase 6 has no CONTEXT, no plans, nothing started — but its gating spike
-(SHOP-01) is answered, so `/gsd:discuss-phase 6` can be about SHOP-02/SHOP-03's real design.
-Last activity: 2026-08-12 -- SHOP-01 spike result recorded in `.planning/`
+Phase: 6 (Purchase Prerequisites & Returning Patients) — CONTEXT gathered, no plans yet
+Plan: 0 of ? — next step is `/gsd:plan-phase 6`
+Status: Phase 5 complete (6 of 6 plans, shipped and deployed). Phase 6 has CONTEXT.md with 11
+decisions and its gating spike answered; nothing built.
+Last activity: 2026-08-12 -- Phase 6 CONTEXT.md written; SHOP-01 spike recorded
+
+**Keep the `Status:` value above on one logical line when editing.** `gsd-sdk query
+state.record-session` scrapes this line into the frontmatter `status:` key; a wrapped line got
+half a sentence written into `status:` on 2026-08-12 and silently reset `completed_phases` 7 → 6
+and `percent` 70 → 60. Both were restored by hand. Re-check the frontmatter after any
+`state.record-session` call.
 
 **Branch:** `main` @ `e687cfd`. PRs #25, #26, #27 and #28 all merged. Phase 5 deployed 2026-08-12.
 `HANDOFF.md` is committed and current (PR #28) — read it alongside this file, it carries the
@@ -511,9 +518,9 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-11T14:26:27.425Z
-Stopped at: Phase 5 UI-SPEC approved
-Resume file: .planning/phases/05-preliminary-score-page/05-UI-SPEC.md
+Last session: 2026-08-12T10:54:40.271Z
+Stopped at: Phase 6 context gathered
+Resume file: .planning/phases/06-purchase-prerequisites/06-CONTEXT.md
 
 **Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
 mid-plan. Task 1 (`e246391`, bundle rebuild) was committed inside worktree
