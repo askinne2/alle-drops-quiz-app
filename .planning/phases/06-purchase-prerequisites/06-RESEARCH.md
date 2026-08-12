@@ -578,25 +578,27 @@ export default async () => {
 
 **A1 and A2 are planning gates, not soft assumptions** — treat as Wave 0 verification tasks.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **D-04 product → template assignment (Wave 0 blocker for placement)**
+Planning resolved each item below; execution still performs the named Wave 0 / plan tasks.
+
+1. **D-04 product → template assignment (Wave 0 blocker for placement)** — **RESOLVED**
    - What we know: three templates exist; `regional-drops` is the SLIT-shaped one.
    - What's unclear: live Admin `templateSuffix` for `tennessee-alledrops`, `texas-alledrops`, `allergy-consultation` (or current consult handle).
-   - Recommendation: Confirm in Shopify Admin (Products → Theme template) or Admin GraphQL `product { handle templateSuffix }` before writing placement tasks. Do not assume.
+   - Resolution: Planned as Wave 0 **plan 02 Task 1** (`06-02-PLAN.md`) — human Admin / GraphQL `templateSuffix` table in `06-02-SUMMARY.md` with STOP gates before placement (plan 06). Do not assume in build plans.
 
-2. **Exact SHOP-05 paste targets**
+2. **Exact SHOP-05 paste targets** — **RESOLVED**
    - What we know: order confirmation notification and refund policy exist; checkout-step extensions need Plus.
    - What's unclear: which free-text "checkout language" field William expects on Basic.
-   - Recommendation: 15-minute admin inventory in Wave 0; draft only for real fields; if none mid-checkout, document that SHOP-04 + notifications + policies cover SHOP-05 intent.
+   - Resolution: Planned as Wave 0 **plan 02 Task 2** (`06-02-PLAN.md`) — 15-minute admin surface inventory (`surface_path`, `editable_on_basic_grow`, `draft_target_for_06-05`) before plan 05 drafts. Plus-only checkout-step targets explicitly out of scope; if no mid-checkout field, SUMMARY documents that SHOP-04 + notifications + policies cover SHOP-05 intent.
 
-3. **D-10 "how to send testing results" destination**
+3. **D-10 "how to send testing results" destination** — **RESOLVED**
    - What we know: Phase 4 requires upload during quiz; some patients may buy before finishing that path.
    - What's unclear: post-purchase intake instructions (email? re-enter quiz? support contact?).
-   - Recommendation: Draft with a placeholder contact owned by William; do not invent a PHI inbox on a non-AOD domain.
+   - Resolution: Locked in **`06-UI-SPEC.md`** SHOP-04 Testing follow-up — generic clinic contact via support details on the order confirmation email; do not invent `testing@…` or a non-AOD domain. William may later confirm a specific post-purchase destination; plans draft against the UI-SPEC generic wording (A5).
 
-4. **Login `return_to` (Claude's discretion)**
-   - Recommendation: Link `/account/login?return_to={{ product.url | url_encode }}` (or Shopify's account login URL helper) so return lands on the same PDP — low friction, matches D-08 spirit.
+4. **Login `return_to` (Claude's discretion)** — **RESOLVED**
+   - Resolution: Locked in **`06-UI-SPEC.md`** + **plan 03** Liquid task — `/account/login?return_to={{ product.url | url_encode }}` (relative `product.url` only; no absolute external `return_to`). Matches D-08 spirit; open-redirect mitigation in plan 03 threat model.
 
 ## Environment Availability
 
