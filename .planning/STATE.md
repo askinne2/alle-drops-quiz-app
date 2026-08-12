@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 6 plans written (06-01..06-06)
-last_updated: "2026-08-12T11:27:05.073Z"
-last_activity: 2026-08-12 -- Phase 6 planning complete
+last_updated: "2026-08-12T11:51:47.228Z"
+last_activity: 2026-08-12 -- Phase 6 execution started
 progress:
   total_phases: 10
   completed_phases: 7
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 6 — Purchase Prerequisites & Returning Patients. Planned 2026-08-12
+**Current focus:** Phase 6 — Purchase Prerequisites & Returning Patients
 (6 plans / 3 waves); next step is `/gsd:execute-phase 6`. Phase 8's LAUNCH-01 runs in
 parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 6 (Purchase Prerequisites & Returning Patients) — planned, 6 plans / 3 waves
-Plan: 0 of 6 — next step is `/gsd:execute-phase 6`
-Status: Ready to execute
-Last activity: 2026-08-12 -- Phase 6 planning complete
+Phase: 6 (Purchase Prerequisites & Returning Patients) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 6
+Last activity: 2026-08-12 -- Phase 6 execution started
 
 **Keep the `Status:` value above on one logical line when editing.** `gsd-sdk query
 state.record-session` scrapes this line into the frontmatter `status:` key; a wrapped line got
