@@ -65,7 +65,7 @@ Each task was committed atomically:
 1. **Task 1: Vendor Sense buy-buttons excerpt for D-02** - `05062fa` (feat)
 2. **Task 2: Green Vitest contract for Sense ATC selector needles** - `fd86a25` (test)
 
-**Plan metadata:** (pending docs commit)
+**Plan metadata:** `2365711` (docs: complete plan)
 
 ## Files Created/Modified
 
