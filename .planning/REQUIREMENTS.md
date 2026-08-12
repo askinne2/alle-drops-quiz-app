@@ -196,7 +196,7 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 - [ ] **SHOP-03**: Add-to-cart on both SLIT product pages requires two prerequisite confirmations —
   quiz completed and allergy testing submitted — via a new theme app extension block targeting the
   product template (`REQ-purchase-gating-honor-system`)
-- [ ] **SHOP-04**: The thank-you page explains the clinical review process and a 2–3 business day
+- [x] **SHOP-04**: The thank-you page explains the clinical review process and a 2–3 business day
   expectation, via a new checkout UI extension (`REQ-purchase-gating-honor-system`)
 - [ ] **SHOP-05**: Checkout page language, order confirmation notifications, and the refund policy
   page all state that products will not ship without a completed quiz and testing on file
@@ -340,7 +340,7 @@ Acknowledged, not in the v1.0 roadmap.
 | SHOP-01 | Phase 6 | Spike answered 2026-08-12 — definitions created, no fallback needed, SHOP-02/03 unblocked. Not Complete: the Liquid render is unproven and owed to SHOP-02. See `06-SPIKE-SHOP-01.md` |
 | SHOP-02 | Phase 6 | Pending |
 | SHOP-03 | Phase 6 | Pending |
-| SHOP-04 | Phase 6 | Pending |
+| SHOP-04 | Phase 6 | Complete |
 | SHOP-05 | Phase 6 | Pending |
 | SHOP-06 | Phase 6 | Pending |
 | TELE-01 | Phase 7 | Pending |

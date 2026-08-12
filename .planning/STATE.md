@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-08-12T11:53:48.521Z"
+stopped_at: Completed 06-04-PLAN.md
+last_updated: "2026-08-12T11:58:21.695Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 62
-  completed_plans: 56
-  percent: 90
+  completed_plans: 57
+  percent: 92
 ---
 
 # Project State
@@ -29,9 +29,9 @@ parallel and is older than Phase 6 — see "Open Now" below.
 ## Current Position
 
 Phase: 6 (Purchase Prerequisites & Returning Patients) — EXECUTING
-Plan: 2 of 6
-Status: Executing Phase 6 (06-01 complete)
-Last activity: 2026-08-12 -- Completed 06-01 (D-02 Sense ATC selector contract)
+Plan: 2 of 6 (next incomplete: 06-02; 06-01 + 06-04 done)
+Status: Executing Phase 6 (06-01 and 06-04 complete)
+Last activity: 2026-08-12 -- Completed 06-04 (SHOP-04 order-review-notice)
 
 **Keep the `Status:` value above on one logical line when editing.** `gsd-sdk query
 state.record-session` scrapes this line into the frontmatter `status:` key; a wrapped line got
@@ -41,6 +41,7 @@ and `percent` 70 → 60. Both were restored by hand. Re-check the frontmatter af
 reset `completed_phases` 7→6 / `percent` 70→60 after UI-SPEC approval — restored by hand.
 **Same day:** `state.planned-phase` again reset `completed_phases` 7→6 / `percent` 70→60 — restored by hand.
 **Same day after 06-01:** `state update-progress` / `record-session` again set `completed_phases` 7→6 (percent correctly 90 from plan counts) — restored by hand to 7.
+**Same day after 06-04:** `state advance-plan` / `update-progress` / `record-session` again set `completed_phases` 7→6 and naively advanced Plan to 3 (wave-parallel 06-04 is not sequential plan 3) — restored `completed_phases` to 7 and Plan pointer to next incomplete 06-02.
 
 **Branch:** `main` @ `e687cfd`. PRs #25, #26, #27 and #28 all merged. Phase 5 deployed 2026-08-12.
 `HANDOFF.md` is committed and current (PR #28) — read it alongside this file, it carries the
@@ -229,6 +230,8 @@ Andrew clicking. The tally is now six. Keep the human browser pass.
 | Phase 04-mandatory-allergy-testing P17 | 35min | 3 tasks | 6 files |
 | Phase 04-mandatory-allergy-testing P18 | 20min | 2 tasks | 7 files |
 | Phase 06 P01 | 1min | 2 tasks | 2 files |
+| Phase 06 P04 | 3min | 3 tasks | 10 files |
+| Phase 06 P04 | 3min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -315,6 +318,8 @@ Affecting current work:
 - [Phase 04]: 04-19: A local `alledrops_dev` Postgres role was created for development so local work never touches the credential Fly runs on. Root cause of the long-standing local `28P01`: **port 5433 is another project's Docker container**, not the Cloud SQL Auth Proxy, which was never running. Session 33's "stale local DATABASE_URL password" is retracted in HANDOFF.md. Setup documented in `docs/local-dev-database.md` and `.env.example` (both new).
 - [Phase 06]: 06-01: D-02 CI fixture is ATC-region excerpt only (two product-form__submit + payment_button); no sibling-theme path in CI
 - [Phase 06]: 06-01: No shopify theme push (D-03); Sense excerpt vendored for selector contract only
+- [Phase 06]: 06-04: checkout_ui CLI scaffold retargeted to D-09 dual modules; no network_access/api_access
+- [Phase 06]: 06-04: ReviewNotice static UI-SPEC copy only; contract bans fetch and clinical field names
 
 ### Pending Todos
 
@@ -523,8 +528,8 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-12T11:53:48.517Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-08-12T11:58:21.692Z
+Stopped at: Completed 06-04-PLAN.md
 Resume file: .planning/phases/06-purchase-prerequisites/06-02-PLAN.md
 
 **Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
