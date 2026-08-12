@@ -148,49 +148,133 @@ describe("SCORE-03 zone rendering and proportional widths", () => {
     );
   });
 
-  it("gives each zone a flex-grow value equal to upTo minus the previous zone's upTo, summing to max", () => {
+  /*
+    CHANGED 2026-08-12. This test previously asserted the opposite: flex-grow === upTo minus the
+    previous upTo, summing to max. That was correct while the zone boundaries were independent of
+    the clinical brackets (20/40/60). They are now the bracket boundaries themselves (2/6/60), and
+    span-proportional widths against those numbers paint 90% of the track red — the outcome D-05
+    was written to prevent. Equal shares hold red to one third. The two changes are one decision;
+    reverting either half alone reintroduces the 90%-red bar.
+  */
+  it("gives every zone an equal flex-grow share, independent of how many score points it spans", () => {
     const scale = getScoreScale();
     const flexGrowValues = getZoneFlexGrowValues();
     expect(flexGrowValues.length).toBe(scale.zones.length);
 
-    let previousUpTo = 0;
-    let total = 0;
-    scale.zones.forEach((zone, index) => {
-      const grow = flexGrowValues[index];
-      expect(grow).toBe(zone.upTo - previousUpTo);
-      total += grow;
-      previousUpTo = zone.upTo;
-    });
-    expect(total).toBe(scale.max);
+    for (const grow of flexGrowValues) {
+      expect(grow).toBe(1);
+    }
+
+    // The guard that matters: the widest and narrowest zones span wildly different point counts
+    // (54 vs 2), and must still render identically. A regression to proportional widths fails here.
+    const spans = scale.zones.map(
+      (zone, index) => zone.upTo - (index === 0 ? 0 : scale.zones[index - 1].upTo),
+    );
+    expect(Math.max(...spans)).toBeGreaterThan(Math.min(...spans) * 10);
+    expect(new Set(flexGrowValues).size).toBe(1);
   });
 });
 
-describe("D-05 bar/bracket independence (load-bearing)", () => {
-  // This is the phase's single most important assertion. The whole reason D-05, this bar's
-  // design, and Phase 5's split from Phase 5.1 exist is that bracket-driven color would render a
-  // patient scoring 7 of 60 — a low, minor-symptom score — deep in red because `7+` is a
-  // catch-all clinical bracket spanning 54 of the 60 possible points. A future "simplification"
-  // that derives the current zone or its tone from `scoreBracket` instead of `score` must fail
-  // this test.
-  it("score 7 with scoreBracket 7+ shows the LOW zone as current, not a high/red tone, while the 7+ recommendation still renders", () => {
+/*
+  SUPERSEDES "D-05 bar/bracket independence (load-bearing)", REWRITTEN 2026-08-12.
+
+  The block that stood here asserted that a patient scoring 7 with bracket `7+` saw the LOW zone as
+  current. It was the phase's single most important assertion, and its comment named exactly this
+  change as the thing it existed to fail: "a future 'simplification' that derives the current zone
+  or its tone from `scoreBracket` instead of `score` must fail this test."
+
+  It is rewritten rather than deleted, and the reversal is deliberate rather than accidental.
+  Andrew reviewed the shipped page against a live preview on 2026-08-12 and chose one colour per
+  clinical bracket — a 7 now reads High. What D-05 was actually protecting was the patient scoring
+  7 of 60 being shown as maximally severe, and that protection did not go away; it moved into the
+  RENDERING. Equal-share zones hold the red band to one third of the track instead of 90%, and
+  within-zone interpolation puts a 7 at red's far-left edge and a 60 at its far right. The two
+  tests below guard that replacement, and one older guard survives unchanged in substance: the
+  zone must still be computed from `score`, never read off the `scoreBracket` prop.
+
+  Why that last one still matters even though the two now agree: `scoreBracket` arrives as a prop
+  and is recomputed as a fallback in `payload.ts:101`, so a resumed or malformed submission can
+  carry one that disagrees with its own score. If the bar read the prop, the bar would contradict
+  the number in the circle. It must not.
+*/
+describe("colour tracks the clinical brackets, computed from score (load-bearing)", () => {
+  it("score 7 with bracket 7+ shows the HIGH zone as current, alongside the 7+ recommendation", () => {
     const { container } = renderResults({ score: 7, scoreBracket: "7+" });
     const { currentLegendItem } = getScaleBarParts(container);
-    expect(currentLegendItem?.textContent).toBe("Low");
+    expect(currentLegendItem?.textContent).toBe("High");
     expect(
       screen.getByText("Sublingual Immunotherapy May Significantly Help You"),
     ).toBeTruthy();
   });
 
-  it("score 45 with the same scoreBracket 7+ shows the HIGH zone as current — proving the lookup tracks score, not a constant", () => {
-    const { container } = renderResults({ score: 45, scoreBracket: "7+" });
-    const { currentLegendItem } = getScaleBarParts(container);
-    expect(currentLegendItem?.textContent).toBe("High");
+  it("each bracket's boundary score lands in its own zone: 2 -> Low, 6 -> Moderate, 7 -> High", () => {
+    const cases = [
+      { score: 2, zone: "Low" },
+      { score: 6, zone: "Moderate" },
+      { score: 7, zone: "High" },
+    ] as const;
+
+    for (const { score, zone } of cases) {
+      const { container, unmount } = renderResults({ score });
+      expect(getScaleBarParts(container).currentLegendItem?.textContent).toBe(zone);
+      unmount();
+    }
+  });
+
+  it("the zone follows `score`, not the `scoreBracket` prop, when the two are made to disagree", () => {
+    // Deliberately inconsistent input: a low score carrying a high bracket. The bar must describe
+    // the number the patient can see in the circle.
+    const { container } = renderResults({ score: 1, scoreBracket: "7+" });
+    expect(getScaleBarParts(container).currentLegendItem?.textContent).toBe("Low");
+    // The recommendation still follows the prop — the two are separately sourced, which is the
+    // whole point of the assertion.
+    expect(
+      screen.getByText("Sublingual Immunotherapy May Significantly Help You"),
+    ).toBeTruthy();
+  });
+});
+
+describe("within-zone interpolation (what replaced D-05's protection)", () => {
+  function markerPercent(overrides: Partial<ResultsDisplayProps>): number {
+    const { container } = renderResults(overrides);
+    const left = getScaleBarParts(container).marker.style.left;
+    cleanup();
+    return Number.parseFloat(left);
+  }
+
+  it("spreads the 7+ bracket across its whole third instead of pinning every 7+ patient to one spot", () => {
+    const atThreshold = markerPercent({ score: 7, scoreBracket: "7+" });
+    const middling = markerPercent({ score: 33, scoreBracket: "7+" });
+    const ceiling = markerPercent({ score: 60, scoreBracket: "7+" });
+
+    // All three sit inside the final third of the track...
+    for (const p of [atThreshold, middling, ceiling]) {
+      expect(p).toBeGreaterThanOrEqual((2 / 3) * 100);
+      expect(p).toBeLessThanOrEqual(100);
+    }
+
+    // ...but strictly ordered within it, and meaningfully far apart. Without interpolation these
+    // would collapse to a single position and a 7 would be indistinguishable from a 60.
+    expect(atThreshold).toBeLessThan(middling);
+    expect(middling).toBeLessThan(ceiling);
+    expect(ceiling - atThreshold).toBeGreaterThan(30);
+  });
+
+  it("a score at the very bottom of the 7+ bracket sits at the left edge of the red third, not deep inside it", () => {
+    const atThreshold = markerPercent({ score: 7, scoreBracket: "7+" });
+    // Within two percentage points of the boundary at 66.67% — visually "just barely into red",
+    // which is the outcome D-05 wanted and this rendering preserves.
+    expect(atThreshold).toBeLessThan((2 / 3) * 100 + 2);
   });
 });
 
 describe("UX — circle caption and two-axis bridge", () => {
+  // CHANGED 2026-08-12: score 7 now reads "High symptom burden", because the zones are the
+  // clinical brackets. Andrew was shown this exact consequence before choosing it — a 7-of-60
+  // patient reads "High symptom burden" directly under their number — and accepted it. Score 1 is
+  // used for the low case so the assertion still proves the caption tracks the score.
   it('shows "{zone} symptom burden" under the circle, driven by raw score not scoreBracket', () => {
-    renderResults({ score: 7, scoreBracket: "7+" });
+    renderResults({ score: 1, scoreBracket: "0-2" });
     expect(screen.getByText("Low symptom burden")).toBeTruthy();
 
     cleanup();
@@ -208,7 +292,7 @@ describe("UX — circle caption and two-axis bridge", () => {
   });
 
   it('renders "{zone} on the symptom scale" under the locked meaning heading', () => {
-    renderResults({ score: 7, scoreBracket: "7+" });
+    renderResults({ score: 1, scoreBracket: "0-2" });
     expect(screen.getByText("Low on the symptom scale")).toBeTruthy();
   });
 });
@@ -232,7 +316,10 @@ describe("Accessibility contract", () => {
     expect(label).toContain("Symptom burden position");
     expect(label).toContain("7");
     expect(label).toContain(String(scale.max));
-    expect(label.toLowerCase()).toContain("low");
+    // "high" as of 2026-08-12 — score 7 is the bottom of the 7+ bracket and the zones now mirror
+    // the brackets. The assertion that matters is unchanged: the label names the ZONE, and names
+    // no clinical bracket string.
+    expect(label.toLowerCase()).toContain("high");
 
     expect(label).not.toContain("0-2");
     expect(label).not.toContain("3-6");

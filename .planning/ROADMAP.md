@@ -27,7 +27,6 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - [x] **Phase 4.1: Testing-First Quiz Order** *(INSERTED)* - Move the testing split + required upload to the front so abandonment costs seconds, not ten minutes (completed 2026-08-11)
 - [x] **Phase 4.2: Resume In-Progress Intake** *(INSERTED)* - Browser-local (localStorage) resume so a closed tab does not lose a completed intake. No draft PHI store, no BAA needed (completed 2026-08-11)
 - [x] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale (completed 2026-08-11)
-- [ ] **Phase 5.1: Admin-Configurable Score Scale** *(INSERTED)* - Move the band stops and clinical bracket boundaries out of code into a versioned, audited admin setting so William tunes them without a deploy
 - [ ] **Phase 6: Purchase Prerequisites** - Honor-system checkboxes and returning-patient state
 - [ ] **Phase 7: Telehealth Intake Path** - Booking-capable consult page and telehealth branching
 - [ ] **Phase 8: Launch Readiness** - Trackers, clinical copy, BAAs, AOD infrastructure handoff
@@ -528,9 +527,8 @@ precedent to follow.
 
 **AMENDED 2026-08-11 after `/gsd:discuss-phase 5`.** The split happened, and the blocker changed
 shape. Phase 5 now ships all three requirements (~1 day) reading through a `getScoreScale()` accessor
-backed by a code constant; the admin-configurable version moved to the new **Phase 5.1**. SCORE-02 and
-SCORE-03 are **no longer code-blocked** — Phase 5 ships a provisional, defensible default and William
-retunes it himself through Phase 5.1's form. His decision drops from a code blocker to a **go-live
+backed by a code constant. SCORE-02 and SCORE-03 are **no longer code-blocked** — Phase 5 ships a
+provisional, defensible default. William's decision drops from a code blocker to a **go-live
 configuration item**, which is still a real obligation: the provisional values must be visibly marked
 provisional and confirmed before go-live.
 
@@ -540,65 +538,27 @@ deprecated invention; and `7+` therefore spans **54 of those 60 points**, which 
 design decouples the colour stops from the clinical brackets entirely. Full reasoning in
 `.planning/phases/05-preliminary-score-page/05-CONTEXT.md`.
 
-### Phase 5.1: Admin-Configurable Score Scale (INSERTED)
+**AMENDED AGAIN 2026-08-12 — Phase 5.1 removed before it was planned.** An inserted "Admin-Configurable
+Score Scale" phase (SCALE-01..04) briefly sat here. It was deleted during `/gsd:discuss-phase 5.1`, at
+the point where the discussion reached what "editable clinical brackets" would actually mean for stored
+data. **The clinical brackets are set in stone** — 0–2 / 3–6 / 7+ in `app/lib/quiz/scoring.ts:4-8`, from
+the AOD medical director, not a tunable. What Andrew intended to make configurable was only the *colour
+band stops*: how a 0–60 raw score maps to green / orange / red on the bar.
 
-**Goal**: William can retune the score scale's colour bands and its clinical bracket boundaries from
-the embedded Shopify admin, without a deploy and without making historical submissions unreadable
-**Depends on**: Phase 5 (the `getScoreScale()` accessor and the scale bar must exist before there is
-anything to configure)
-**Requirements**: SCALE-01, SCALE-02, SCALE-03, SCALE-04
-**Success Criteria** (what must be TRUE):
+That distinction removes the entire cost of the phase. Everything expensive in it — `scale_version`, a
+`submissions` migration, the PHI-path PR review, the whole historical-interpretability problem —
+descended from the editable-brackets half. A colour-stop setting needs none of it: the bar is
+display-only, rendered from the raw score at `ResultsDisplay.tsx:70`, never persisted, never in the PDF
+(`pdf.ts:83` prints the bracket label, not the bar). Retuning colours in 2027 does not make a 2026 row
+harder to read.
 
-  1. An authorized user edits the band stops, their tones, and the clinical bracket boundaries from a
-     page in the embedded Shopify admin, and the storefront quiz reflects the change without a deploy
+Nothing was ever built. Grep confirms zero code references to `scale_version`, `app.settings`, or
+`api.quiz.config` across `app/`, `migrations/`, and `tests/`. The phase existed only in planning docs.
 
-  2. Every edit increments a `scale_version` and records who changed it and when
-
-  3. Every submission stores the `scale_version` that produced its `score_bracket`, so a row written
-     under one band set is still interpretable after the bands change
-
-  4. A patient never sees or is bracketed by a partial or failed configuration read — a failed fetch
-     falls back to the compiled-in constant, and the fallback is observable
-
-  5. Invalid band sets are rejected at the form, not at render — stops must be ascending, within the
-     derived range, and cover it without gaps
-
-**Plans**: TBD
-**UI hint**: yes
-
-**Notes**: ~2–3 days. **This is a PHI-path change** — it adds a column to the `submissions` table and
-changes how `score_bracket` is derived, so CLAUDE.md's PR-review rule and the PHI self-review
-checklist both apply. The settings row itself holds no PHI.
-
-**Why this phase exists.** Discussed and chosen on 2026-08-11 during `/gsd:discuss-phase 5`. Andrew
-was offered three storage mechanisms for the score scale — a code constant, a theme app block
-setting, and this — and chose this one after seeing their costs. He was then offered a narrower
-variant limited to the *visual* bands, which would have stayed entirely off the PHI path, and chose
-the wider one that includes the clinical brackets. See
-`.planning/phases/05-preliminary-score-page/05-CONTEXT.md` D-01 through D-04.
-
-**The versioning is not optional polish.** `getScoreBracket()` output is persisted as
-`score_bracket` on every submission (`app/lib/quiz/payload.ts:110`) and selects which clinical message
-the patient reads. Making its boundaries editable without a version stamp means two patients with
-identical answers months apart carry different brackets with no record of why. `scale_version` on
-both the settings row and the submission is what keeps the clinical record honest.
-
-**Nothing here is patient-facing copy.** Editing the three clinical band explanations, the title, or
-the disclaimer through this form was offered during discussion and **declined** — that is what
-`CONSENT_VERSION` discipline exists to prevent, and the disclaimer is counsel-owned under Phase 8 /
-LAUNCH-03. This phase configures numbers and tones only.
-
-**Four call sites, one scale.** `QuizContainer.tsx:203,260,601` and `payload.ts:101` all compute the
-bracket independently. The active scale must reach all four consistently, or a resumed submission
-could be bracketed under a different band set than the one displayed to the patient.
-
-**The config read lands on a PHI-collecting page** but is same-origin from the iframe (both on
-`alle-drops-quiz-app.fly.dev`), so it introduces no third-party script and no CORS surface. The
-failure path is the design risk, not the request itself.
-
-**Sequencing:** strictly after Phase 5. Building the settings infrastructure first was offered and
-declined — it front-loads the slowest, highest-review-burden work while the currently misleading
-results page stays live.
+**What replaces it:** William's colour-stop call is a go-live configuration item, not a phase. He gives
+three numbers; they are edited into `PROVISIONAL_SCORE_SCALE` (`app/lib/quiz/score-scale.ts:28-36`) and
+deployed. If AOD later wants to self-serve this without a deploy, it earns a new phase then — scoped to
+colour stops only, off the PHI path.
 
 ### Phase 6: Purchase Prerequisites & Returning Patients
 
@@ -712,14 +672,18 @@ range, (c) whether the three brackets or the four legacy bands drive the colour.
 **Not blocked and separable:** SCORE-01 — the "Preliminary Score" retitle and the 1–2 business day
 review copy. Ship independently.
 
-**DOWNGRADED 2026-08-11 — no longer blocks code.** `/gsd:discuss-phase 5` resolved this by making the
-scale configurable rather than by guessing a model. Sub-question (c) is answered structurally: neither
-drives the other. The colour stops and the clinical brackets became two independent tunables, so a
-patient scoring 7 of 60 no longer renders deep in red. Sub-questions (a) and (b) get a provisional
-default in Phase 5 and William's real answer through Phase 5.1's admin form — a data edit, not a
-deploy. **What remains owed:** the provisional values must be confirmed by William before go-live, and
-until then they must be visibly marked provisional. Measured while resolving this: the derived ceiling
-is **exactly 60**, so (a) has a defensible answer already.
+**DOWNGRADED 2026-08-11 — no longer blocks code.** `/gsd:discuss-phase 5` resolved this structurally
+rather than by guessing a model. Sub-question (c) is answered: neither drives the other. The colour
+stops and the clinical brackets are two independent things, so a patient scoring 7 of 60 no longer
+renders deep in red. Sub-questions (a) and (b) got a provisional default in Phase 5. **What remains
+owed:** the provisional colour stops (20 / 40 / 60) must be confirmed by William before go-live, and
+until then they stay visibly marked provisional in code. Measured while resolving this: the derived
+ceiling is **exactly 60**, so (a) has a defensible answer already.
+
+**RESTATED 2026-08-12.** The 2026-08-11 amendment routed William's answer through a Phase 5.1 admin
+form. That phase is gone (see Phase 5's notes) — **the clinical brackets are fixed, not tunable**, so
+only the colour stops were ever in question. His answer is now a one-line edit to
+`app/lib/quiz/score-scale.ts:28-36` plus a deploy. Still owed, same as before; cheaper to apply.
 
 **2. Domain spelling — gates LAUNCH-07 and the TEST-04 copy string.**
 `alledrops.com` (no R) was chosen in October 2025 *because* "AllerDrops" collides with the live

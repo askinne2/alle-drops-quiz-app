@@ -570,4 +570,30 @@ describe("public/quiz-bundle.js carries Phase 5 (preliminary-score-page) content
     const needle = " symptom burden";
     expect(count(needle)).toBeGreaterThanOrEqual(1);
   });
+
+  it('contains the equal-share zone flex literal — proves the 2026-08-12 bracket-aligned bar reached the storefront', () => {
+    /*
+      The single marker that separates a bundle built before 2026-08-12 from one built after, and
+      the one that matters most: the change it detects is invisible in copy. Every other Phase 5
+      marker in this block — the title, the bridge sentence, the burden caption — is equally true
+      of the pre-change bundle, so none of them can catch this staleness.
+
+      Before: zone width came from a template, `flex: ${span} 0 0`, computed per zone from
+      `upTo - previousUpTo`, so no fixed "1 0 0" literal existed anywhere in the output. After:
+      both the zone divs and the legend spans render the constant `flex: "1 0 0"`, which esbuild
+      preserves verbatim because it does not mangle string literals.
+
+      MEASURED both ways, per this file's methodology. Against the bundle committed at f44f647
+      (`git show HEAD:public/quiz-bundle.js`): 0 occurrences. Against the fresh rebuild: 2 — one
+      for the zones map, one for the legend map.
+
+      Why a stale bundle here is worse than a cosmetic miss: the source would be shipping
+      bracket-aligned boundaries (2 / 6 / 60) while the storefront still rendered them at
+      span-proportional widths. That combination paints 90% of the bar red and puts a 7-of-60
+      patient deep inside it — the exact outcome D-05 was written to prevent, and the one
+      arrangement nobody chose. See the comment above `PROVISIONAL_SCORE_SCALE` in score-scale.ts.
+    */
+    const needle = 'flex:"1 0 0"';
+    expect(count(needle)).toBe(2);
+  });
 });

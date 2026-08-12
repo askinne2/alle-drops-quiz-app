@@ -1,13 +1,13 @@
-import { getMaxScore } from "./scoring";
+import { getMaxScore, SCORE_BRACKETS } from "./scoring";
 import { ALL_SCORED_QUESTIONS } from "./questions";
 
-/** The five-value tone scale Phase 5.1's admin form can assign to an arbitrary number of zones. */
+/** The five-value tone scale, assignable to an arbitrary number of zones (D-07). */
 export type ScaleTone = "low" | "low-mid" | "mid" | "mid-high" | "high";
 
 export interface ScaleZone {
   upTo: number; // inclusive upper bound, raw score points, on the 0..max axis
   tone: ScaleTone;
-  label: string; // display text, independent of `tone` (Phase 5.1 can rename display text later)
+  label: string; // display text, independent of `tone` — renaming one does not touch the other
 }
 
 export interface ScoreScale {
@@ -18,27 +18,53 @@ export interface ScoreScale {
   // non-provisional scale cannot be assigned to this shape by accident.
 }
 
+/** SCORE-02's derived ceiling. Also the last zone's upper bound, so the two cannot drift apart. */
+const DERIVED_MAX = getMaxScore(ALL_SCORED_QUESTIONS);
+
 /**
- * PROVISIONAL — see D-04 (05-CONTEXT.md). Equal thirds of the derived 0-60 range, chosen because
- * this default needs no clinical justification of its own: D-05 already decoupled the bar's
- * color from the clinical brackets, so this default's only job is to show linear position, not
- * encode a claim. William confirms or replaces these three numbers via Phase 5.1's admin form
- * before go-live. This marking is developer- and admin-facing only.
+ * The zone boundaries ARE the clinical bracket boundaries, read from `SCORE_BRACKETS` rather than
+ * retyped as literals. Andrew chose this on 2026-08-12 after reviewing the shipped page against a
+ * live preview: one colour per bracket, boundaries identical, no independent colour numbers to
+ * maintain or to ask William about.
+ *
+ * **This reverses D-05** (`05-CONTEXT.md`), which decoupled colour from the brackets precisely
+ * because `7+` spans 54 of the 60 possible points. That reasoning was not wrong and is not
+ * discarded — it is answered instead by how the bar RENDERS. `ResultsDisplay` gives every zone an
+ * equal share of the track and interpolates the marker inside its own zone, so the red zone is one
+ * third of the bar rather than 90% of it, and a patient at 7 sits at the far-left edge of red while
+ * one at 60 sits at the far right. Position still carries ordering; it just no longer carries a
+ * linear reading of the raw score. Do not "fix" the equal-share rendering back to
+ * span-proportional widths without reading that section of ResultsDisplay first — proportional
+ * widths plus these boundaries is the 90%-red outcome D-05 warned about, and is the one
+ * combination nobody chose.
+ *
+ * Derived, not literal, for a second reason: if the medical director ever revises the brackets,
+ * the colours follow in the same commit. There is no second set of numbers to forget.
+ *
+ * **Still provisional.** William has not yet confirmed this presentation — the question went to him
+ * on 2026-08-12 and his answer may change the arrangement again. There is no admin form and there
+ * will not be one: an "Admin-Configurable Score Scale" phase (5.1 / SCALE-01..04) was inserted
+ * 2026-08-11 and cancelled 2026-08-12, because the clinical brackets it was built around are fixed,
+ * not tunable. See `.planning/REQUIREMENTS.md` §"Removed Requirements". This marking is developer-
+ * and admin-facing only and is never rendered to a patient.
  */
 export const PROVISIONAL_SCORE_SCALE: ScoreScale = {
   max: getMaxScore(ALL_SCORED_QUESTIONS),
   isProvisional: true,
   zones: [
-    { upTo: 20, tone: "low", label: "Low" },
-    { upTo: 40, tone: "mid", label: "Moderate" },
-    { upTo: 60, tone: "high", label: "High" },
+    { upTo: SCORE_BRACKETS.LOW.max, tone: "low", label: "Low" },
+    { upTo: SCORE_BRACKETS.MID.max, tone: "mid", label: "Moderate" },
+    // SCORE_BRACKETS.HIGH.max is Infinity — an open-ended clinical bracket. The bar needs a finite
+    // right edge, so the top zone closes at the derived ceiling instead.
+    { upTo: DERIVED_MAX, tone: "high", label: "High" },
   ],
 };
 
 /**
- * Phase 5: returns the compiled-in provisional constant — no config channel exists yet. Phase
- * 5.1 swaps this implementation to read a DB-backed setting with this same return shape, falling
- * back to PROVISIONAL_SCORE_SCALE on fetch failure; ResultsDisplay's call site does not change.
+ * Returns the compiled-in scale. This stays synchronous and stays a constant: the DB-backed
+ * variant lived in the cancelled Phase 5.1 (see PROVISIONAL_SCORE_SCALE above). The accessor is
+ * kept rather than inlined because it is the single seam every consumer reads through — if the
+ * scale ever does become configurable, only this body changes.
  */
 export function getScoreScale(): ScoreScale {
   return PROVISIONAL_SCORE_SCALE;

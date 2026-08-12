@@ -163,28 +163,16 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
   on the full range (`REQ-preliminary-score-page`) — ⚠ **blocked on the score-scale decision**
 
 > **AMENDED 2026-08-11.** SCORE-02 and SCORE-03 are **no longer code-blocked.** `/gsd:discuss-phase 5`
-> resolved the score-scale question structurally: the colour stops and the clinical brackets became
-> two independent tunables, and the scale itself moved to a versioned admin setting (new Phase 5.1,
-> SCALE-01..04). Phase 5 ships a provisional default; William's answer becomes a data edit rather than
-> a code change. **Still owed:** confirmation of the provisional band values before go-live.
-
-### Admin-Configurable Score Scale
-
-- [ ] **SCALE-01**: An app-settings store holds the active score scale — the displayed range, the
-  band stops with their tones, and the clinical bracket boundaries — carrying a `scale_version` that
-  increments on every edit plus `changed_by` and `changed_at`
-  (`05-CONTEXT.md` D-01, D-02)
-- [ ] **SCALE-02**: An authorized user edits that scale from a page in the embedded Shopify admin,
-  with validation at the form: stops ascending, within the derived range, and covering it without
-  gaps. Invalid sets are rejected before they can be saved, never at render (`05-CONTEXT.md` D-02)
-- [ ] **SCALE-03**: The storefront quiz reads the active scale at runtime through `getScoreScale()`
-  and falls back to the compiled-in constant when the read fails, so no patient is ever shown or
-  bracketed by a partial configuration. All four bracket call sites
-  (`QuizContainer.tsx:203,260,601` and `payload.ts:101`) resolve to the same scale
-  (`05-CONTEXT.md` D-03)
-- [ ] **SCALE-04**: Every submission records the `scale_version` that produced its `score_bracket`,
-  so a row written under one band set stays interpretable after the bands change — ⚠ **PHI-path
-  change: adds a column to `submissions`** (`05-CONTEXT.md` D-02)
+> resolved the score-scale question structurally: the colour stops and the clinical brackets are two
+> independent things. Phase 5 ships a provisional default. **Still owed:** confirmation of the
+> provisional colour stops before go-live.
+>
+> **AMENDED AGAIN 2026-08-12.** The 2026-08-11 version of this note also moved the scale into "a
+> versioned admin setting (new Phase 5.1, SCALE-01..04)". **That phase and those four requirements are
+> deleted** — see the Removed Requirements section below. The clinical brackets are fixed by the AOD
+> medical director and are not tunable; only the colour stops were ever in question, and those are a
+> code constant William confirms once. William's answer is a one-line edit to
+> `app/lib/quiz/score-scale.ts:28-36` plus a deploy, not a data edit through a form.
 
 ### Purchase Prerequisites & Returning Patients
 
@@ -315,12 +303,8 @@ Acknowledged, not in the v1.0 roadmap.
 | RESUME-03 | Phase 4.2 | Complete (2026-08-11, verified live) |
 | RESUME-04 | Phase 4.2 | Complete (2026-08-11, verified live) |
 | SCORE-01 | Phase 5 | Complete |
-| SCORE-02 | Phase 5 | Complete (unblocked 2026-08-11 — provisional default, William tunes via Phase 5.1) |
-| SCORE-03 | Phase 5 | Complete (unblocked 2026-08-11 — provisional default, William tunes via Phase 5.1; Phase 5 shipped provisional bands as a code constant — Phase 5.1 replaces `getScoreScale()`'s body with a database read behind the same signature) |
-| SCALE-01 | Phase 5.1 | Pending |
-| SCALE-02 | Phase 5.1 | Pending |
-| SCALE-03 | Phase 5.1 | Pending |
-| SCALE-04 | Phase 5.1 | Pending |
+| SCORE-02 | Phase 5 | Complete (unblocked 2026-08-11 — provisional default) |
+| SCORE-03 | Phase 5 | Complete (unblocked 2026-08-11 — provisional colour stops shipped as a code constant, `score-scale.ts:28-36`; William confirms the three numbers before go-live) |
 | SHOP-01 | Phase 6 | Pending |
 | SHOP-02 | Phase 6 | Pending |
 | SHOP-03 | Phase 6 | Pending |
@@ -338,19 +322,41 @@ Acknowledged, not in the v1.0 roadmap.
 | LAUNCH-07 | Phase 8 | Blocked (William — domain spelling) |
 | LAUNCH-08 | Phase 8 | Pending |
 
-**Coverage** (updated 2026-08-11):
-- v1 requirements: **46 total** (42 original + SCALE-01..04, added with Phase 5.1)
-- Mapped to phases: 46
+## Removed Requirements
+
+- **SCALE-01, SCALE-02, SCALE-03, SCALE-04 — removed 2026-08-12, never planned, never built.**
+  Added on 2026-08-11 alongside an inserted Phase 5.1 ("Admin-Configurable Score Scale"). Deleted
+  during `/gsd:discuss-phase 5.1`, at the point where the discussion reached what editable clinical
+  brackets would mean for the `score_bracket` column.
+
+  **The premise was wrong.** The clinical brackets (0–2 / 3–6 / 7+, `app/lib/quiz/scoring.ts:4-8`)
+  come from the AOD medical director and are fixed. Only the *colour band stops* — how a 0–60 raw
+  score maps to green / orange / red on the bar — were ever meant to be configurable. Phase 5's
+  `05-CONTEXT.md` D-02 recorded both as editable; that is the line being corrected.
+
+  **Removing the bracket half removes the whole cost.** SCALE-04's `submissions.scale_version` column,
+  the migration, and the PHI-path PR review all existed to keep a stored bracket interpretable after
+  its boundaries moved. Brackets don't move. The colour bar is display-only — rendered from the raw
+  score at `ResultsDisplay.tsx:70`, never persisted, absent from the PDF (`pdf.ts:83` prints the
+  bracket label, not the bar) — so retuning colours later cannot make an older row harder to read.
+
+  **Nothing was implemented.** Zero code references to `scale_version`, `app.settings`, or
+  `api.quiz.config` across `app/`, `migrations/`, and `tests/`. If AOD later wants to retune colours
+  without a deploy, that earns a new phase, scoped to colour stops only and off the PHI path.
+
+**Coverage** (updated 2026-08-12):
+- v1 requirements: **42 total** (SCALE-01..04 added 2026-08-11 and removed 2026-08-12 — see above)
+- Mapped to phases: 42
 - Unmapped: 0 ✓
 - Duplicated across phases: 0 ✓
 - Blocked on a client decision or client action: **5** — DIAG-01, LAUNCH-03, LAUNCH-05, LAUNCH-06,
   LAUNCH-07. DIAG-01 needs an answer to a question; LAUNCH-03/05/06/07 need client action. None of
-  the 5 blocks the other 41.
-- **SCORE-02 and SCORE-03 left this list on 2026-08-11.** They were blocked on William's score-scale
-  decision. `/gsd:discuss-phase 5` resolved it structurally rather than by guessing: the colour stops
-  and clinical brackets became independent tunables, and the scale moved to a versioned admin setting
-  (Phase 5.1). William's answer is now a data edit, not a code blocker. **The obligation did not
-  vanish** — the provisional band values must be confirmed before go-live.
+  the 5 blocks the other 37.
+- **SCORE-02 and SCORE-03 left the blocked list on 2026-08-11** and stay off it. They were blocked on
+  William's score-scale decision; `/gsd:discuss-phase 5` resolved it structurally by separating the
+  colour stops from the clinical brackets. **The obligation did not vanish** — the provisional colour
+  stops (20 / 40 / 60) must be confirmed by William before go-live. That confirmation is a one-line
+  edit to `score-scale.ts:28-36` plus a deploy, not a phase.
 
 ---
 *Requirements defined: 2026-07-29*
