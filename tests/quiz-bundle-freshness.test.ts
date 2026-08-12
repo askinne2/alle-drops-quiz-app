@@ -508,10 +508,13 @@ describe("public/quiz-bundle.js carries Phase 5 (preliminary-score-page) content
     expect(count(needle)).toBeGreaterThanOrEqual(1);
   });
 
-  it('contains the "What this means for you" D-06 meaning-section heading at least once — proves the recommendation blocks are wrapped under the new heading', () => {
-    // Measured against the pre-rebuild committed bundle: 0 occurrences. Measured against the
-    // fresh rebuild: 1 occurrence.
-    const needle = "What this means for you";
+  it('contains the bridge sentence — the D-06 two-axis label, which replaced the "What this means for you" heading on 2026-08-12', () => {
+    // REPOINTED 2026-08-12. This asserted `"What this means for you" >= 1`; that heading was
+    // removed and now has a zero-assertion in the block below, so leaving this one pointed at the
+    // old needle would have made the suite contradict itself — the two assertions cannot both
+    // pass. D-06's requirement did not move: the bridge sentence is what labels the two axes now.
+    // Measured 1 occurrence in the rebuilt bundle.
+    const needle = "The bar shows how many symptoms you reported";
     expect(count(needle)).toBeGreaterThanOrEqual(1);
   });
 
@@ -559,10 +562,23 @@ describe("public/quiz-bundle.js carries Phase 5 (preliminary-score-page) content
     expect(count(needle)).toBeGreaterThanOrEqual(1);
   });
 
-  it('contains the "{zone} on the symptom scale" context line — proves the meaning-section zone caption is compiled in', () => {
-    // Post-approval UX polish (2026-08-11): measured 1 occurrence (template suffix) in the rebuilt bundle.
+  it('has zero occurrences of the retired "{zone} on the symptom scale" context line — proves the 2026-08-12 removal reached the storefront, not just the source tree', () => {
+    // INVERTED 2026-08-12 (was: >= 1). Andrew removed this line and the "What this means for you"
+    // heading above it once the zones were aligned to the clinical brackets — "on the symptom
+    // scale" was the third statement of the same zone word within two inches. Measured 1
+    // occurrence in the bundle committed at c92fd60, 0 after the rebuild. Kept as a zero-assertion
+    // rather than deleted so a stale bundle that still carries the retired copy fails here, the
+    // same way the severityValue guard above works.
     const needle = " on the symptom scale";
-    expect(count(needle)).toBeGreaterThanOrEqual(1);
+    expect(count(needle)).toBe(0);
+  });
+
+  it('has zero occurrences of the retired "What this means for you" heading — the D-06 heading was replaced by the bridge sentence', () => {
+    // Measured 1 occurrence in the bundle committed at c92fd60, 0 after the rebuild. Its
+    // replacement — the bridge sentence — is asserted present by the test above, so the pair
+    // together prove the swap happened rather than one half of it.
+    const needle = "What this means for you";
+    expect(count(needle)).toBe(0);
   });
 
   it('contains the circle burden caption suffix " symptom burden" — proves the under-circle zone label is compiled in', () => {
