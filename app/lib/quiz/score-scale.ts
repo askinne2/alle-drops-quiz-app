@@ -1,13 +1,13 @@
 import { getMaxScore } from "./scoring";
 import { ALL_SCORED_QUESTIONS } from "./questions";
 
-/** The five-value tone scale Phase 5.1's admin form can assign to an arbitrary number of zones. */
+/** The five-value tone scale, assignable to an arbitrary number of zones (D-07). */
 export type ScaleTone = "low" | "low-mid" | "mid" | "mid-high" | "high";
 
 export interface ScaleZone {
   upTo: number; // inclusive upper bound, raw score points, on the 0..max axis
   tone: ScaleTone;
-  label: string; // display text, independent of `tone` (Phase 5.1 can rename display text later)
+  label: string; // display text, independent of `tone` — renaming one does not touch the other
 }
 
 export interface ScoreScale {
@@ -22,8 +22,16 @@ export interface ScoreScale {
  * PROVISIONAL — see D-04 (05-CONTEXT.md). Equal thirds of the derived 0-60 range, chosen because
  * this default needs no clinical justification of its own: D-05 already decoupled the bar's
  * color from the clinical brackets, so this default's only job is to show linear position, not
- * encode a claim. William confirms or replaces these three numbers via Phase 5.1's admin form
- * before go-live. This marking is developer- and admin-facing only.
+ * encode a claim.
+ *
+ * **These three numbers are a go-live blocker.** William confirms or replaces them before real
+ * patients see this page. There is no admin form and there will not be one — an "Admin-Configurable
+ * Score Scale" phase (5.1 / SCALE-01..04) was inserted 2026-08-11 and cancelled 2026-08-12, because
+ * the clinical brackets it was built around are fixed by the AOD medical director, not tunable.
+ * Applying his answer means editing the `zones` array below and deploying. See
+ * `.planning/REQUIREMENTS.md` §"Removed Requirements".
+ *
+ * This provisional marking is developer- and admin-facing only.
  */
 export const PROVISIONAL_SCORE_SCALE: ScoreScale = {
   max: getMaxScore(ALL_SCORED_QUESTIONS),
@@ -36,9 +44,14 @@ export const PROVISIONAL_SCORE_SCALE: ScoreScale = {
 };
 
 /**
- * Phase 5: returns the compiled-in provisional constant — no config channel exists yet. Phase
- * 5.1 swaps this implementation to read a DB-backed setting with this same return shape, falling
- * back to PROVISIONAL_SCORE_SCALE on fetch failure; ResultsDisplay's call site does not change.
+ * Returns the compiled-in scale. This stays synchronous and stays a constant: the DB-backed
+ * variant lived in the cancelled Phase 5.1 (see PROVISIONAL_SCORE_SCALE above). The accessor is
+ * kept rather than inlined because it is the single seam every consumer reads through — if the
+ * scale ever does become configurable, only this body changes.
+ *
+ * Note the two axes are independent and only one of them is soft: the colour zones here are a
+ * display choice, while the clinical brackets in `scoring.ts` (SCORE_BRACKETS) are fixed clinical
+ * input and are deliberately not reachable from this shape.
  */
 export function getScoreScale(): ScoreScale {
   return PROVISIONAL_SCORE_SCALE;

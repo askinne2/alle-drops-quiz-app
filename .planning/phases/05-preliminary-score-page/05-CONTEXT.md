@@ -38,14 +38,33 @@ purchase-prerequisite surfaces (Phase 6).
   `enable_test_mode` all flow Liquid → iframe query params) and was declined because clinical
   boundaries in an unvalidated free-text theme field carry no audit trail.
 
-- **D-02: Both the visual band stops AND the clinical brackets are editable.** This is the expensive
-  branch and was chosen deliberately. Consequences that are therefore **mandatory, not optional**:
-  - a `scale_version` integer incremented on every edit
-  - `changed_by` (Shopify user id) and `changed_at` on the settings row
-  - a new `submissions.scale_version` column, so a 2027 row remains interpretable against the band
-    set that actually produced it
-  - This makes the settings work a **PHI-path change** under CLAUDE.md's PR-review rule, because it
-    adds a column to the `submissions` table and changes how `score_bracket` is derived.
+- **D-02: ~~Both the visual band stops AND the clinical brackets are editable.~~ CORRECTED 2026-08-12
+  — the clinical brackets are NOT editable.** Andrew reversed this during `/gsd:discuss-phase 5.1`,
+  before any of it was planned or built: "the clinical bracket should be set in stone... I thought I
+  was changing the way the 0 to 60 scores map to the Bracket." Only the *colour band stops* are
+  configurable. `SCORE_BRACKETS` (`app/lib/quiz/scoring.ts:4-8`) comes from the AOD medical director
+  and stays a code constant.
+
+  **Everything below this line is superseded.** `scale_version`, `changed_by` / `changed_at`, the
+  `submissions.scale_version` column, and the PHI-path classification all existed solely to keep a
+  stored `score_bracket` interpretable after its boundaries moved. Boundaries don't move, so none of
+  it is needed. The colour bar is display-only — rendered from the raw score at
+  `ResultsDisplay.tsx:70`, never persisted, absent from the PDF (`pdf.ts:83` prints the bracket
+  label, not the bar) — so retuning colours cannot make an older row harder to read. Phase 5.1 and
+  SCALE-01..04 were deleted the same day; see `.planning/REQUIREMENTS.md` §"Removed Requirements".
+
+  D-01 (settings belong in the embedded app, not a theme-block field) survives as reasoning but has
+  nothing left to apply to. D-05, D-06, D-07 and D-08 are unaffected — they describe what Phase 5
+  actually shipped. Retained verbatim below for the record:
+
+  - This was the expensive branch and was chosen deliberately. Consequences that are therefore
+    **mandatory, not optional**:
+    - a `scale_version` integer incremented on every edit
+    - `changed_by` (Shopify user id) and `changed_at` on the settings row
+    - a new `submissions.scale_version` column, so a 2027 row remains interpretable against the band
+      set that actually produced it
+    - This makes the settings work a **PHI-path change** under CLAUDE.md's PR-review rule, because it
+      adds a column to the `submissions` table and changes how `score_bracket` is derived.
 
 - **D-03: Split across two phases.** Phase 5 ships SCORE-01/02/03 against `getScoreScale()` backed by
   a constant (~1 day, unblocked). New **Phase 5.1** swaps the accessor to DB-backed and adds the
@@ -262,12 +281,14 @@ Note `radio_multi` is **multi-select** (`types.ts:8` — "Select one or more fro
 <deferred>
 ## Deferred Ideas
 
-- **Phase 5.1 — admin-configurable score scale.** Not lost and not optional: Andrew chose it
-  explicitly. It needs a roadmap entry, requirement IDs, and its own discuss/plan cycle. Contents are
-  fixed by D-01, D-02, and D-03 above: settings table with `scale_version` / `changed_by` /
-  `changed_at`, `app/routes/app.settings.tsx`, `app/routes/api.quiz.config.tsx`, `app/lib/settings.ts`
-  with caching, a fetch-failure fallback, the `submissions.scale_version` migration, and DB-backed
-  `getScoreScale()`. **This is a PHI-path change requiring PR review per CLAUDE.md.**
+- **~~Phase 5.1 — admin-configurable score scale.~~ CANCELLED 2026-08-12 — do not build this.** It got
+  its roadmap entry and requirement IDs (SCALE-01..04) on 2026-08-11, then both were deleted the next
+  day during `/gsd:discuss-phase 5.1` when Andrew corrected D-02: the clinical brackets are fixed, not
+  tunable. No settings table, no `app.settings.tsx`, no `api.quiz.config.tsx`, no
+  `submissions.scale_version` migration, no DB-backed `getScoreScale()`, no PHI-path change. See the
+  D-02 correction above and `.planning/REQUIREMENTS.md` §"Removed Requirements". **`getScoreScale()`
+  keeps returning the compiled-in constant** — its docstring at `score-scale.ts:38-42` still promises a
+  Phase 5.1 swap and is now stale.
 
 - **Admin-editable patient-facing clinical copy** — offered as the third option when scoping what the
   settings page controls, and **not selected**. It would put counsel-owned wording in a form with no
