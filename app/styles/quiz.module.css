@@ -32,8 +32,8 @@
   --quiz-color-warning: #FF9800;
   --quiz-color-error: #F44336;
 
-  /* Scale-bar zone tones (D-07). Five slots ship so Phase 5.1 can add a fourth or
-     fifth zone without new CSS. */
+  /* Scale-bar zone tones (D-07). Five slots ship so a fourth or fifth zone can be
+     added without new CSS. */
   --quiz-color-tone-low: var(--quiz-color-success, #4CAF50);
   --quiz-color-tone-low-mid: #CDDC39;
   --quiz-color-tone-mid: var(--quiz-color-warning, #FF9800);
