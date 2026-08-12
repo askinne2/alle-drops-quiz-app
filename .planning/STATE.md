@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-stopped_at: Phase 6 UI-SPEC approved
-last_updated: "2026-08-12T11:10:00.016Z"
-last_activity: 2026-08-12 -- Phase 6 UI-SPEC approved; next /gsd:plan-phase 6
+status: ready_to_execute
+stopped_at: Phase 6 plans written (06-01..06-06)
+last_updated: "2026-08-12T11:30:00.000Z"
+last_activity: 2026-08-12 -- Phase 6 planned: 6 plans in 3 waves; next /gsd:execute-phase 6
 progress:
-  total_phases: 10
-  completed_phases: 7
-  total_plans: 56
-  completed_plans: 55
-  percent: 70
+    total_phases: 10
+    completed_phases: 7
+    total_plans: 62
+    completed_plans: 55
+    percent: 70
 ---
 
 # Project State
@@ -28,10 +28,10 @@ parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 6 (Purchase Prerequisites & Returning Patients) — UI-SPEC approved, no plans yet
-Plan: 0 of ? — next step is `/gsd:plan-phase 6`
-Status: Phase 6 UI-SPEC approved (CONTEXT + RESEARCH + VALIDATION ready); nothing built.
-Last activity: 2026-08-12 -- Phase 6 UI-SPEC approved; next /gsd:plan-phase 6
+Phase: 6 (Purchase Prerequisites & Returning Patients) — planned, 6 plans / 3 waves
+Plan: 0 of 6 — next step is `/gsd:execute-phase 6`
+Status: Phase 6 plans written (06-01..06-06); ready to execute
+Last activity: 2026-08-12 -- Phase 6 planned: 6 plans in 3 waves; next /gsd:execute-phase 6
 
 **Keep the `Status:` value above on one logical line when editing.** `gsd-sdk query
 state.record-session` scrapes this line into the frontmatter `status:` key; a wrapped line got
@@ -518,9 +518,9 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-12T11:10:00.011Z
-Stopped at: Phase 6 UI-SPEC approved
-Resume file: .planning/phases/06-purchase-prerequisites/06-UI-SPEC.md
+Last session: 2026-08-12T11:30:00.000Z
+Stopped at: Phase 6 plans written (06-01..06-06)
+Resume file: .planning/phases/06-purchase-prerequisites/06-01-PLAN.md
 
 **Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
 mid-plan. Task 1 (`e246391`, bundle rebuild) was committed inside worktree

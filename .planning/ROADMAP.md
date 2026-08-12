@@ -590,7 +590,24 @@ shipping — and a returning patient sees the credit for work already done
 
   5. A written fulfillment verification step exists and is owned by AOD before the first shipment
 
-**Plans**: TBD
+**Plans**: 6 plans in 3 waves
+
+Plans:
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — D-02 Sense ATC selector CI fixture + contract (fail-open compensating control)
+- [ ] 06-02-PLAN.md — Wave 0 human gates: D-04 templateSuffix, SHOP-05 admin inventory, SHOP-01 Liquid render
+- [ ] 06-04-PLAN.md — Checkout UI extension order-review-notice (SHOP-04 dual thank-you/order-status)
+
+**Wave 2** *(06-03 depends on 06-01; 06-05 depends on 06-02)*
+
+- [ ] 06-03-PLAN.md — Theme app block purchase-prerequisites (SHOP-02/03 Liquid + fail-open gate JS)
+- [ ] 06-05-PLAN.md — SHOP-05 copy draft + refund SPEC; SHOP-06 fulfillment process draft
+
+**Wave 3** *(blocked on 06-02, 06-03, 06-04)*
+
+- [ ] 06-06-PLAN.md — Authorized shopify app deploy, editor-only placement (D-01/D-03), blocking UAT
+
 **UI hint**: yes
 **Notes**: ~3–5 days; the largest phase. Two new extensions — a theme app extension block targeting
 the product template, and this repo's first checkout UI extension. ~~**Start with SHOP-01 as a
@@ -603,7 +620,8 @@ real-time blocking, or an `orders/create` backstop; all were removed by
 `DEC-purchase-gating-is-honor-system`, and the app's `read_customers,write_customers` scopes plus
 Basic/Grow plan make them unavailable anyway. Known weakness to design around: the customer link is
 best-effort email matching, so a patient who quizzes with one email and buys with another is
-unlinked.
+unlinked. **Planned 2026-08-12:** 6 plans / 3 waves; no Fly deploy expected; never `shopify theme
+push` (D-03).
 
 ### Phase 7: Telehealth Intake Path
 
@@ -756,6 +774,6 @@ exposures today.
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
 | 4. Mandatory Allergy Testing | 19/19 | Complete   | 2026-08-10 |
 | 5. Preliminary Score Page | 6/6 | Complete   | 2026-08-11 |
-| 6. Purchase Prerequisites | 0/TBD | Not started | - |
+| 6. Purchase Prerequisites | 0/6 | Planned | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |
 | 8. Launch Readiness | 0/TBD | Not started | - |
