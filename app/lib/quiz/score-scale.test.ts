@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { getScoreScale } from "./score-scale";
-import { getMaxScore } from "./scoring";
+import { getMaxScore, SCORE_BRACKETS } from "./scoring";
 import { ALL_SCORED_QUESTIONS } from "./questions";
 
 describe("getScoreScale: max is derived, not a literal", () => {
@@ -18,13 +18,27 @@ describe("getScoreScale: max is derived, not a literal", () => {
 });
 
 describe("getScoreScale: zone shape invariants", () => {
-  it("has exactly three zones in the locked ascending order: 20/low/Low, 40/mid/Moderate, 60/high/High", () => {
+  it("has exactly three zones in the locked ascending order: 2/low/Low, 6/mid/Moderate, 60/high/High", () => {
     const { zones } = getScoreScale();
     expect(zones).toEqual([
-      { upTo: 20, tone: "low", label: "Low" },
-      { upTo: 40, tone: "mid", label: "Moderate" },
+      { upTo: 2, tone: "low", label: "Low" },
+      { upTo: 6, tone: "mid", label: "Moderate" },
       { upTo: 60, tone: "high", label: "High" },
     ]);
+  });
+
+  // CHANGED 2026-08-12 (was 20/40/60). Andrew chose one colour per clinical bracket after
+  // reviewing the shipped page. The literals above are asserted deliberately rather than read back
+  // from SCORE_BRACKETS: a test that derives its expectation from the same source as the code
+  // proves only that the code is self-consistent. These numbers are a clinical decision and a
+  // change to them should have to be made twice, on purpose.
+  it("each zone boundary equals the clinical bracket boundary it mirrors, so colour and bracket cannot drift apart", () => {
+    const { zones, max } = getScoreScale();
+    expect(zones[0].upTo).toBe(SCORE_BRACKETS.LOW.max);
+    expect(zones[1].upTo).toBe(SCORE_BRACKETS.MID.max);
+    // SCORE_BRACKETS.HIGH.max is Infinity; the bar closes at the derived ceiling instead.
+    expect(SCORE_BRACKETS.HIGH.max).toBe(Infinity);
+    expect(zones[2].upTo).toBe(max);
   });
 
   it("every zone's upTo is strictly greater than its predecessor's, the first is greater than 0, and the last equals max (no gap, no overhang)", () => {

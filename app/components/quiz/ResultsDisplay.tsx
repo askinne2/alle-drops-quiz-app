@@ -68,8 +68,46 @@ export function ResultsDisplay({
 }: ResultsDisplayProps) {
   const [copied, setCopied] = useState(false);
   const scale = getScoreScale();
-  const currentZone = scale.zones.find((z) => score <= z.upTo) ?? scale.zones[scale.zones.length - 1];
-  const markerPercent = scale.max > 0 ? (score / scale.max) * 100 : 0;
+
+  /*
+    EQUAL-SHARE ZONES, INTERPOLATED MARKER. Every zone gets 1/N of the track regardless of how many
+    score points it spans, and the marker is placed by interpolating within its own zone.
+
+    This pairing is load-bearing and the two halves must change together. The zone boundaries are
+    now the clinical bracket boundaries (see score-scale.ts), and `7+` spans 54 of the 60 possible
+    points. Rendering these boundaries at span-proportional widths — the previous behaviour, and the
+    obvious "simplification" — paints 90% of the bar red and puts a 7-of-60 patient deep inside it.
+    That outcome is what D-05 (05-CONTEXT.md) was written to prevent and it is the one arrangement
+    nobody chose. Equal shares hold red to one third.
+
+    Interpolation is what stops equal shares from throwing away ordering: within the red third,
+    score 7 lands at its far-left edge and score 60 at its far right, so two `7+` patients at
+    opposite ends of the bracket still read as visibly different. The trade-off Andrew accepted on
+    2026-08-12 is that marker position is no longer a linear reading of the raw score — the number
+    itself carries that, in the circle and in the "{score} of {max}" readout.
+
+    KNOWN LIMITATION, MEASURED AND ACCEPTED (2026-08-12) — do not file this as a bug. Because
+    interpolation makes position continuous, scores on opposite sides of a zone seam land on top of
+    each other. Rendered and screenshotted at every score: 6 sits at 66.67%, 7 at 67.28%, 8 at
+    67.90% — roughly three pixels apart on a 520px bar. So the 6 -> 7 crossing, the most
+    consequential clinical threshold in the quiz, produces no perceptible marker movement; the
+    colour beneath it, the bolded legend label, and the recommendation copy carry that change
+    instead. Two alternatives were costed and declined: centring the marker in its band (makes the
+    threshold a third-of-the-bar jump, but collapses every 7+ patient onto one position), and
+    insetting each band's usable range away from the seams (preserves both, but needs an arbitrary
+    tuning constant and stops score 0 and score 60 from reaching the bar's ends).
+  */
+  const zoneIndexRaw = scale.zones.findIndex((z) => score <= z.upTo);
+  const zoneIndex = zoneIndexRaw === -1 ? scale.zones.length - 1 : zoneIndexRaw;
+  const currentZone = scale.zones[zoneIndex];
+  const zoneFloor = zoneIndex === 0 ? 0 : scale.zones[zoneIndex - 1].upTo;
+  const zoneSpan = currentZone.upTo - zoneFloor;
+  // Clamped so a score above the ceiling (impossible today, cheap to guard) cannot push the marker
+  // past the track's right edge.
+  const withinZone =
+    zoneSpan > 0 ? Math.min(1, Math.max(0, (score - zoneFloor) / zoneSpan)) : 1;
+  const markerPercent =
+    scale.zones.length > 0 ? ((zoneIndex + withinZone) / scale.zones.length) * 100 : 0;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(symptomProfileId).then(() => {
@@ -113,18 +151,15 @@ export function ResultsDisplay({
                 aria-label={`Symptom burden position: ${currentZone.label.toLowerCase()} zone, ${score} of ${scale.max} on a 0 to ${scale.max} scale.`}
               >
                 <div className={styles.scaleBar__zones} aria-hidden="true">
-                  {scale.zones.map((zone, index) => {
-                    const previousUpTo = index === 0 ? 0 : scale.zones[index - 1].upTo;
-                    const span = zone.upTo - previousUpTo;
-                    return (
-                      <div
-                        key={zone.tone + zone.upTo}
-                        className={styles.scaleBar__zone}
-                        data-tone={zone.tone}
-                        style={{ flex: `${span} 0 0` }}
-                      />
-                    );
-                  })}
+                  {/* Equal share per zone, NOT `upTo - previousUpTo` — see the comment above. */}
+                  {scale.zones.map((zone) => (
+                    <div
+                      key={zone.tone + zone.upTo}
+                      className={styles.scaleBar__zone}
+                      data-tone={zone.tone}
+                      style={{ flex: "1 0 0" }}
+                    />
+                  ))}
                 </div>
                 <div
                   className={styles.scaleBar__marker}
@@ -133,20 +168,17 @@ export function ResultsDisplay({
                 />
               </div>
               <div className={styles.scaleBar__legend}>
-                {scale.zones.map((zone, index) => {
-                  const previousUpTo = index === 0 ? 0 : scale.zones[index - 1].upTo;
-                  const span = zone.upTo - previousUpTo;
-                  return (
-                    <span
-                      key={zone.tone + zone.upTo}
-                      className={styles.scaleBar__legendItem}
-                      style={{ flex: `${span} 0 0` }}
-                      {...(zone === currentZone ? { "data-current": "true" } : {})}
-                    >
-                      {zone.label}
-                    </span>
-                  );
-                })}
+                {/* Widths must match the zones above exactly, or every label drifts off its band. */}
+                {scale.zones.map((zone) => (
+                  <span
+                    key={zone.tone + zone.upTo}
+                    className={styles.scaleBar__legendItem}
+                    style={{ flex: "1 0 0" }}
+                    {...(zone === currentZone ? { "data-current": "true" } : {})}
+                  >
+                    {zone.label}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
