@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 6 plans written (06-01..06-06)
-last_updated: "2026-08-12T11:51:47.228Z"
-last_activity: 2026-08-12 -- Phase 6 execution started
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-08-12T11:53:48.521Z"
+last_activity: 2026-08-12
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 62
-  completed_plans: 55
-  percent: 70
+  completed_plans: 56
+  percent: 90
 ---
 
 # Project State
@@ -29,9 +29,9 @@ parallel and is older than Phase 6 — see "Open Now" below.
 ## Current Position
 
 Phase: 6 (Purchase Prerequisites & Returning Patients) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 6
-Last activity: 2026-08-12 -- Phase 6 execution started
+Plan: 2 of 6
+Status: Executing Phase 6 (06-01 complete)
+Last activity: 2026-08-12 -- Completed 06-01 (D-02 Sense ATC selector contract)
 
 **Keep the `Status:` value above on one logical line when editing.** `gsd-sdk query
 state.record-session` scrapes this line into the frontmatter `status:` key; a wrapped line got
@@ -40,6 +40,7 @@ and `percent` 70 → 60. Both were restored by hand. Re-check the frontmatter af
 `state.record-session` call. **2026-08-12 again:** record-session set `status: completed` and
 reset `completed_phases` 7→6 / `percent` 70→60 after UI-SPEC approval — restored by hand.
 **Same day:** `state.planned-phase` again reset `completed_phases` 7→6 / `percent` 70→60 — restored by hand.
+**Same day after 06-01:** `state update-progress` / `record-session` again set `completed_phases` 7→6 (percent correctly 90 from plan counts) — restored by hand to 7.
 
 **Branch:** `main` @ `e687cfd`. PRs #25, #26, #27 and #28 all merged. Phase 5 deployed 2026-08-12.
 `HANDOFF.md` is committed and current (PR #28) — read it alongside this file, it carries the
@@ -227,6 +228,7 @@ Andrew clicking. The tally is now six. Keep the human browser pass.
 | Phase 04-mandatory-allergy-testing P16 | 55min | 3 tasks | 5 files |
 | Phase 04-mandatory-allergy-testing P17 | 35min | 3 tasks | 6 files |
 | Phase 04-mandatory-allergy-testing P18 | 20min | 2 tasks | 7 files |
+| Phase 06 P01 | 1min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -311,6 +313,8 @@ Affecting current work:
 - [Phase 04]: 04-19: Migration 004 executed against alledrops_quiz_dev ahead of the deploy, deviating from its own "app code live on Fly first" precondition. That precondition guards Phase 3's DROP-before-code failure mode; 004 is additive in the opposite direction (CREATE TABLE IF NOT EXISTS, two indexes, a CHECK widened 3→4 values), so v50 was unaffected and the database was left ahead of the code rather than behind. Backup 1786361850289 ON_DEMAND SUCCESSFUL read back first. Execution deviation: `submissions` is owned by alledrops_app and `submission_access_log` by postgres, so no single role can run the file — ran as postgres in one transaction with SET ROLE alledrops_app for the table, RESET ROLE for the ALTER.
 - [Phase 04]: 04-19: **UAT defect #6** — the progress counter read "Step 2 of 9" on the intro screens then switched noun AND denominator to "Part 1 of 7" for the quiz parts, and omitted consent entirely despite D-09 making it mandatory. Replaced with one continuous counter (`quizFlowProgress` in schema.ts, pure and unit-tested), Step 1..N+3 where N = QUIZ_PARTS.length. Sixth defect on this project found by a human clicking and missed by a fully green suite.
 - [Phase 04]: 04-19: A local `alledrops_dev` Postgres role was created for development so local work never touches the credential Fly runs on. Root cause of the long-standing local `28P01`: **port 5433 is another project's Docker container**, not the Cloud SQL Auth Proxy, which was never running. Session 33's "stale local DATABASE_URL password" is retracted in HANDOFF.md. Setup documented in `docs/local-dev-database.md` and `.env.example` (both new).
+- [Phase 06]: 06-01: D-02 CI fixture is ATC-region excerpt only (two product-form__submit + payment_button); no sibling-theme path in CI
+- [Phase 06]: 06-01: No shopify theme push (D-03); Sense excerpt vendored for selector contract only
 
 ### Pending Todos
 
@@ -519,9 +523,9 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-12T11:30:00.000Z
-Stopped at: Phase 6 plans written (06-01..06-06)
-Resume file: .planning/phases/06-purchase-prerequisites/06-01-PLAN.md
+Last session: 2026-08-12T11:53:48.517Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: .planning/phases/06-purchase-prerequisites/06-02-PLAN.md
 
 **Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
 mid-plan. Task 1 (`e246391`, bundle rebuild) was committed inside worktree

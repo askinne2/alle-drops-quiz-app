@@ -595,7 +595,7 @@ shipping — and a returning patient sees the credit for work already done
 Plans:
 **Wave 1**
 
-- [ ] 06-01-PLAN.md — D-02 Sense ATC selector CI fixture + contract (fail-open compensating control)
+- [x] 06-01-PLAN.md — D-02 Sense ATC selector CI fixture + contract (fail-open compensating control)
 - [ ] 06-02-PLAN.md — Wave 0 human gates: D-04 templateSuffix, SHOP-05 admin inventory, SHOP-01 Liquid render
 - [ ] 06-04-PLAN.md — Checkout UI extension order-review-notice (SHOP-04 dual thank-you/order-status)
 
