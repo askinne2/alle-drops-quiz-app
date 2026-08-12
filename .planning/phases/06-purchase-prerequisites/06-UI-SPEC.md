@@ -1,10 +1,11 @@
 ---
 phase: 6
 slug: purchase-prerequisites
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-08-12
+reviewed_at: 2026-08-12
 ---
 
 # Phase 6 — UI Design Contract: Purchase Prerequisites & Returning Patients
@@ -33,6 +34,10 @@ created: 2026-08-12
 | Font | Sense theme stack — `var(--font-body-family)` / `var(--font-heading-family)`. Checkout extension uses Shopify checkout font. No remote fonts. |
 
 **Source:** `06-RESEARCH.md` Standard Stack; Phase 5 UI-SPEC posture; Sense `buy-buttons.liquid`.
+
+**Focal point (PDP):** The “Before you order” prerequisites panel — then the disabled Sense add-to-cart button beneath it. Do not compete with hero media or price for first attention once the panel is in the purchase column.
+
+**Focal point (thank-you / order-status):** The single clinical-review `Banner` / notice block. No secondary cards or upsells from this extension.
 
 ---
 
@@ -235,14 +240,14 @@ Per `DEC-no-approval-promise-copy` and `06-RESEARCH.md` Pitfall 6 — **do not s
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS (FLAG addressed — explicit PDP + thank-you focal points added)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-08-12
 
 ---
 
