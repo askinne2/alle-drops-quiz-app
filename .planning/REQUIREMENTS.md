@@ -176,10 +176,20 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 
 ### Purchase Prerequisites & Returning Patients
 
-- [ ] **SHOP-01**: Metafield definitions exist for the `alledrops` customer namespace and Liquid
+- [~] **SHOP-01**: Metafield definitions exist for the `alledrops` customer namespace and Liquid
   readability of `customer.metafields.alledrops.quiz_count` / `last_completed_at` is confirmed — or
   the spike documents that it is not readable and names the fallback
   (`REQ-customer-metafield-definitions`) — **spike, gates SHOP-02 and SHOP-03**
+
+  > **Spike run 2026-08-12 — verdict: no fallback needed, SHOP-02/SHOP-03 unblocked.** Full record:
+  > `.planning/phases/06-purchase-prerequisites/06-SPIKE-SHOP-01.md`. Both metafields existed as
+  > **unstructured** (no definition) on 4 customers, which is exactly why Liquid could not see them
+  > while the Admin API could. Both definitions were created in the Shopify admin — `quiz_count`
+  > (Integer) and `last_completed_at` (Date and time), **Storefront API access ON**, Customer Account
+  > API **no access**, **"Filter or group data in Analytics" OFF and it must stay off**. One step is
+  > still owed before this closes: that Liquid actually *renders* the value for a logged-in customer
+  > was never measured — it is assigned to SHOP-02's first implementation step, verified on served
+  > bytes.
 - [ ] **SHOP-02**: A returning logged-in patient who has completed the quiz sees that completion
   state at the moment of purchase, not only on their customer profile page
   (`REQ-returning-patient-completion-surface`)
@@ -208,13 +218,35 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 - [ ] **LAUNCH-01**: No Klaviyo, Meta Pixel, Google Analytics, or other tracker loads on any
   PHI-collecting page, verified in the browser on the live store — theme/Shopify-app level, zero
   references in this repo (`CON-no-third-party-trackers-on-phi-pages`) — owner: Andrew
-- [ ] **LAUNCH-02**: The Test Mode button and container do not render on the production storefront
+- [x] **LAUNCH-02**: The Test Mode button and container do not render on the production storefront
   page (UX-AUDIT CONTENT-2) — owner: Andrew, one line in the theme customizer
-- [ ] **LAUNCH-03**: No placeholder text remains on any patient-facing clinical surface — the app
-  block's Medical Disclaimer Text field (currently "This text needs changed.", toggle off) and the
-  `[PENDING — Treatment policy page language]` marker at `ConsentStep.tsx:56` — and
-  `CONSENT_VERSION` is bumped from `draft-2026-05-09` to `v1.0-YYYY-MM-DD`
+
+  > **Satisfied — confirmed 2026-08-12.** The iframe URL on the live storefront carries `test=0`,
+  > and `enable_test_mode` has `"default": false` in
+  > `extensions/quiz-block/blocks/symptom-quiz.liquid` (schema, verified in source), which
+  > `symptom-quiz.liquid:54` maps to the `_test_flag = '0'` branch. Nothing needed doing; the
+  > requirement was recorded as Pending before anyone looked. Re-confirm on served bytes at go-live
+  > alongside the other launch checks rather than trusting this note.
+
+- [ ] **LAUNCH-03**: No placeholder text remains on any patient-facing clinical surface, and
+  `CONSENT_VERSION` is bumped to `v1.0-YYYY-MM-DD` after counsel approval
   (`REQ-consent-and-disclaimer-finalization`, UX-AUDIT CONTENT-1) — owner: William / counsel
+
+  > **Text corrected 2026-08-12 — this requirement previously described three things that are no
+  > longer true.** Corrections, with what was actually checked:
+  >
+  > - ~~"the app block's Medical Disclaimer Text field (currently `This text needs changed.`, toggle
+  >   off)"~~ — the live page renders the real clinical disclaimer. Observed in the browser on the
+  >   live storefront 2026-08-12; **not** re-verified on served bytes here, so treat it as
+  >   one-observation evidence, not a closed check.
+  > - ~~"the `[PENDING — Treatment policy page language]` marker at `ConsentStep.tsx:56`"~~ — the
+  >   marker does not exist. It was removed in Phase 4 plan 04-03 by D-11's section-4 interim
+  >   rewrite. Verified in source: zero `PENDING` matches anywhere in `app/components/quiz/`.
+  > - ~~"`CONSENT_VERSION` is bumped **from `draft-2026-05-09`**"~~ — it is already at
+  >   `draft-2026-08-09` (`app/lib/consent-version.ts`), bumped by the same 04-03 rewrite.
+  >
+  > **What actually remains open is unchanged:** counsel has not approved the consent copy, so the
+  > version string is still a `draft-`, not a `v1.0-`. Status stays **Blocked (William / counsel)**.
 - [ ] **LAUNCH-04**: One live quiz submission has been confirmed written to and read back from
   production Cloud SQL, and `DELETE FROM submissions WHERE patient_email = 'diag+preflight@example.com';`
   has been executed (`intel/context.md#open-verification-items`) — owner: Andrew; note this writes a
@@ -305,7 +337,7 @@ Acknowledged, not in the v1.0 roadmap.
 | SCORE-01 | Phase 5 | Complete |
 | SCORE-02 | Phase 5 | Complete (unblocked 2026-08-11 — provisional default) |
 | SCORE-03 | Phase 5 | Complete (unblocked 2026-08-11 — provisional colour stops shipped as a code constant, `score-scale.ts:28-36`; William confirms the three numbers before go-live) |
-| SHOP-01 | Phase 6 | Pending |
+| SHOP-01 | Phase 6 | Spike answered 2026-08-12 — definitions created, no fallback needed, SHOP-02/03 unblocked. Not Complete: the Liquid render is unproven and owed to SHOP-02. See `06-SPIKE-SHOP-01.md` |
 | SHOP-02 | Phase 6 | Pending |
 | SHOP-03 | Phase 6 | Pending |
 | SHOP-04 | Phase 6 | Pending |
@@ -314,7 +346,7 @@ Acknowledged, not in the v1.0 roadmap.
 | TELE-01 | Phase 7 | Pending |
 | TELE-02 | Phase 7 | Pending |
 | LAUNCH-01 | Phase 8 | Pending |
-| LAUNCH-02 | Phase 8 | Pending |
+| LAUNCH-02 | Phase 8 | Satisfied (2026-08-12 — live iframe URL carries `test=0`; `enable_test_mode` defaults false in the block schema). Re-confirm on served bytes at go-live |
 | LAUNCH-03 | Phase 8 | Blocked (William / counsel) |
 | LAUNCH-04 | Phase 8 | Pending |
 | LAUNCH-05 | Phase 8 | Blocked (William / counsel) |
