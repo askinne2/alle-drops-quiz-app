@@ -599,7 +599,7 @@ Plans:
 - [ ] 06-02-PLAN.md — Wave 0 human gates: D-04 templateSuffix, SHOP-05 admin inventory, SHOP-01 Liquid render
 - [ ] 06-04-PLAN.md — Checkout UI extension order-review-notice (SHOP-04 dual thank-you/order-status)
 
-**Wave 2** *(06-03 depends on 06-01; 06-05 depends on 06-02)*
+**Wave 2** *(06-03 depends on 06-01 and 06-02; 06-05 depends on 06-02)*
 
 - [ ] 06-03-PLAN.md — Theme app block purchase-prerequisites (SHOP-02/03 Liquid + fail-open gate JS)
 - [ ] 06-05-PLAN.md — SHOP-05 copy draft + refund SPEC; SHOP-06 fulfillment process draft
