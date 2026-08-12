@@ -49,9 +49,14 @@ These produce dead code or duplicated hardcodes if violated:
 3. **Phase 1 ships alone.** It touches only already-shipped behavior and must deploy this week
    without waiting on any other phase.
 
-4. **SHOP-01 (metafield readability spike) before SHOP-02 and SHOP-03.** No metafield definition
-   exists anywhere in the repo, so whether `customer.metafields.alledrops.quiz_count` is readable
-   from Liquid is unverified — and the product-page prerequisite checkboxes may depend on it.
+4. ~~**SHOP-01 (metafield readability spike) before SHOP-02 and SHOP-03.**~~ **RESOLVED 2026-08-12 —
+   constraint discharged.** The spike ran; verdict was no fallback needed. Both metafields existed as
+   *unstructured* (no definition), which is why Liquid could not read them; definitions were created
+   in the Shopify admin with Storefront API access on. SHOP-02 and SHOP-03 are unblocked and may be
+   designed on Liquid reads. Full record:
+   `.planning/phases/06-purchase-prerequisites/06-SPIKE-SHOP-01.md`. One measurement is owed — that
+   Liquid actually *renders* the value for a logged-in customer — and is assigned to SHOP-02's first
+   implementation step, not held as a gate.
 
 5. **TELE-01 before TELE-02.** `/pages/consult` is a 404 today; the telehealth branch has nothing to
    route to until it exists.
@@ -570,6 +575,8 @@ shipping — and a returning patient sees the credit for work already done
 
   1. Completion metafields are readable from Liquid on the storefront — or the spike has documented
      that they are not and named the fallback design
+     — **spike done 2026-08-12, resolved to the first branch; definitions created, no fallback
+     needed. The render itself is still owed as a measurement (see `06-SPIKE-SHOP-01.md`).**
 
   2. A returning logged-in patient who has completed the quiz sees that state on the product page,
      not only on their customer profile
@@ -586,8 +593,11 @@ shipping — and a returning patient sees the credit for work already done
 **Plans**: TBD
 **UI hint**: yes
 **Notes**: ~3–5 days; the largest phase. Two new extensions — a theme app extension block targeting
-the product template, and this repo's first checkout UI extension. **Start with SHOP-01 as a spike**
-and let its result shape SHOP-02 and SHOP-03. Gating is UI-level only and expected to be bypassable
+the product template, and this repo's first checkout UI extension. ~~**Start with SHOP-01 as a
+spike** and let its result shape SHOP-02 and SHOP-03.~~ **The spike ran 2026-08-12 and came back
+green — start with SHOP-02 design instead**, carrying the one owed measurement (does Liquid actually
+render the metafield for a logged-in customer) as SHOP-02's first implementation step. See
+`06-SPIKE-SHOP-01.md`. Gating is UI-level only and expected to be bypassable
 — that is the locked decision, not a gap. Do not propose account flags, Shopify Functions,
 real-time blocking, or an `orders/create` backstop; all were removed by
 `DEC-purchase-gating-is-honor-system`, and the app's `read_customers,write_customers` scopes plus

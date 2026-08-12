@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 5 shipped and deployed; Phase 5.1 removed; Phase 6 not started
-last_updated: "2026-08-12T09:58:00.000Z"
-last_activity: 2026-08-12 -- Phase 5.1 removed, scale bar aligned to clinical brackets, deployed
+stopped_at: SHOP-01 spike recorded; Phase 6 ready to discuss (no CONTEXT, no plans)
+last_updated: "2026-08-12T00:00:00.000Z"
+last_activity: 2026-08-12 -- SHOP-01 spike result recorded, LAUNCH-02 marked satisfied, LAUNCH-03 text corrected
 progress:
   total_phases: 10
   completed_phases: 7
@@ -29,12 +29,13 @@ LAUNCH-01 / LAUNCH-02 run in parallel and are older than Phase 6 — see "Open N
 
 Phase: 5 (Preliminary Score Page) — COMPLETE, shipped and deployed
 Plan: 6 of 6 complete
-Status: Between phases. Phase 6 has no CONTEXT, no plans, nothing started.
-Last activity: 2026-08-12 -- Phase 5.1 removed, scale bar aligned to clinical brackets, deployed
+Status: Between phases. Phase 6 has no CONTEXT, no plans, nothing started — but its gating spike
+(SHOP-01) is answered, so `/gsd:discuss-phase 6` can be about SHOP-02/SHOP-03's real design.
+Last activity: 2026-08-12 -- SHOP-01 spike result recorded in `.planning/`
 
-**Branch:** `main` @ `196720e`. Nothing outstanding. PRs #25 and #26 merged and deployed on
-2026-08-12. `HANDOFF.md` carries uncommitted edits that predate the 2026-08-12 session and were
-deliberately not touched by it.
+**Branch:** `main` @ `e687cfd`. PRs #25, #26, #27 and #28 all merged. Phase 5 deployed 2026-08-12.
+`HANDOFF.md` is committed and current (PR #28) — read it alongside this file, it carries the
+2026-08-12 session's method notes and two do-not-"fix" warnings.
 
 **Gates at ship (2026-08-12):** 734 tests / 49 files green, typecheck exit 0, theme bundle rebuilt
 in-commit and byte-identical to the bytes Fly serves (203,797 B measured on the live
@@ -50,17 +51,29 @@ in-commit and byte-identical to the bytes Fly serves (203,797 B measured on the 
    its band. William's reply may change the arrangement again. Applying whatever he says is an edit
    to the `zones` array plus a deploy — no phase, no migration.
 
-2. **LAUNCH-01 and LAUNCH-02 are live patient-facing exposures and still Pending.** Roadmap
-   sequencing constraint 6 says start them immediately; they have been open since the roadmap was
-   written. LAUNCH-02 (Test Mode button) was demonstrated live on 2026-08-12 via
-   `/quiz-embed?test=1` on the deployed app — whether the storefront exposes it depends on the
-   `enable_test_mode` theme-block toggle, which has not been checked. Both are Andrew-owned and
-   theme-level, not code.
+2. **LAUNCH-02 is SATISFIED (2026-08-12); LAUNCH-01 is still open.** The `enable_test_mode` toggle
+   question is settled: the live storefront iframe URL carries `test=0`, and the block schema in
+   `extensions/quiz-block/blocks/symptom-quiz.liquid` has `"default": false`, which line 54 maps to
+   the `_test_flag = '0'` branch. Nothing needed doing — it was recorded Pending before anyone
+   looked. Re-confirm on served bytes at go-live rather than trusting this note. LAUNCH-01 remains
+   Pending; roadmap sequencing constraint 6 still says start it immediately. Both are Andrew-owned
+   and theme-level, not code.
 
-3. **Phase 6 starts with SHOP-01 as a spike**, not as an implementation plan. No metafield
-   definition exists anywhere in the repo, so Liquid readability of
-   `customer.metafields.alledrops.quiz_count` is unverified — and SHOP-02 / SHOP-03 both depend on
-   the answer.
+3. **SHOP-01 is ANSWERED — the Phase 6 gating spike is cleared.** Run 2026-08-12; full record at
+   `.planning/phases/06-purchase-prerequisites/06-SPIKE-SHOP-01.md`. Verdict: **no fallback design
+   needed**, so SHOP-02 and SHOP-03 can be designed on Liquid reads. Both metafields existed as
+   *unstructured* (no definition) on 4 customers — which is exactly why Liquid could not see them
+   while the Admin API could; conflating those two reads is why this sat unverified. Definitions were
+   created in the Shopify admin: `quiz_count` (Integer) and `last_completed_at` (Date and time),
+   **Storefront API access ON**, Customer Account API no access, **"Filter or group data in
+   Analytics" OFF — keep it off**, because segmenting on a health-adjacent completion flag inside a
+   system with no BAA is what turns an approved non-PHI field into a problem.
+
+   **One step is owed and deliberately not claimed:** that Liquid actually *renders*
+   `customer.metafields.alledrops.quiz_count` for a logged-in customer was never measured. Creating
+   the definition is the documented prerequisite, not proof of behavior. Assigned forward to SHOP-02's
+   first implementation step, to be verified on served bytes. Phase 6 no longer opens with a spike —
+   it opens with SHOP-02 design plus that one measurement.
 
 4. **04-19 is the one outstanding plan** (55 of 56 complete). It is the Phase 4 human-UAT plan,
    `autonomous: false`, blocked on the Fly.io BAA, the production GCP cutover, and William. Not
