@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
+status: ready_to_plan
 stopped_at: Phase 6 UI-SPEC approved
 last_updated: "2026-08-12T11:10:00.016Z"
-last_activity: 2026-08-12 -- Phase 6 CONTEXT.md written; SHOP-01 spike recorded
+last_activity: 2026-08-12 -- Phase 6 UI-SPEC approved; next /gsd:plan-phase 6
 progress:
   total_phases: 10
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 56
   completed_plans: 55
-  percent: 60
+  percent: 70
 ---
 
 # Project State
@@ -22,23 +22,23 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 6 — Purchase Prerequisites & Returning Patients. CONTEXT.md gathered
-2026-08-12 (11 decisions, D-01..D-11); next step is `/gsd:plan-phase 6`. Phase 8's LAUNCH-01 runs in
+**Current focus:** Phase 6 — Purchase Prerequisites & Returning Patients. CONTEXT + RESEARCH +
+UI-SPEC approved 2026-08-12; next step is `/gsd:plan-phase 6`. Phase 8's LAUNCH-01 runs in
 parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 6 (Purchase Prerequisites & Returning Patients) — CONTEXT gathered, no plans yet
+Phase: 6 (Purchase Prerequisites & Returning Patients) — UI-SPEC approved, no plans yet
 Plan: 0 of ? — next step is `/gsd:plan-phase 6`
-Status: Phase 5 complete (6 of 6 plans, shipped and deployed). Phase 6 has CONTEXT.md with 11
-decisions and its gating spike answered; nothing built.
-Last activity: 2026-08-12 -- Phase 6 CONTEXT.md written; SHOP-01 spike recorded
+Status: Phase 6 UI-SPEC approved (CONTEXT + RESEARCH + VALIDATION ready); nothing built.
+Last activity: 2026-08-12 -- Phase 6 UI-SPEC approved; next /gsd:plan-phase 6
 
 **Keep the `Status:` value above on one logical line when editing.** `gsd-sdk query
 state.record-session` scrapes this line into the frontmatter `status:` key; a wrapped line got
 half a sentence written into `status:` on 2026-08-12 and silently reset `completed_phases` 7 → 6
 and `percent` 70 → 60. Both were restored by hand. Re-check the frontmatter after any
-`state.record-session` call.
+`state.record-session` call. **2026-08-12 again:** record-session set `status: completed` and
+reset `completed_phases` 7→6 / `percent` 70→60 after UI-SPEC approval — restored by hand.
 
 **Branch:** `main` @ `e687cfd`. PRs #25, #26, #27 and #28 all merged. Phase 5 deployed 2026-08-12.
 `HANDOFF.md` is committed and current (PR #28) — read it alongside this file, it carries the
