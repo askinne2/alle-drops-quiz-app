@@ -77,7 +77,7 @@ Each task was committed atomically:
 2. **Task 2: Shared ReviewNotice plus thin thank-you and order-status entries** - `a938a0a` (feat)
 3. **Task 3: Green order-review-notice extension contract** - `dabe0e8` (test)
 
-**Plan metadata:** _(see final docs commit on this plan)_
+**Plan metadata:** `eef6dda` (docs: complete plan)
 
 ## Self-Check: PASSED
 
