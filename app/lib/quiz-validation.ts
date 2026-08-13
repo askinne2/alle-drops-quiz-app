@@ -23,7 +23,7 @@ import { MAX_FILES } from "./storage/upload-validation";
 const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type QuizState = "tennessee" | "texas";
-export type ScoreBracket = "0-2" | "3-6" | "7+";
+export type ScoreBracket = "0-2" | "3-8" | "9+";
 
 export interface QuizSubmissionData {
   state: QuizState;
@@ -115,9 +115,13 @@ export function validateQuizData(data: unknown): ValidationResult {
     return { valid: false, error: "quiz_score must be a number" };
   }
 
-  const brackets: ScoreBracket[] = ["0-2", "3-6", "7+"];
+  // Deliberately narrower than migration 005's widened CHECK constraint: this app now produces
+  // only these three labels, so the write path never accepts the two retired pre-2026-08-13
+  // labels. The CHECK is wide only so historical rows keep validating — see
+  // .planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md (D-52-03).
+  const brackets: ScoreBracket[] = ["0-2", "3-8", "9+"];
   if (!quizData.score_bracket || !brackets.includes(quizData.score_bracket as ScoreBracket)) {
-    return { valid: false, error: "score_bracket must be one of: 0-2, 3-6, 7+" };
+    return { valid: false, error: "score_bracket must be one of: 0-2, 3-8, 9+" };
   }
 
   if (!quizData.answers || typeof quizData.answers !== "object" || Array.isArray(quizData.answers)) {
