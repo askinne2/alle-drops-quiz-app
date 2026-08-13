@@ -614,11 +614,33 @@ two unrelated phases indistinguishable in the planning record. `5.1` stays burne
 **Plans**: 5 plans / 3 waves
 
 Plans:
-- [ ] 05.2-01-PLAN.md — Move the brackets to 0–2 / 3–8 / 9+ in scoring/types/scale, ship William's verbatim copy, drop the `/60` denominator, rebuild the theme bundle in-commit (wave 1)
-- [ ] 05.2-02-PLAN.md — Carry the new labels through API validation, the clinical PDF, the admin table and dashboard, the E2E script, and every test fixture (wave 2)
-- [ ] 05.2-03-PLAN.md — Author `migrations/005_widen_score_bracket_check.sql` alone, zero DDL executed, guarded by a contract test (wave 1)
-- [ ] 05.2-04-PLAN.md — Named Cloud SQL backup, human-gated DDL execution, constraint proven on query output (wave 2, `autonomous: false`)
-- [ ] 05.2-05-PLAN.md — Merge, deploy, verify on served bytes, blocking human browser pass at 375px, close SCORE-04/05/06 (wave 3, `autonomous: false`)
+**Wave 1**
+
+- [ ] 05.2-01-PLAN.md — Move the brackets to 0–2 / 3–8 / 9+ in scoring/types/scale, ship William's verbatim copy, drop the `/60` denominator, rebuild the theme bundle in-commit
+- [ ] 05.2-03-PLAN.md — Author `migrations/005_widen_score_bracket_check.sql` alone, zero DDL executed, guarded by a contract test
+
+**Wave 2** *(05.2-02 depends on 05.2-01; 05.2-04 depends on 05.2-03)*
+
+- [ ] 05.2-02-PLAN.md — Carry the new labels through API validation, the clinical PDF, the admin table and dashboard, the E2E script, and every test fixture
+- [ ] 05.2-04-PLAN.md — Named Cloud SQL backup, human-gated DDL execution, constraint proven on query output (`autonomous: false`)
+
+**Wave 3** *(blocked on 05.2-01, 05.2-02, 05.2-04)*
+
+- [ ] 05.2-05-PLAN.md — Merge, deploy, verify on served bytes, blocking human browser pass at 375px, close SCORE-04/05/06 (`autonomous: false`)
+
+**Cross-cutting constraints:**
+
+- **Branching is manual and is an operator precondition.** `.planning/config.json` sets no
+  `git.branching_strategy`, so `/gsd:execute-phase` does not cut the branch. Be on
+  `phase-5.2-clinical-bracket-revision`, cut from `main`, *before* invoking it — not `main`, and not
+  `thread-phase-6-purchase-prerequisites`, which carries in-flight Phase 6 Wave 1 work. Worktree
+  executors legitimately commit on `worktree-agent-*`; that is expected and must not be "fixed".
+- **DDL runs before the deploy** (05.2-04 before 05.2-05), inverting Phase 3's order deliberately.
+  Widening the CHECK is additive, so live code writing `3-6` / `7+` stays valid. Deploying first
+  would put code writing `9+` against a database that rejects it, losing a completed clinical intake
+  at INSERT.
+- **`3-6` is unusable as a served-bytes or bundle needle.** `ConsentStep.tsx` ships the clinical
+  phrase `3-6 months`, so an absence gate on it can never pass and a presence gate passes vacuously.
 
 **UI hint**: yes
 
@@ -890,7 +912,7 @@ exposures today.
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
 | 4. Mandatory Allergy Testing | 19/19 | Complete   | 2026-08-10 |
 | 5. Preliminary Score Page | 6/6 | Complete   | 2026-08-11 |
-| 5.2 Clinical Bracket Revision *(INSERTED)* | 0/TBD | Not planned | - |
+| 5.2 Clinical Bracket Revision *(INSERTED)* | 0/5 | Planned | - |
 | 6. Purchase Prerequisites | 2/6 | Executing | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |
 | 8. Launch Readiness | 0/TBD | Not started | - |

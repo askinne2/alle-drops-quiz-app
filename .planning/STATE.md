@@ -65,6 +65,15 @@ not just the field it advertises, and diff the block afterward. `state.patch` wa
 run for the phase-insert pointer update (the insert-phase workflow calls for it) — the Current
 Position pointer legitimately tracks in-flight 06-02, and no field named in that workflow exists in
 this STATE.md anyway, so the call would have matched nothing while risking another rewrite.
+**2026-08-13, seventh occurrence:** `state.planned-phase` (reporting `updated: ["Status","Last
+Activity"]` — two fields) rewrote `progress:` as well: `completed_phases` 7→6, `completed_plans`
+57→**58**, `percent` 92→**55**. It correctly raised `total_plans` 62→67 for Phase 5.2's five plans.
+Restored to 7 / 57, and `percent` recomputed to **85** (57 of 67, keeping the plan-based convention
+the 92 figure used). It also overwrote `Status:` with a bare "Ready to execute", which was wrong
+while Phase 6 Wave 1 is mid-flight — rewritten to name both phases. **The pattern is now confirmed
+across four distinct handlers** (`record-session`, `planned-phase`, `update-progress`/`advance-plan`,
+`add-roadmap-evolution`): the reported `updated` list does not bound what the handler writes. Snapshot
+`sed -n '9,14p' .planning/STATE.md` before every `gsd-sdk query state.*` call and diff after.
 
 **Branch:** `main` @ `e687cfd`. PRs #25, #26, #27 and #28 all merged. Phase 5 deployed 2026-08-12.
 `HANDOFF.md` is committed and current (PR #28) — read it alongside this file, it carries the
@@ -76,13 +85,27 @@ in-commit and byte-identical to the bytes Fly serves (203,797 B measured on the 
 
 ### Open Now (read before picking up Phase 6)
 
-1. **Provisional colour stops are unconfirmed.** `PROVISIONAL_SCORE_SCALE` in
-   `app/lib/quiz/score-scale.ts` still carries `isProvisional: true`. Andrew emailed William on
-   2026-08-12 asking about the colour stops, but that email describes the **previous** design (a
-   linear 0–60 bar with independent 20/40/60 stops). The deployed page is already a version past it:
-   colour now tracks the clinical brackets 1:1, three equal-width bands, marker interpolated within
-   its band. William's reply may change the arrangement again. Applying whatever he says is an edit
-   to the `zones` array plus a deploy — no phase, no migration.
+1. ~~**Provisional colour stops are unconfirmed.**~~ **ANSWERED 2026-08-13 — and the last sentence
+   below was wrong.** `PROVISIONAL_SCORE_SCALE` in `app/lib/quiz/score-scale.ts` still carries
+   `isProvisional: true`. Andrew emailed William on 2026-08-12 asking about the colour stops, but that
+   email describes the **previous** design (a linear 0–60 bar with independent 20/40/60 stops). The
+   deployed page is already a version past it: colour now tracks the clinical brackets 1:1, three
+   equal-width bands, marker interpolated within its band. ~~Applying whatever he says is an edit to
+   the `zones` array plus a deploy — no phase, no migration.~~
+
+   William replied 2026-08-13 (verbatim at
+   `.planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md`). He
+   **approved the shipped arrangement** — brackets driving colour 1:1, equal-width bands, and
+   explicitly accepted that most patients render red. So the colour question costs nothing and
+   `isProvisional` simply comes off (note it is typed as the literal `true`, so that is a type
+   change).
+
+   **But he also moved the clinical brackets** — `3–6` → `3–8`, `7+` → `9+` — added replacement
+   recommendation copy for all three, and removed the `/ 60` denominator from the patient view. That
+   *is* a phase and it *does* need a migration: `migrations/001_create_submissions.sql:24` constrains
+   `score_bracket` to the old labels and fails closed on `9+`. Phase 5.2 carries it, planned
+   2026-08-13. The "no phase, no migration" prediction rested on the brackets being fixed — true of
+   us, never of the medical director.
 
 2. **LAUNCH-02 is SATISFIED (2026-08-12); LAUNCH-01 is still open.** The `enable_test_mode` toggle
    question is settled: the live storefront iframe URL carries `test=0`, and the block schema in
