@@ -47,7 +47,7 @@ afterEach(() => {
 // none may be introduced into this fixture — see 05-04-PLAN.md's threat T-5-21.
 const BASE_PROPS: ResultsDisplayProps = {
   score: 7,
-  scoreBracket: "7+",
+  scoreBracket: "9+",
   patientState: "tennessee",
   symptomProfileId: "AOD_TEST_0001",
   testingStatus: "had_testing",
@@ -198,8 +198,8 @@ describe("SCORE-03 zone rendering and proportional widths", () => {
   the number in the circle. It must not.
 */
 describe("colour tracks the clinical brackets, computed from score (load-bearing)", () => {
-  it("score 7 with bracket 7+ shows the HIGH zone as current, alongside the 7+ recommendation", () => {
-    const { container } = renderResults({ score: 7, scoreBracket: "7+" });
+  it("score 9 with bracket 9+ shows the HIGH zone as current, alongside the 9+ recommendation", () => {
+    const { container } = renderResults({ score: 9, scoreBracket: "9+" });
     const { currentLegendItem } = getScaleBarParts(container);
     expect(currentLegendItem?.textContent).toBe("High");
     expect(
@@ -207,11 +207,11 @@ describe("colour tracks the clinical brackets, computed from score (load-bearing
     ).toBeTruthy();
   });
 
-  it("each bracket's boundary score lands in its own zone: 2 -> Low, 6 -> Moderate, 7 -> High", () => {
+  it("each bracket's boundary score lands in its own zone: 2 -> Low, 8 -> Moderate, 9 -> High", () => {
     const cases = [
       { score: 2, zone: "Low" },
-      { score: 6, zone: "Moderate" },
-      { score: 7, zone: "High" },
+      { score: 8, zone: "Moderate" },
+      { score: 9, zone: "High" },
     ] as const;
 
     for (const { score, zone } of cases) {
@@ -224,7 +224,7 @@ describe("colour tracks the clinical brackets, computed from score (load-bearing
   it("the zone follows `score`, not the `scoreBracket` prop, when the two are made to disagree", () => {
     // Deliberately inconsistent input: a low score carrying a high bracket. The bar must describe
     // the number the patient can see in the circle.
-    const { container } = renderResults({ score: 1, scoreBracket: "7+" });
+    const { container } = renderResults({ score: 1, scoreBracket: "9+" });
     expect(getScaleBarParts(container).currentLegendItem?.textContent).toBe("Low");
     // The recommendation still follows the prop — the two are separately sourced, which is the
     // whole point of the assertion.
@@ -242,10 +242,10 @@ describe("within-zone interpolation (what replaced D-05's protection)", () => {
     return Number.parseFloat(left);
   }
 
-  it("spreads the 7+ bracket across its whole third instead of pinning every 7+ patient to one spot", () => {
-    const atThreshold = markerPercent({ score: 7, scoreBracket: "7+" });
-    const middling = markerPercent({ score: 33, scoreBracket: "7+" });
-    const ceiling = markerPercent({ score: 60, scoreBracket: "7+" });
+  it("spreads the 9+ bracket across its whole third instead of pinning every 9+ patient to one spot", () => {
+    const atThreshold = markerPercent({ score: 9, scoreBracket: "9+" });
+    const middling = markerPercent({ score: 33, scoreBracket: "9+" });
+    const ceiling = markerPercent({ score: 60, scoreBracket: "9+" });
 
     // All three sit inside the final third of the track...
     for (const p of [atThreshold, middling, ceiling]) {
@@ -260,8 +260,8 @@ describe("within-zone interpolation (what replaced D-05's protection)", () => {
     expect(ceiling - atThreshold).toBeGreaterThan(30);
   });
 
-  it("a score at the very bottom of the 7+ bracket sits at the left edge of the red third, not deep inside it", () => {
-    const atThreshold = markerPercent({ score: 7, scoreBracket: "7+" });
+  it("a score at the very bottom of the 9+ bracket sits at the left edge of the red third, not deep inside it", () => {
+    const atThreshold = markerPercent({ score: 9, scoreBracket: "9+" });
     // Within two percentage points of the boundary at 66.67% — visually "just barely into red",
     // which is the outcome D-05 wanted and this rendering preserves.
     expect(atThreshold).toBeLessThan((2 / 3) * 100 + 2);
@@ -269,16 +269,17 @@ describe("within-zone interpolation (what replaced D-05's protection)", () => {
 });
 
 describe("UX — circle caption and two-axis bridge", () => {
-  // CHANGED 2026-08-12: score 7 now reads "High symptom burden", because the zones are the
-  // clinical brackets. Andrew was shown this exact consequence before choosing it — a 7-of-60
-  // patient reads "High symptom burden" directly under their number — and accepted it. Score 1 is
-  // used for the low case so the assertion still proves the caption tracks the score.
+  // CHANGED 2026-08-12, boundary revised 2026-08-13: score 9 now reads "High symptom burden",
+  // because the zones are the clinical brackets. Andrew was shown this exact consequence before
+  // choosing it — a 9-of-60 patient reads "High symptom burden" directly under their number — and
+  // accepted it. Score 1 is used for the low case so the assertion still proves the caption tracks
+  // the score.
   it('shows "{zone} symptom burden" under the circle, driven by raw score not scoreBracket', () => {
     renderResults({ score: 1, scoreBracket: "0-2" });
     expect(screen.getByText("Low symptom burden")).toBeTruthy();
 
     cleanup();
-    renderResults({ score: 45, scoreBracket: "7+" });
+    renderResults({ score: 45, scoreBracket: "9+" });
     expect(screen.getByText("High symptom burden")).toBeTruthy();
   });
 
@@ -316,21 +317,21 @@ describe("DOM structure — the marker-clipping regression guard", () => {
 describe("Accessibility contract", () => {
   it("the track's aria-label carries score, ceiling, and the current zone's label, and names none of the clinical brackets", () => {
     const scale = getScoreScale();
-    const { container } = renderResults({ score: 7, scoreBracket: "7+" });
+    const { container } = renderResults({ score: 9, scoreBracket: "9+" });
     const { track } = getScaleBarParts(container);
     const label = track.getAttribute("aria-label") ?? "";
 
     expect(label).toContain("Symptom burden position");
-    expect(label).toContain("7");
+    expect(label).toContain("9");
     expect(label).toContain(String(scale.max));
-    // "high" as of 2026-08-12 — score 7 is the bottom of the 7+ bracket and the zones now mirror
-    // the brackets. The assertion that matters is unchanged: the label names the ZONE, and names
-    // no clinical bracket string.
+    // "high" as of 2026-08-12, boundary revised 2026-08-13 — score 9 is the bottom of the 9+
+    // bracket and the zones now mirror the brackets. The assertion that matters is unchanged: the
+    // label names the ZONE, and names no clinical bracket string.
     expect(label.toLowerCase()).toContain("high");
 
     expect(label).not.toContain("0-2");
-    expect(label).not.toContain("3-6");
-    expect(label).not.toContain("7+");
+    expect(label).not.toContain("3-8");
+    expect(label).not.toContain("9+");
   });
 
   it('the "7 of {max}" readout is normal-flow text with no aria-hidden ancestor', () => {
@@ -353,7 +354,7 @@ describe("Edge scores", () => {
 
   it("score at the scale's max renders without throwing, marker left is 100%, and exactly one zone is current", () => {
     const scale = getScoreScale();
-    const { container } = renderResults({ score: scale.max, scoreBracket: "7+" });
+    const { container } = renderResults({ score: scale.max, scoreBracket: "9+" });
     const { marker, currentLegendItem } = getScaleBarParts(container);
     expect(marker.style.left).toBe("100%");
     expect(currentLegendItem).not.toBeNull();
@@ -375,7 +376,7 @@ describe("D-06 two-axis labelling", () => {
     fails.
   */
   it("labels both axes exactly once per bracket, via the bridge sentence", () => {
-    for (const bracket of ["0-2", "3-6", "7+"] as const) {
+    for (const bracket of ["0-2", "3-8", "9+"] as const) {
       const { container, unmount } = renderResults({ scoreBracket: bracket });
       const text = container.textContent ?? "";
 
@@ -394,8 +395,8 @@ describe("D-06 two-axis labelling", () => {
 describe("D-09 verbatim band copy", () => {
   const bandHeadings: Record<ResultsDisplayProps["scoreBracket"], string> = {
     "0-2": "Your Symptoms Appear Mild and Well-Controlled",
-    "3-6": "You May Benefit From Seeing an Allergist",
-    "7+": "Sublingual Immunotherapy May Significantly Help You",
+    "3-8": "You May Benefit From Seeing an Allergist",
+    "9+": "Sublingual Immunotherapy May Significantly Help You",
   };
   const DISCLAIMER_SENTENCE = "This assessment is a clinical symptom screening tool.";
 

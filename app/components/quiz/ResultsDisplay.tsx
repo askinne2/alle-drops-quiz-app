@@ -221,7 +221,7 @@ export function ResultsDisplay({
               </div>
             )}
 
-            {scoreBracket === "3-6" && (
+            {scoreBracket === "3-8" && (
               <div className={styles.quizResults__recommendation}>
                 <div className={styles.quizResults__message}>
                   <h3>You May Benefit From Seeing an Allergist</h3>
@@ -234,7 +234,7 @@ export function ResultsDisplay({
               </div>
             )}
 
-            {scoreBracket === "7+" && (
+            {scoreBracket === "9+" && (
               <div className={styles.quizResults__recommendation}>
                 <div className={styles.quizResults__message}>
                   <h3>Sublingual Immunotherapy May Significantly Help You</h3>

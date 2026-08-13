@@ -1,13 +1,15 @@
 import { type QuizAnswers, type QuizQuestion } from "./types";
 
-// Score bracket thresholds (from AOD medical director)
+// Score bracket thresholds, revised 2026-08-13 by the AOD medical director (William Miller). See
+// .planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md for the
+// verbatim source of this change.
 export const SCORE_BRACKETS = {
   LOW: { min: 0, max: 2 }, // "mild and well-controlled"
-  MID: { min: 3, max: 6 }, // "may benefit from seeing an allergist"
-  HIGH: { min: 7, max: Infinity }, // "would likely benefit from SLIT"
+  MID: { min: 3, max: 8 }, // "may benefit from seeing an allergist prior to starting treatment"
+  HIGH: { min: 9, max: Infinity }, // "would likely benefit from SLIT"
 } as const;
 
-export type ScoreBracket = "0-2" | "3-6" | "7+";
+export type ScoreBracket = "0-2" | "3-8" | "9+";
 
 /**
  * Calculate score for a single question answer.
@@ -128,8 +130,8 @@ export function getMaxScore(questions: QuizQuestion[]): number {
  */
 export function getScoreBracket(score: number): ScoreBracket {
   if (score <= SCORE_BRACKETS.LOW.max) return "0-2";
-  if (score <= SCORE_BRACKETS.MID.max) return "3-6";
-  return "7+";
+  if (score <= SCORE_BRACKETS.MID.max) return "3-8";
+  return "9+";
 }
 
 /**

@@ -39,16 +39,15 @@ const BASE_0_2: QuizAnswers = {
   diagnosed_allergic_condition: "no",
 };
 
-// Base Parts 1-5 answers scoring into the "3-6" bracket (total = 5: 2 from symptoms_nasal + 3
+// Base Parts 1-5 answers scoring into the "3-8" bracket (total = 5: 2 from symptoms_nasal + 3
 // from severity_nasal_congestion).
 const BASE_3_6: QuizAnswers = {
   ...BASE_0_2,
   severity_nasal_congestion: 3,
 };
 
-// Base Parts 1-5 answers scoring into the "7+" bracket (total = 7: 3 from
-// severity_nasal_congestion + 4 from impact_sleep, on top of the 2 from symptoms_nasal already
-// present).
+// Base Parts 1-5 answers scoring into the "9+" bracket (total = 9: 2 from symptoms_nasal + 3 from
+// severity_nasal_congestion + 4 from impact_sleep).
 const BASE_7_PLUS: QuizAnswers = {
   ...BASE_3_6,
   impact_sleep: 4,
@@ -85,20 +84,38 @@ describe("score parity across all three brackets (Success Criterion 5 / D-04)", 
     expect(getScoreBracket(scoreWithout)).toBe("0-2");
   });
 
-  it("3-6 bracket: identical score and bracket with and without medical-history answers", () => {
+  it("3-8 bracket: identical score and bracket with and without medical-history answers", () => {
     const scoreWithout = calculateTotalScore(ALL_SCORED_QUESTIONS, BASE_3_6);
     const scoreWith = calculateTotalScore(ALL_SCORED_QUESTIONS, withMedicalHistory(BASE_3_6));
     expect(scoreWith).toBe(scoreWithout);
     expect(getScoreBracket(scoreWith)).toBe(getScoreBracket(scoreWithout));
-    expect(getScoreBracket(scoreWithout)).toBe("3-6");
+    expect(getScoreBracket(scoreWithout)).toBe("3-8");
   });
 
-  it("7+ bracket: identical score and bracket with and without medical-history answers", () => {
+  it("9+ bracket: identical score and bracket with and without medical-history answers", () => {
     const scoreWithout = calculateTotalScore(ALL_SCORED_QUESTIONS, BASE_7_PLUS);
     const scoreWith = calculateTotalScore(ALL_SCORED_QUESTIONS, withMedicalHistory(BASE_7_PLUS));
     expect(scoreWith).toBe(scoreWithout);
     expect(getScoreBracket(scoreWith)).toBe(getScoreBracket(scoreWithout));
-    expect(getScoreBracket(scoreWithout)).toBe("7+");
+    expect(getScoreBracket(scoreWithout)).toBe("9+");
+  });
+});
+
+describe("Phase 5.2: getScoreBracket boundary at 0-2 / 3-8 / 9+ (05.2-SOURCE-william-2026-08-13.md)", () => {
+  it("classifies the low bracket boundary", () => {
+    expect(getScoreBracket(2)).toBe("0-2");
+    expect(getScoreBracket(3)).toBe("3-8");
+  });
+
+  it("classifies 6, 7 and 8 as the mid bracket — this is the boundary that moved", () => {
+    expect(getScoreBracket(6)).toBe("3-8");
+    expect(getScoreBracket(7)).toBe("3-8");
+    expect(getScoreBracket(8)).toBe("3-8");
+  });
+
+  it("classifies 9 and the scale ceiling as the high bracket", () => {
+    expect(getScoreBracket(9)).toBe("9+");
+    expect(getScoreBracket(60)).toBe("9+");
   });
 });
 
