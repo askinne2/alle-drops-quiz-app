@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 05.2 complete (shipped and approved 2026-08-13)
-last_updated: "2026-08-13T10:01:28.167Z"
-last_activity: 2026-08-13 -- Phase 05.2 complete: merged, deployed, UAT approved
+stopped_at: Merged main into thread-phase-6-purchase-prerequisites; Phase 6 Wave 1 paused at 06-02 Task 3
+last_updated: "2026-08-13T00:00:00.000Z"
+last_activity: 2026-08-13 -- merged Phase 05.2 (main) into the Phase 6 branch; Wave 2 unblocked
 progress:
   total_phases: 11
   completed_phases: 8
   total_plans: 67
-  completed_plans: 60
-  percent: 90
+  completed_plans: 62
+  percent: 93
 ---
 
 # Project State
@@ -22,16 +22,19 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 05.2 — Clinical Bracket Revision
+**Current focus:** Phase 6 — Purchase Prerequisites & Returning Patients
 (6 plans / 3 waves); next step is `/gsd:execute-phase 6`. Phase 8's LAUNCH-01 runs in
 parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 05.2 (Clinical Bracket Revision) — **COMPLETE**, 5/5 plans, shipped 2026-08-13
-Plan: 5 of 5 — SCORE-04, SCORE-05 and SCORE-06 all closed
-Status: Phase 05.2 shipped and approved; next is Phase 6 Wave 2, now unblocked by Sequencing Constraint 7
-Last activity: 2026-08-13 -- Phase 05.2 complete: merged, deployed, UAT approved
+Phase: 6 (Purchase Prerequisites & Returning Patients) — EXECUTING
+Plan: 2 of 6 (next incomplete: 06-02; 06-01 + 06-04 done)
+Status: Executing Phase 6 (06-01 and 06-04 complete); Phase 05.2 shipped and approved 2026-08-13, so Wave 2 is unblocked by Sequencing Constraint 7
+Last activity: 2026-08-13 -- merged main (Phase 05.2) into thread-phase-6-purchase-prerequisites
+
+**Phase 05.2 is COMPLETE** — 5/5 plans, shipped and approved 2026-08-13; SCORE-04, SCORE-05 and
+SCORE-06 all closed. Its record follows as history on this branch, not as in-flight work.
 
 **Phase 05.2 deploy verification (2026-08-13), on served bytes rather than exit codes.** Two deploys:
 the phase itself, then a UAT fix Andrew found by looking at the live page.
@@ -142,16 +145,17 @@ predated the phase branch tip, so the plan files were not on disk at spawn. One 
 correctly and neither rewrote history. Expect this on every wave — it is harness behavior, not a
 defect, and the fix is never to check out the phase branch inside a worktree.
 
-**Read this branch's state as branch-local.** This is
-`phase-5.2-clinical-bracket-revision`, cut from `main`. Phase 6 Wave 1 (`06-01` and `06-04` complete,
-`06-02` Task 3 open) lives on `thread-phase-6-purchase-prerequisites` and is deliberately **not**
-recorded here — the counts above are `main`'s plus Phase 5.2's five new plans. Do not "correct" them
-against the Phase 6 branch; the two reconcile when both merge to `main`.
+**The two branches are now reconciled.** `main` (carrying Phase 5.2) was merged into
+`thread-phase-6-purchase-prerequisites` on 2026-08-13. The counts in the frontmatter above are the
+reconciled figures: 62 of 67 plans (`main`'s 60 plus Phase 6's `06-01` and `06-04`). The earlier
+"read this branch's state as branch-local" caveat, written while 5.2 lived on its own branch, no
+longer applies.
 
-**The two phases do not conflict.** ROADMAP Sequencing Constraint 7 requires 5.2 to land before Phase
+**The two phases did not conflict.** ROADMAP Sequencing Constraint 7 required 5.2 to land before Phase
 6 **Wave 2** only, because `06-03` and `06-05` are the first Phase 6 artifacts that name a bracket
 threshold and the threshold moves 7 → 9. Wave 1 (`06-01`, `06-02`, `06-04`) references no bracket
-boundary and is unaffected.
+boundary and was unaffected. **The constraint is now satisfied — plan `06-03` and `06-05` against
+`9+`, never `7+`.**
 
 **Keep the `Status:` value above on one logical line when editing.** `gsd-sdk query
 state.record-session` scrapes this line into the frontmatter `status:` key; a wrapped line got
@@ -384,6 +388,9 @@ Andrew clicking. The tally is now six. Keep the human browser pass.
 | Phase 04-mandatory-allergy-testing P16 | 55min | 3 tasks | 5 files |
 | Phase 04-mandatory-allergy-testing P17 | 35min | 3 tasks | 6 files |
 | Phase 04-mandatory-allergy-testing P18 | 20min | 2 tasks | 7 files |
+| Phase 06 P01 | 1min | 2 tasks | 2 files |
+| Phase 06 P04 | 3min | 3 tasks | 10 files |
+| Phase 06 P04 | 3min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -469,6 +476,10 @@ Affecting current work:
 - [Phase 04]: 04-19: Migration 004 executed against alledrops_quiz_dev ahead of the deploy, deviating from its own "app code live on Fly first" precondition. That precondition guards Phase 3's DROP-before-code failure mode; 004 is additive in the opposite direction (CREATE TABLE IF NOT EXISTS, two indexes, a CHECK widened 3→4 values), so v50 was unaffected and the database was left ahead of the code rather than behind. Backup 1786361850289 ON_DEMAND SUCCESSFUL read back first. Execution deviation: `submissions` is owned by alledrops_app and `submission_access_log` by postgres, so no single role can run the file — ran as postgres in one transaction with SET ROLE alledrops_app for the table, RESET ROLE for the ALTER.
 - [Phase 04]: 04-19: **UAT defect #6** — the progress counter read "Step 2 of 9" on the intro screens then switched noun AND denominator to "Part 1 of 7" for the quiz parts, and omitted consent entirely despite D-09 making it mandatory. Replaced with one continuous counter (`quizFlowProgress` in schema.ts, pure and unit-tested), Step 1..N+3 where N = QUIZ_PARTS.length. Sixth defect on this project found by a human clicking and missed by a fully green suite.
 - [Phase 04]: 04-19: A local `alledrops_dev` Postgres role was created for development so local work never touches the credential Fly runs on. Root cause of the long-standing local `28P01`: **port 5433 is another project's Docker container**, not the Cloud SQL Auth Proxy, which was never running. Session 33's "stale local DATABASE_URL password" is retracted in HANDOFF.md. Setup documented in `docs/local-dev-database.md` and `.env.example` (both new).
+- [Phase 06]: 06-01: D-02 CI fixture is ATC-region excerpt only (two product-form__submit + payment_button); no sibling-theme path in CI
+- [Phase 06]: 06-01: No shopify theme push (D-03); Sense excerpt vendored for selector contract only
+- [Phase 06]: 06-04: checkout_ui CLI scaffold retargeted to D-09 dual modules; no network_access/api_access
+- [Phase 06]: 06-04: ReviewNotice static UI-SPEC copy only; contract bans fetch and clinical field names
 
 ### Pending Todos
 
@@ -677,9 +688,9 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-12T11:30:00.000Z
-Stopped at: Phase 6 plans written (06-01..06-06)
-Resume file: .planning/phases/06-purchase-prerequisites/06-01-PLAN.md
+Last session: 2026-08-12T11:58:21.692Z
+Stopped at: Completed 06-04-PLAN.md
+Resume file: .planning/phases/06-purchase-prerequisites/06-02-PLAN.md
 
 **Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
 mid-plan. Task 1 (`e246391`, bundle rebuild) was committed inside worktree

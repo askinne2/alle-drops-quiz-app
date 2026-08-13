@@ -1,0 +1,112 @@
+{%- comment -%}
+  AlleDrops Purchase Prerequisites — SHOP-02 (returning-patient credit) + SHOP-03 (honor-system ATC).
+
+  Reads ONLY the two non-PHI customer metafields this app writes (a completion count and a date).
+  It never reads clinical content, never calls the Fly app, and never introduces a third metafield
+  (D-05). A missing metafield means "uncredited" — never an error banner (D-08).
+
+  Placement is editor-only (D-03): inside Sense main-product, above buy_buttons, on the
+  product.regional-drops template only. The consult product uses a different template, so this
+  block cannot reach it (D-04).
+
+  Gating is an honor system (DEC-purchase-gating-is-honor-system). The checkboxes are a nudge;
+  the real control is the human fulfillment check in 06-SHOP-06-FULFILLMENT-PROCESS.md.
+{%- endcomment -%}
+
+{%- liquid
+  assign quiz_count = 0
+  assign completed_on = nil
+
+  if customer
+    assign quiz_count = customer.metafields.alledrops.quiz_count.value | default: 0
+    assign completed_on = customer.metafields.alledrops.last_completed_at.value
+  endif
+
+  assign is_credited = false
+  if customer and quiz_count >= 1
+    assign is_credited = true
+  endif
+-%}
+
+<div
+  class="purchasePrerequisites"
+  data-purchase-prerequisites
+  data-block-id="{{ block.id }}"
+  {{ block.shopify_attributes }}
+>
+  <h3 class="purchasePrerequisites__heading">Before you order</h3>
+
+  <div class="purchasePrerequisites__rows">
+    {%- if is_credited -%}
+      <div class="purchasePrerequisites__row purchasePrerequisites__row--credited">
+        <input
+          type="checkbox"
+          class="purchasePrerequisites__checkbox"
+          id="PurchasePrereqQuiz-{{ block.id }}"
+          data-prereq="quiz"
+          checked
+          disabled
+        >
+        <label class="purchasePrerequisites__label" for="PurchasePrereqQuiz-{{ block.id }}">
+          <span class="purchasePrerequisites__labelText">Symptom assessment complete</span>
+          {%- if completed_on -%}
+            <span class="purchasePrerequisites__caption">
+              Completed {{ completed_on | date: "%B %d, %Y" }}
+            </span>
+          {%- endif -%}
+        </label>
+      </div>
+    {%- else -%}
+      <div class="purchasePrerequisites__row">
+        <input
+          type="checkbox"
+          class="purchasePrerequisites__checkbox"
+          id="PurchasePrereqQuiz-{{ block.id }}"
+          data-prereq="quiz"
+        >
+        <label class="purchasePrerequisites__label" for="PurchasePrereqQuiz-{{ block.id }}">
+          <span class="purchasePrerequisites__labelText">I completed the AlleDrops symptom assessment</span>
+        </label>
+      </div>
+    {%- endif -%}
+
+    <div class="purchasePrerequisites__row">
+      <input
+        type="checkbox"
+        class="purchasePrerequisites__checkbox"
+        id="PurchasePrereqTesting-{{ block.id }}"
+        data-prereq="testing"
+      >
+      <label class="purchasePrerequisites__label" for="PurchasePrereqTesting-{{ block.id }}">
+        <span class="purchasePrerequisites__labelText">I understand AOD will not ship until allergy testing results are on file.</span>
+      </label>
+    </div>
+  </div>
+
+  {%- unless is_credited -%}
+    <p class="purchasePrerequisites__login">
+      Already completed your assessment?
+      <a
+        class="purchasePrerequisites__loginLink"
+        href="/account/login?return_to={{ product.url | url_encode }}"
+      >Log in</a> to see it here.
+    </p>
+  {%- endunless -%}
+
+  <p class="purchasePrerequisites__helper" data-prereq-helper hidden>
+    Confirm both items above to add to cart.
+  </p>
+</div>
+
+{% schema %}
+{
+  "name": "Purchase prerequisites",
+  "target": "section",
+  "stylesheet": "purchase-prerequisites.css",
+  "javascript": "purchase-prerequisites.js",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": []
+}
+{% endschema %}
