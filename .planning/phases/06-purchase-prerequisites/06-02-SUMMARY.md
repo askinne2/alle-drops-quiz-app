@@ -34,8 +34,9 @@ served bytes, so `06-03` needs no fallback design. All three tasks ran by drivin
 Chrome session (`claude-in-chrome`). Task 3 used an **unpublished duplicate theme**, not the live
 theme as the plan specified — the live theme was verified unmodified afterwards.
 
-**One item is open and is Andrew's:** "Filter or group data in Analytics" is **ON** on both metafield
-definitions, where `06-SPIKE-SHOP-01.md` records it as OFF. Not changed. See Task 3 Deviation.
+**One deviation, now closed by decision:** "Filter or group data in Analytics" is **ON** on both
+metafield definitions, where `06-SPIKE-SHOP-01.md` records it as OFF. Andrew's call 2026-08-13 —
+leave it ON. This supersedes the spike's "keep it off". Nothing was changed. See Task 3 Deviation.
 
 ## Performance
 
@@ -243,11 +244,25 @@ the record**, on both definitions.
 
 This is either (a) the definitions were created with it ON and the spike's note recorded intent rather
 than observed state, or (b) it defaulted ON and was never actually turned off. Which of the two is not
-determinable from the Admin UI now. **Not changed** — flipping it is an account-settings change and
-belongs to Andrew, so it is recorded here and left alone.
+determinable from the Admin UI now.
 
-This means Task 3's third acceptance criterion ("SUMMARY confirms Analytics filter still OFF on both
-metafield definitions") is **reported as failed rather than asserted as met**. The other three are met.
+**RESOLVED 2026-08-13 — Andrew's decision: leave it ON.** Surfaced to him with the spike's reasoning
+(segmenting on a health-adjacent completion flag inside a system with no BAA is what turns an approved
+non-PHI field into a problem); his call was *"analytics filter on is fine as far as I care."*
+**Nothing was changed** — the toggle was already ON and stays ON.
+
+This **supersedes** `06-SPIKE-SHOP-01.md`'s "keep it off" instruction. Two consequences to carry:
+
+- `06-03` and `06-06` must not treat "Analytics filter OFF" as a precondition or assert it in any
+  verification step — it is ON by decision, not by oversight.
+- The exposure is bounded but real: Shopify Analytics can now segment customers by *how many symptom
+  assessments they have completed* and *when*. That is a completion count and a date, not clinical
+  content — no score, bracket, or answers are reachable this way. Worth re-confirming at the LAUNCH-06
+  transfer, when the store moves onto AOD's plan and BAA posture.
+
+Task 3's third acceptance criterion ("SUMMARY confirms Analytics filter still OFF on both metafield
+definitions") is therefore **not met as written, and deliberately so** — the criterion was superseded
+by an owner decision rather than failed by an oversight. The other three criteria are met.
 
 ## Accomplishments
 
