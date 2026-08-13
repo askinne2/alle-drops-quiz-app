@@ -5,7 +5,9 @@
 **Branch:** `thread-phase-6-purchase-prerequisites` — `main` (Phase 5.2) merged in on 2026-08-13
 **Fly:** last deploy 2026-08-13 **from `main`**, served `/quiz-bundle-js` **203,686 B**, SHA-256 identical to the committed artifact, `/health` 200. **Nothing from Phase 6 has shipped.**
 
-**Resume with:** Phase 6 Wave 2 — `06-03` and `06-05`, planned **against the `9+` threshold, not `7+`**. Sequencing Constraint 7 is satisfied now that 5.2 is merged here. `06-02` Task 3 is still open and needs Andrew (see Next steps #2).
+**Resume with:** Phase 6 Wave 2. **All six plans already exist** (written 2026-08-12) — do NOT run `/gsd:plan-phase 6`, it replans the whole phase and would overwrite the three already-executed plans. Run `/gsd:execute-phase 6`. `06-05` is executable now; `06-03` is blocked on `06-02` Task 3, which needs Andrew.
+
+**Correction, 2026-08-13:** ROADMAP Sequencing Constraint 7 ("Phase 5.2 before Phase 6 Wave 2") rested on a false premise and is now struck through. Phase 6's purchase gate is **not** keyed to the clinical bracket — `06-03` gates on `customer.metafields.alledrops.quiz_count >= 1`, a non-PHI integer, per `DEC-purchase-gating-is-honor-system`. `06-03-PLAN.md` and `06-05-PLAN.md` contain zero occurrences of `bracket`, `threshold`, `score`, `7+`, `9+`, `3-6` or `3-8`; every bracket mention in Phase 6 is a *prohibition* against reading it on a Shopify surface. Wave 2 never depended on 5.2. The merge was still correct — this branch was 29 commits behind `main` — but no replanning was ever needed.
 
 ---
 
@@ -150,8 +152,8 @@ ROADMAP success criterion 4 for Phase 6 says the clinical-review language must a
 
 ## Next steps
 
-1. **Plan Wave 2 — `06-03` and `06-05`, in parallel.** Both now reference the **`9+`** threshold; the old `7+` is dead everywhere except legacy read paths. `06-05` **must incorporate the no-refund-policy finding above** — it changes the deliverable from an amendment to authoring guidance.
-2. **`06-02` Task 3 is still open** — the SHOP-01 Liquid render measurement. It needs two things, the second harder:
+1. **Execute Wave 2 — the plans already exist, do not replan.** `06-05` (SHOP-05 copy draft + SHOP-06 fulfillment checklist) is unblocked: it depends on `06-02` **Task 2's** surface inventory, which is complete. It **must incorporate the no-refund-policy finding above** — that changes the deliverable from an amendment to authoring guidance. `06-03` (the `purchase-prerequisites` theme app extension) is blocked on Task 3 below.
+2. **`06-02` Task 3 is the real Wave 2 blocker** — the SHOP-01 Liquid render measurement. It proves whether Liquid actually renders `customer.metafields.alledrops.quiz_count` for a logged-in customer, which is the single assumption `06-03`'s whole design rests on. It needs two things, the second harder:
    - a temporary Custom Liquid probe that outputs `customer.metafields.alledrops.quiz_count`, and
    - **a logged-in customer session** for one of the 4 customers who have that metafield. Shopify has no customer impersonation and login is an emailed code, so this needs a test customer whose inbox Andrew controls. An agent cannot do this half.
 

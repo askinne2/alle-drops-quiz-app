@@ -66,13 +66,28 @@ These produce dead code or duplicated hardcodes if violated:
    (Workspace → BAA → GCP migration) and two of its items — LAUNCH-01 (Klaviyo) and LAUNCH-02 (Test
    Mode) — are live patient-facing exposures today. Start them immediately.
 
-7. **Phase 5.2 before Phase 6 Wave 2.** Phase 6's purchase gate is keyed to the clinical bracket, and
+7. ~~**Phase 5.2 before Phase 6 Wave 2.** Phase 6's purchase gate is keyed to the clinical bracket, and
    the threshold moves from 7 to 9 on 2026-08-13. Plans `06-03` (the `purchase-prerequisites` theme
    app block) and `06-05` (SHOP-05 copy) are the first Phase 6 artifacts that name a threshold, and
-   neither has started. Writing them against `7+` and correcting later means re-editing shipped
-   Liquid, a re-deploy, and re-doing 06-06's human UAT. Phase 6 Wave 1 is unaffected — `06-01`,
-   `06-02` and `06-04` never reference a bracket boundary — so this constraint does not stall the
-   Wave 1 work already in flight.
+   neither has started.~~ **[RETRACTED 2026-08-13 — the premise was false. Phase 6's purchase gate is
+   NOT keyed to the clinical bracket.** `06-03` gates on `customer.metafields.alledrops.quiz_count >= 1`,
+   a non-PHI integer count, per `DEC-purchase-gating-is-honor-system`. Verified by grep across the whole
+   phase directory: `06-03-PLAN.md` and `06-05-PLAN.md` contain **zero** occurrences of `bracket`,
+   `threshold`, `score`, `7+`, `9+`, `3-6` or `3-8`. Every bracket mention anywhere in Phase 6 is a
+   *prohibition* — `06-CONTEXT.md:184` "Do not fetch score, bracket, or answers", `06-UI-SPEC.md:20`
+   the same, `06-06-PLAN.md:135` "no score/bracket displayed" — because reading the bracket on a
+   Shopify surface would violate CLAUDE.md's PHI rule. **Phase 6 Wave 2 never depended on Phase 5.2.**
+   Phase 5.2 shipped 2026-08-13 regardless, so nothing is owed; this entry stays struck through rather
+   than deleted so the reasoning error stays visible.
+
+   **The real Wave 2 blocker is `06-02` Task 3**, not the brackets — see Sequencing Constraint 7a.]
+
+7a. **`06-02` Task 3 before `06-03`.** `06-02` is `status: awaiting-task-3-human-authorization`. Task 3
+   measures whether Liquid actually *renders* `customer.metafields.alledrops.quiz_count` for a
+   logged-in customer — the single assumption `06-03`'s entire design rests on. It needs a logged-in
+   customer session (Shopify login is an emailed code; no impersonation exists), so it is human-owned.
+   `06-05` depends on `06-02` **Task 2's** surface inventory, which is complete, so `06-05` is not
+   blocked by Task 3.
 
 **No scoring phase exists, deliberately.** `calculateTotalScore` takes an explicit question list and
 is always called with `ALL_SCORED_QUESTIONS` (Parts 1–5). New sections cannot alter the score.
