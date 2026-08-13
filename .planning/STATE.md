@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 05.2 planned (5 plans / 3 waves)
-last_updated: "2026-08-13T09:49:16.557Z"
-last_activity: 2026-08-13 -- Phase 05.2 planning complete
+stopped_at: Phase 05.2 execution started (wave 1 dispatching)
+last_updated: "2026-08-13T10:01:28.167Z"
+last_activity: 2026-08-13 -- Phase 05.2 execution started
 progress:
   total_phases: 11
   completed_phases: 7
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 6 — Purchase Prerequisites & Returning Patients. Planned 2026-08-12
+**Current focus:** Phase 05.2 — Clinical Bracket Revision
 (6 plans / 3 waves); next step is `/gsd:execute-phase 6`. Phase 8's LAUNCH-01 runs in
 parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 5.2 (Clinical Bracket Revision) — planned, 5 plans / 3 waves
-Plan: 0 of 5 — next step is `/gsd:execute-phase 5.2`
-Status: Phase 5.2 planned and ready to execute on this branch; Phase 6 Wave 1 is in flight elsewhere
-Last activity: 2026-08-13 -- Phase 05.2 planning complete
+Phase: 05.2 (Clinical Bracket Revision) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 05.2
+Last activity: 2026-08-13 -- Phase 05.2 execution started
 
 **Read this branch's state as branch-local.** This is
 `phase-5.2-clinical-bracket-revision`, cut from `main`. Phase 6 Wave 1 (`06-01` and `06-04` complete,
