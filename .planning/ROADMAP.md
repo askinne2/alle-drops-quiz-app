@@ -555,8 +555,10 @@ design decouples the colour stops from the clinical brackets entirely. Full reas
 **AMENDED AGAIN 2026-08-12 — Phase 5.1 removed before it was planned.** An inserted "Admin-Configurable
 Score Scale" phase (SCALE-01..04) briefly sat here. It was deleted during `/gsd:discuss-phase 5.1`, at
 the point where the discussion reached what "editable clinical brackets" would actually mean for stored
-data. **The clinical brackets are set in stone** — 0–2 / 3–6 / 7+ in `app/lib/quiz/scoring.ts:4-8`, from
-the AOD medical director, not a tunable. What Andrew intended to make configurable was only the *colour
+data. ~~**The clinical brackets are set in stone** — 0–2 / 3–6 / 7+ in `app/lib/quiz/scoring.ts:4-8`, from
+the AOD medical director, not a tunable.~~ **[RETRACTED 2026-08-13 — the brackets moved to
+`0–2 / 3–8 / 9+` in Phase 5.2. "Set in stone" was true of us, never of the medical director. Do not
+plan any threshold against `7+`; see Sequencing Constraint 7 and the Phase 5.2 entry below.]** What Andrew intended to make configurable was only the *colour
 band stops*: how a 0–60 raw score maps to green / orange / red on the bar.
 
 That distinction removes the entire cost of the phase. Everything expensive in it — `scale_version`, a
