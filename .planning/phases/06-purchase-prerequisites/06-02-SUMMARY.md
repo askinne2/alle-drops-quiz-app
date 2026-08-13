@@ -20,24 +20,29 @@ key-files:
   modified: []
 key-decisions: []
 patterns-established: []
-requirements-completed: [] # SHOP-01, SHOP-05 — mark complete only after all three tasks
+requirements-completed: [SHOP-01] # SHOP-05 stays open — 06-05 owns the copy deliverable
 duration: pending
-completed: pending
-status: awaiting-task-3-human-authorization
+completed: 2026-08-13
+status: complete
 ---
 
 # Phase 6 Plan 02: Wave 0 Human Gates Summary
 
-**IN PROGRESS — Tasks 1 and 2 measured 2026-08-12 in Andrew's logged-in Shopify Admin session
-(driven via claude-in-chrome). Task 3 is not started: it requires placing a temporary Custom Liquid
-probe on the live theme, which is a storefront mutation and needs Andrew's explicit authorization.**
+**COMPLETE — 3/3 tasks.** Tasks 1 and 2 measured 2026-08-12; **Task 3 measured 2026-08-13** and
+SHOP-01 is empirically proven — Liquid renders both `alledrops` metafields for a logged-in customer on
+served bytes, so `06-03` needs no fallback design. All three tasks ran by driving Andrew's logged-in
+Chrome session (`claude-in-chrome`). Task 3 used an **unpublished duplicate theme**, not the live
+theme as the plan specified — the live theme was verified unmodified afterwards.
+
+**One item is open and is Andrew's:** "Filter or group data in Analytics" is **ON** on both metafield
+definitions, where `06-SPIKE-SHOP-01.md` records it as OFF. Not changed. See Task 3 Deviation.
 
 ## Performance
 
 - **Duration:** pending
 - **Started:** 2026-08-12T11:59:19Z
-- **Completed:** pending
-- **Tasks:** 2/3
+- **Completed:** 2026-08-13 (Task 3)
+- **Tasks:** 3/3
 - **Files modified:** 1 (this SUMMARY)
 
 ## Method note
@@ -164,27 +169,85 @@ from this store currently sends from the agency's address, not an AOD one. Not a
 it belongs with LAUNCH-06's "off the cross-client billing account" work — but it is the same class of
 finding and cheap to record now.
 
-## Task 3: SHOP-01 Liquid metafield render on served bytes (NOT STARTED)
+## Task 3: SHOP-01 Liquid metafield render on served bytes (COMPLETE — 2026-08-13)
 
-Measure `customer.metafields.alledrops.quiz_count` on **authenticated, cache-busted served HTML** for a known customer who already has values. Count with `split(needle).length - 1`, never `grep -c`. Prefer `claude-in-chrome` (chrome-devtools MCP has no Shopify session).
+**Verdict: SHOP-01 is empirically PROVEN. Liquid reads both `alledrops` metafields for a logged-in
+customer on served bytes. No fallback design is needed and `06-03` may proceed as designed.**
 
 | field | value |
 |-------|-------|
-| customer used (opaque id / redacted) | _awaiting_ |
-| URL fetched | _awaiting_ |
-| needles counted | _awaiting_ |
-| measured integer presence (yes/no) | _awaiting_ |
-| last_completed_at also checked? | _awaiting_ |
-| Analytics Filter or group data still OFF on both definitions? | _awaiting_ |
-| Temporary Custom Liquid probe removed? | _awaiting_ |
+| customer used (opaque id / redacted) | Customer **A** — an existing customer already carrying both metafields (one of the 4). Email deliberately not recorded. |
+| URL fetched | `https://allergist-on-demand.myshopify.com/products/tennessee-alledrops` (cache-busted `&cb=`), fetched with `credentials: 'include'`, `cache: 'no-store'` from the logged-in session |
+| HTTP status / served bytes | **200** / **140,652 B** |
+| measured integer presence (yes/no) | **YES** — `quiz_count` rendered as a non-empty integer |
+| last_completed_at also checked? | **YES** — rendered through a `date: '%Y-%m-%d'` filter |
+| Analytics Filter or group data still OFF on both definitions? | **NO — it is ON on BOTH.** See "Deviation" below. Not changed; awaiting Andrew's decision. |
+| Temporary probe removed? | **YES** — probe theme `150693806286` deleted; `shopify theme list` re-read afterwards shows only Sense (live) and Dawn (unpublished) |
 
-**Do not paste PHI** (answers, score, bracket, DOB) into this SUMMARY.
+### Needle counts (all via `split(needle).length - 1`, never `grep -c`)
 
-**Why this task is still open:** the measurement method requires placing a temporary Custom Liquid
-block on the live Sense theme, rendering it for a logged-in customer, then removing it. That is a
-write against the live storefront of a clinic intake site, so it is not a read-only step and was not
-performed without Andrew's explicit authorization. Every other cell above depends on that probe
-existing, so none could be filled in advance.
+| needle | count | what it proves |
+|---|---|---|
+| `TASK3PROBEMARKER` | **1** | non-vacuity control — the probe actually rendered |
+| `data-task3-loggedin="yes"` | **1** | the `customer` object is populated on the storefront |
+| `data-task3-loggedin="no"` | **0** | — |
+| `data-task3-ns-present="yes"` | **1** | the `alledrops` namespace is visible to Liquid |
+| `data-task3-ns-present="no"` | **0** | — |
+| `data-task3-count-value="3"` | **1** | `quiz_count.value` renders, correct value |
+| `data-task3-count-raw="3"` | **1** | bare object output also renders the value |
+| `data-task3-count-value=""` | **0** | the negative case is absent, not merely unlooked-for |
+| `data-task3-last-value="2026-08-10"` | **1** | `last_completed_at` renders via date filter |
+| `data-task3-last-value=""` | **0** | — |
+
+Only the two CLAUDE.md-allowlisted non-PHI fields (a count and a date) appear above. No answers,
+score, bracket, DOB, name, email or filename is recorded anywhere in this section.
+
+### Method — and why it never touched the live theme
+
+The plan's own method (probe on the live Sense theme, remove after) was **not** used. It is a write
+against the live storefront of a clinical intake site, and a safer route was available:
+
+1. `shopify theme duplicate --theme 135799767246 --name TASK3-PROBE-DELETE-ME` → unpublished theme
+   `150693806286`.
+2. `shopify theme pull --only layout/theme.liquid` from the duplicate; appended a probe `<div>` before
+   `</body>` emitting the two metafields plus a unique marker; `shopify theme push --only
+   layout/theme.liquid` back to the duplicate **only**.
+3. Loaded the product URL once with `?preview_theme_id=150693806286` to set the preview cookie, then
+   fetched cache-busted served HTML from the page context.
+4. Deleted the probe theme.
+
+**Control proving live was never mutated:** after the measurement, `layout/theme.liquid` was pulled
+from the **live** Sense theme (`135799767246`) and counted — `TASK3PROBEMARKER` = **0**, `task3` = **0**,
+21,653 B. So the marker existed only in the duplicate, which is also what makes the positive counts
+above attributable to the probe rather than to anything pre-existing.
+
+**Note on the URL:** Shopify strips `preview_theme_id` from the response URL after setting its cookie,
+so the recorded `finalUrl` shows no preview parameter. The measurement is still attributable to the
+probe theme, because `TASK3PROBEMARKER` does not exist in the live theme (control above).
+
+### ⚠️ Deviation — Analytics segmentation is ON, not OFF
+
+`06-SPIKE-SHOP-01.md` records both definitions as created with **"Filter or group data in Analytics"
+OFF — keep it off**, on the reasoning that segmenting on a health-adjacent completion flag inside a
+system with no BAA is what turns an approved non-PHI field into a problem. Read directly from Admin
+on 2026-08-13:
+
+| definition | Storefront API access | Customer Account API access | Filter or group data in Analytics |
+|---|---|---|---|
+| `alledrops.quiz_count` (`173433454798`) | ON | No access | **ON** ✗ |
+| `alledrops.last_completed_at` (`173432766670`) | ON | No access | **ON** ✗ |
+
+Storefront API access being ON is correct and is what makes the Liquid read above work. Customer
+Account API access at "No access" is correct. **The Analytics toggle is the one that does not match
+the record**, on both definitions.
+
+This is either (a) the definitions were created with it ON and the spike's note recorded intent rather
+than observed state, or (b) it defaulted ON and was never actually turned off. Which of the two is not
+determinable from the Admin UI now. **Not changed** — flipping it is an account-settings change and
+belongs to Andrew, so it is recorded here and left alone.
+
+This means Task 3's third acceptance criterion ("SUMMARY confirms Analytics filter still OFF on both
+metafield definitions") is **reported as failed rather than asserted as met**. The other three are met.
 
 ## Accomplishments
 
@@ -222,4 +285,27 @@ existing, so none could be filled in advance.
 
 ## Known Stubs
 
-- All Task 3 cells remain empty pending authorization for the live-theme probe.
+- ~~All Task 3 cells remain empty pending authorization for the live-theme probe.~~ **CLOSED
+  2026-08-13** — Task 3 measured via an unpublished duplicate theme rather than the live theme. One
+  open item remains: the **Analytics segmentation toggle is ON on both definitions** and is Andrew's
+  to decide (see Task 3 Deviation).
+
+## Task 3 addendum — two findings outside Task 3's scope
+
+1. **The Admin Themes page is persistently broken on this store, not transiently.** `/themes` returned
+   the "Online Store" heading with an empty content area and no **Themes** sub-item in the nav (only
+   Pages and Preferences) — the same failure recorded on 2026-08-12, now **four attempts across two
+   sessions**. The Shopify **CLI** (`shopify theme list / duplicate / pull / push / delete`) works
+   fine against the same store and is the working route. Anything in `06-06` that assumes the Admin
+   Themes UI should be rewritten against the CLI or the theme editor deep link.
+
+2. **Quiz-answer-shaped values are sitting on the Shopify customer record as TAGS.** Customer A's Tags
+   field carries, among others: `complicated regimen`, `frequent doctor visits`, `prescribed
+   medication`, `natural remedies`, `natural alternative`, `long-term solution`, `somewhat open`,
+   `not sure`, `fall`, `summer`, `northwest`, `south central`, `southeast`, `fallback result`, and
+   `Quiz Kit App Subscriber`. The `Quiz Kit App Subscriber` tag points at a **third-party quiz app
+   (Quiz Kit)**, not this application — this app writes only the two allowlisted metafields, which is
+   verifiable in `app/lib/shopify/metafields.ts`. But the effect is the same shape as LAUNCH-01:
+   clinical-ish answers tied to an identified customer, living in Shopify, which CLAUDE.md rule 2
+   forbids. Not a Phase 6 deliverable and not an agent action — recorded so it is not discovered a
+   third time. Belongs with LAUNCH-01 as an Andrew-owned live exposure.
