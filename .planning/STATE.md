@@ -10,8 +10,8 @@ progress:
   total_phases: 11
   completed_phases: 7
   total_plans: 67
-  completed_plans: 58
-  percent: 87
+  completed_plans: 59
+  percent: 88
 ---
 
 # Project State
@@ -28,26 +28,39 @@ parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 05.2 (Clinical Bracket Revision) — EXECUTING, wave 2 partial
-Plan: 3 of 5 (05.2-01, 05.2-03, 05.2-02 done; 05.2-04 BLOCKED; 05.2-05 waits on it)
-Status: Phase 05.2 code complete and green; 05.2-04 blocked on an expired gcloud OAuth token
-Last activity: 2026-08-13 -- Phase 05.2 plan 05.2-02 merged; 05.2-04 blocked on gcloud reauth
+Phase: 05.2 (Clinical Bracket Revision) — EXECUTING, waves 1 and 2 complete
+Plan: 4 of 5 (05.2-01, 05.2-02, 05.2-03, 05.2-04 done; only 05.2-05 remains)
+Status: Phase 05.2 code green and DDL live; 05.2-05 needs merge and deploy authorization from Andrew
+Last activity: 2026-08-13 -- Phase 05.2 wave 2 complete; migration 005 executed and verified
 
-**BLOCKER — `05.2-04` cannot run until `gcloud auth login` is done interactively.** The cached
-OAuth token for `andrew@21adsmedia.com` expired. Both `gcloud sql backups create` and a pure
-`gcloud sql backups list` fail with "Reauthentication failed. cannot prompt during non-interactive
-execution", so this is an auth gate rather than a permissions or instance problem. Confirmed
-independently by the orchestrator, not taken from the agent's report. Fix:
-`gcloud auth login andrew@21adsmedia.com` in an interactive terminal, then re-run
-`gcloud sql backups list --instance=alledrops-quiz-data --project=alledrops-quiz --limit=3`; a table
-(even empty) means the gate is clear. **`alledrops_quiz_dev` is untouched** — zero DDL, zero DML, no
-backup created, and the executor declined to work around the block rather than substituting a
-service-account key or mutating global gcloud config. Andrew's DDL authorization (the `fly ssh
-console` route) still stands and does not need re-obtaining.
+**MIGRATION 005 IS LIVE on `alledrops_quiz_dev`.** Executed 2026-08-13 under Andrew's in-session
+authorization, via `fly ssh console -a alle-drops-quiz-app` (the Fly VM is the only host inside the
+`216.246.40.114/32` authorized network). **Independently re-verified by the orchestrator from the
+database, not accepted from the executor's report:**
 
-**Note for whoever runs it:** `gcloud`'s active project is `smart-rope-305817`, so every call needs
-an explicit `--project alledrops-quiz`. Do not `gcloud config set project` — other work depends on
-the current value.
+```
+CHECK ((score_bracket = ANY (ARRAY['0-2'::text, '3-6'::text, '3-8'::text, '7+'::text, '9+'::text])))
+```
+
+- Pre-DDL backup **`1786617655419`**, `ON_DEMAND` / `SUCCESSFUL`, description
+  `pre-phase52-widen-score-bracket-check` — read back via `gcloud sql backups describe`, twice, and
+  distinguished from the automated daily backups rather than mistaken for one.
+- Row count **48 before, 48 after**. Bracket distribution unchanged at `0-2=10, 3-6=11, 7+=27` —
+  **no historical row was relabelled**, which is the whole point of the union constraint.
+- INSERT probes both inside transactions that were rolled back: `'9+'` accepted (48→49→48),
+  `'not-a-bracket'` rejected by name. Proving acceptance alone would have proven only that
+  something ran.
+- Zero PHI values printed, logged, or written. Counts, IDs, and constraint text only.
+
+Execution deviation, recorded and correct: connected as `alledrops_app` (confirmed via
+`SELECT current_user, session_user`) rather than `postgres` + `SET ROLE`. That is the role
+`DATABASE_URL` authenticates as on the Fly VM, and it already owns `submissions`. The `SET ROLE`
+dance in the 04-19 precedent was only needed because migration 004 also touched
+`submission_access_log`, owned by `postgres`.
+
+**The gcloud OAuth block that stopped the first attempt is cleared** — Andrew ran
+`gcloud auth login`. Note for next time: gcloud's active project is `smart-rope-305817`, so every
+call needs an explicit `--project alledrops-quiz`; do not `gcloud config set project`.
 
 **Code-side wave 2 is done and verified on the merged tree:** typecheck exit 0, **759 tests / 50
 files** green (753 before this plan). The write/read asymmetry that D-52-04 exists to protect was
