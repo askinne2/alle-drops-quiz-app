@@ -132,12 +132,26 @@ describe("SCORE-01 copy", () => {
 });
 
 describe("SCORE-02 derived readout", () => {
-  // CHANGED 2026-08-13 (D-52-01, SCORE-06). The readout no longer shows the /60 denominator —
-  // William Miller confirmed the total is what "throws it off" and skews the scale's appearance.
-  // See .planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md.
-  it('renders "Score: {score}", with no denominator', () => {
+  // CHANGED TWICE ON 2026-08-13. First (D-52-01, SCORE-06) the /60 denominator came off, leaving
+  // "Score: {score}". Then Andrew saw the deployed page and removed the number entirely: with no
+  // denominator, a bare "30" above a scale whose top band means "9+" was less interpretable, not
+  // more. NO NUMERIC SCORE IS SHOWN TO THE PATIENT AT ALL.
+  // Source: 05.2-SOURCE-william-2026-08-13.md — "the main part is utilizing the scale so they can
+  // understand". The raw score is still scored, stored, and shown to providers in the clinical PDF
+  // and admin table; this is a patient-facing display decision only.
+  it("renders no numeric score anywhere in the patient-facing results", () => {
+    const { container } = renderResults({ score: 7 });
+
+    expect(screen.queryByText("Score: 7")).toBeNull();
+    expect(screen.queryByText("7")).toBeNull();
+    expect(screen.queryByText(/\bScore:\s*\d/)).toBeNull();
+    expect(container.textContent ?? "").not.toMatch(/\b7\s*(of|\/)\s*60\b/);
+  });
+
+  it("still communicates the result without a number — zone caption and legend carry it", () => {
     renderResults({ score: 7 });
-    expect(screen.getByText("Score: 7")).toBeTruthy();
+    // 7 is Moderate under 0-2 / 3-8 / 9+. The caption is what replaced the number.
+    expect(screen.getByText("Moderate symptom burden")).toBeTruthy();
   });
 });
 
@@ -325,7 +339,10 @@ describe("Accessibility contract", () => {
     const label = track.getAttribute("aria-label") ?? "";
 
     expect(label).toContain("Symptom burden position");
-    expect(label).toContain("9");
+    // The `toContain("9")` assertion that lived here was removed 2026-08-13 when the numeric score
+    // was dropped from the patient view — the label no longer carries any number. Its sibling test
+    // ("carries no number at all") now guards that directly.
+    //
     // "high" as of 2026-08-12, boundary revised 2026-08-13 — score 9 is the bottom of the 9+
     // bracket and the zones now mirror the brackets. The assertion that matters is unchanged: the
     // label names the ZONE, and names no clinical bracket string.
@@ -336,20 +353,19 @@ describe("Accessibility contract", () => {
     expect(label).not.toContain("9+");
   });
 
-  // CHANGED 2026-08-13 (D-52-01, SCORE-06). The aria-label no longer carries the /60 denominator
-  // or the "on a 0 to X scale" fragment, and the visible readout is "Score: {score}" instead of
-  // "{score} of {max}".
-  it('the aria-label carries the score with no denominator, and the "Score: 7" readout is normal-flow text with no aria-hidden ancestor', () => {
+  // CHANGED TWICE ON 2026-08-13 — see the SCORE-02 block above. The aria-label first lost the /60
+  // denominator, then lost the score entirely when the visible number was removed. A screen-reader
+  // user must not be told a number that sighted users cannot see: that is an accessibility
+  // asymmetry, not a courtesy.
+  it("the aria-label names the zone and carries no number at all", () => {
     const { container } = renderResults({ score: 7 });
     const { track } = getScaleBarParts(container);
     const label = track.getAttribute("aria-label") ?? "";
 
-    expect(label).toContain("score 7");
+    expect(label).toContain("moderate");
     expect(label).not.toContain("on a 0 to");
-
-    const readout = screen.getByText("Score: 7");
-    expect(readout.closest('[aria-hidden="true"]')).toBeNull();
-    void container;
+    expect(label).not.toMatch(/\bscore\s*\d/i);
+    expect(label).not.toMatch(/\d/);
   });
 });
 

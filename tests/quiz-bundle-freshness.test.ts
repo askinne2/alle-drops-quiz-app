@@ -690,4 +690,22 @@ describe("public/quiz-bundle.js carries Phase 5.2 (clinical-bracket-revision) co
     const needle = " on a 0 to ";
     expect(count(needle)).toBe(0);
   });
+
+  // Added 2026-08-13 after Andrew's UAT on the deployed page. SCORE-06 removed the "/60"
+  // denominator; seeing it live, he removed the NUMBER itself — a bare "30" above a scale whose top
+  // band means "9+" read as less interpretable, not more. These two markers guard that the numeric
+  // score is gone from the patient-facing bundle in both its visible and its accessible form.
+  it('has zero occurrences of the retired "Score: " visible readout — the number is gone from the patient view', () => {
+    // measured against the previously committed bundle (204,067 B): 1;
+    // against the current committed bundle (203,686 B): 0.
+    const needle = "Score: ";
+    expect(count(needle)).toBe(0);
+  });
+
+  it('has zero occurrences of the retired ", score " aria-label fragment — a screen reader must not be told a number sighted users cannot see', () => {
+    // measured against the previously committed bundle (204,067 B): 1;
+    // against the current committed bundle (203,686 B): 0.
+    const needle = ", score ";
+    expect(count(needle)).toBe(0);
+  });
 });
