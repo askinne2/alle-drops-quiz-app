@@ -101,11 +101,19 @@ commits; four false planning premises corrected (see What didn't work).
 
 ## Next steps
 
-1. **Email William for review** — the largest blocker is now entirely on his side. He owes:
-   - Paste the SHOP-05 order confirmation copy. **This is also what makes the already-shipped SHOP-04
-     notice true** — it tells patients to use "the support details on your order confirmation email",
-     but `Settings → Policies → Contact information` is **Required and unset** and the sender is
-     `andrew@21adsmedia.com`.
+1. **Do NOT send William another email yet.** Andrew emailed him the morning of 2026-08-13 and is
+   waiting on that reply; he batches communication rather than sending a second thread on top. A
+   Missive draft was created this session and then discarded — do not recreate it. When William
+   replies, the outstanding asks below go out together in one message.
+
+   **Also: Andrew intends to handle the product copy edit and the order-confirmation contact settings
+   himself**, so items 2 and the SHOP-05 paste below are not necessarily blocked on William at all —
+   only the clinical wording is genuinely his call. What William still owes:
+   - Approve the clinical substance of the SHOP-05 order confirmation copy. **The paste itself is
+     Andrew's** — and it is what makes the already-shipped SHOP-04 notice true, since that notice
+     tells patients to use "the support details on your order confirmation email" while
+     `Settings → Policies → Contact information` is **Required and unset** and the sender is
+     `andrew@21adsmedia.com`. Needs a real phone number or address; do not invent one.
    - **Write a refund policy — there is none, and no shipping policy either.** SPEC bullets are in
      `06-SHOP-05-COPY-DRAFT.md`. Needs counsel.
    - Approve the D-13 replacement copy (see #2).
@@ -117,7 +125,8 @@ commits; four false planning premises corrected (see What didn't work).
    treatment."* The page asks the patient to confirm testing is on file, one paragraph under text
    saying testing isn't needed. Replacement copy is drafted in
    `.planning/phases/04-mandatory-allergy-testing/04-STOREFRONT-COPY-DRAFT.md`. Editable in the theme
-   editor — **no theme push required**, contrary to the Phase 4 note. Clinical copy is William's.
+   editor — **no theme push required**, contrary to the Phase 4 note. **Andrew plans to make this
+   edit himself**; William's input is on the clinical wording, not the mechanics.
 3. **Decide on Apntly.** With Klaviyo gone it is the **only** registered pixel and it sits on the
    PHI-collecting quiz page. Live in the runtime trace: `s1.staq-cdn.com`, `booking-api.apntly.com`,
    `d3emjguzbsq9q3.cloudfront.net`, plus a `www.cloudflare.com` call returning visitor IP and geo.
