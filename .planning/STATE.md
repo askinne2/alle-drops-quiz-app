@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Merged main into thread-phase-6-purchase-prerequisites; Phase 6 Wave 1 paused at 06-02 Task 3
+stopped_at: Phase 6 complete (6/6 plans), deployed and approved 2026-08-13
 last_updated: "2026-08-13T00:00:00.000Z"
-last_activity: 2026-08-13 -- merged Phase 05.2 (main) into the Phase 6 branch; Wave 2 unblocked
+last_activity: 2026-08-13 -- Phase 6 complete: alledrops-quiz-production-24 deployed, gate live, approved
 progress:
   total_phases: 11
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 67
-  completed_plans: 62
-  percent: 93
+  completed_plans: 66
+  percent: 99
 ---
 
 # Project State
@@ -28,10 +28,40 @@ parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 6 (Purchase Prerequisites & Returning Patients) — EXECUTING
-Plan: 2 of 6 (next incomplete: 06-02; 06-01 + 06-04 done)
-Status: Executing Phase 6 (06-01 and 06-04 complete); Phase 05.2 shipped and approved 2026-08-13, so Wave 2 is unblocked by Sequencing Constraint 7
-Last activity: 2026-08-13 -- merged main (Phase 05.2) into thread-phase-6-purchase-prerequisites
+Phase: 6 (Purchase Prerequisites & Returning Patients) — **COMPLETE**, 6/6 plans, deployed and approved 2026-08-13
+Plan: 6 of 6 — SHOP-01, SHOP-02, SHOP-03, SHOP-04 all closed; SHOP-05 and SHOP-06 stay Pending on William/AOD action
+Status: Phase 6 shipped and approved; the honor-system purchase gate is live on both SLIT PDPs and the clinical-review notice is live on thank-you and order-status. Next is Phase 7 (Telehealth Intake Path) or Phase 8 (Launch Readiness) — see Open Now
+Last activity: 2026-08-13 -- Phase 6 complete: alledrops-quiz-production-24 deployed, editor placement done, UAT approved
+
+**Phase 6 deploy verification (2026-08-13), on served bytes.** Shopify app version
+**`alledrops-quiz-production-24`** (from `-23`). No Fly deploy — Phase 6 changed no Fly-served code.
+**No `shopify theme push` was run at any point**; all theme changes went through the theme editor UI.
+
+| needle | TN | TX | consult |
+|---|---|---|---|
+| served bytes | 140,167 | 139,939 | 128,562 |
+| `Before you order` | **1** | **1** | **0** |
+| `Symptom assessment complete` | **1** | **1** | 0 |
+| `Completed August 10, 2026` | **1** | **1** | 0 |
+| uncredited label / login line | 0 | 0 | 0 |
+| `shopify-payment-button` | **0** | **0** | — |
+| `dynamic-checkout` | **0** | **0** | — |
+
+The credited and uncredited branches are mutually exclusive, which a single presence check would not
+have shown. Live DOM gate exercised on the deployed page: ATC disabled → enabled on checking the
+testing box → disabled again on unchecking, with the `data-prereq-disabled` ownership marker applied
+and cleared each time.
+
+**A vacuous measurement was caught and thrown out.** The first UAT returned all-zeros across all three
+products with **three byte-identical 11,565 B responses** — the storefront password page, not the
+products. Those zeros would have read as a clean pass ("consult absent, express checkout gone").
+Three identical byte counts for three different products is the tell. Re-run after Andrew entered the
+store password.
+
+**Two things the agent could not verify were closed by Andrew, and their provenance is recorded
+separately** in `06-06-SUMMARY.md`: the logged-out state (he confirmed visually; no agent needle
+counts exist for it) and the absence of a real order (payments are off on this store; checkout editor
+preview accepted).
 
 **Phase 05.2 is COMPLETE** — 5/5 plans, shipped and approved 2026-08-13; SCORE-04, SCORE-05 and
 SCORE-06 all closed. Its record follows as history on this branch, not as in-flight work.

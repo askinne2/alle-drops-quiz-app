@@ -211,7 +211,7 @@ Set by William Miller (AOD medical director) on 2026-08-13. Source of truth for 
 
 ### Purchase Prerequisites & Returning Patients
 
-- [~] **SHOP-01**: Metafield definitions exist for the `alledrops` customer namespace and Liquid
+- [x] **SHOP-01**: Metafield definitions exist for the `alledrops` customer namespace and Liquid
   readability of `customer.metafields.alledrops.quiz_count` / `last_completed_at` is confirmed — or
   the spike documents that it is not readable and names the fallback
   (`REQ-customer-metafield-definitions`) — **spike, gates SHOP-02 and SHOP-03**
@@ -225,12 +225,24 @@ Set by William Miller (AOD medical director) on 2026-08-13. Source of truth for 
   > still owed before this closes: that Liquid actually *renders* the value for a logged-in customer
   > was never measured — it is assigned to SHOP-02's first implementation step, verified on served
   > bytes.
-- [ ] **SHOP-02**: A returning logged-in patient who has completed the quiz sees that completion
+  >
+  > **CLOSED 2026-08-13.** The owed render measurement was taken in `06-02` Task 3 against an
+  > unpublished duplicate theme (live theme verified unmodified afterwards): `quiz_count` and
+  > `last_completed_at` both rendered non-empty for a logged-in customer on cache-busted served
+  > bytes, with a non-vacuity marker present and both empty-variants at 0. Re-confirmed live in
+  > `06-06` via the credited branch on both SLIT PDPs.
+  >
+  > **One clause above is superseded:** *"Filter or group data in Analytics OFF and it must stay
+  > off"*. It was measured **ON** on both definitions, and Andrew's decision on 2026-08-13 is that it
+  > stays ON. Do not treat OFF as a precondition in any later phase.
+- [x] **SHOP-02**: A returning logged-in patient who has completed the quiz sees that completion
   state at the moment of purchase, not only on their customer profile page
-  (`REQ-returning-patient-completion-surface`)
-- [ ] **SHOP-03**: Add-to-cart on both SLIT product pages requires two prerequisite confirmations —
+  (`REQ-returning-patient-completion-surface`) — **live 2026-08-13**, proven on served bytes on both
+  SLIT PDPs (`06-06-SUMMARY.md`)
+- [x] **SHOP-03**: Add-to-cart on both SLIT product pages requires two prerequisite confirmations —
   quiz completed and allergy testing submitted — via a new theme app extension block targeting the
-  product template (`REQ-purchase-gating-honor-system`)
+  product template (`REQ-purchase-gating-honor-system`) — **live 2026-08-13**; gate engage/release
+  exercised on the deployed page and express checkout removed (`06-06-SUMMARY.md`)
 - [x] **SHOP-04**: The thank-you page explains the clinical review process and a 2–3 business day
   expectation, via a new checkout UI extension (`REQ-purchase-gating-honor-system`)
 - [ ] **SHOP-05**: Checkout page language, order confirmation notifications, and the refund policy
@@ -375,12 +387,12 @@ Acknowledged, not in the v1.0 roadmap.
 | SCORE-04 | Phase 5.2 | Complete (2026-08-13) — 0–2 / 3–8 / 9+ live in code and in the DB CHECK |
 | SCORE-05 | Phase 5.2 | Complete (2026-08-13) — verbatim copy verified on served bytes |
 | SCORE-06 | Phase 5.2 | Complete (2026-08-13) — went further: the numeric score is removed entirely from the patient view |
-| SHOP-01 | Phase 6 | Spike answered 2026-08-12 — definitions created, no fallback needed, SHOP-02/03 unblocked. Not Complete: the Liquid render is unproven and owed to SHOP-02. See `06-SPIKE-SHOP-01.md` |
-| SHOP-02 | Phase 6 | Pending |
-| SHOP-03 | Phase 6 | Pending |
+| SHOP-01 | Phase 6 | **Complete 2026-08-13** — Liquid render proven on served bytes (`06-02-SUMMARY.md` Task 3), re-confirmed live in `06-06`. Note: "Analytics filter OFF" in the requirement prose is **superseded** — Andrew's decision is that it stays ON |
+| SHOP-02 | Phase 6 | **Complete 2026-08-13** |
+| SHOP-03 | Phase 6 | **Complete 2026-08-13** |
 | SHOP-04 | Phase 6 | Complete |
-| SHOP-05 | Phase 6 | Pending |
-| SHOP-06 | Phase 6 | Pending |
+| SHOP-05 | Phase 6 | Pending — draft ready (`06-SHOP-05-COPY-DRAFT.md`); closes when William pastes and the refund policy is written |
+| SHOP-06 | Phase 6 | Pending — checklist drafted (`06-SHOP-06-FULFILLMENT-PROCESS.md`); closes on AOD adoption |
 | TELE-01 | Phase 7 | Pending |
 | TELE-02 | Phase 7 | Pending |
 | LAUNCH-01 | Phase 8 | Pending |

@@ -24,13 +24,16 @@ key-decisions:
 requirements-completed: [SHOP-01, SHOP-02, SHOP-03, SHOP-04]
 duration: ~40min
 completed: 2026-08-13
-status: complete-with-open-items
+status: complete
 ---
 
 # Phase 6 Plan 06: Deploy, Editor Placement, UAT Summary
 
-**Task 1 COMPLETE. Task 2 MOSTLY COMPLETE — two verifications are owed and are recorded as owed, not
-as passed.** The gate is live on both SLIT PDPs and demonstrably works.
+**Task 1 COMPLETE. Task 2 COMPLETE.** The gate is live on both SLIT PDPs and demonstrably works. The
+two verifications the agent could not take were closed by Andrew on 2026-08-13 — see below, where the
+provenance of each is stated rather than blended into the agent's own measurements.
+
+**Phase 6 approved by Andrew 2026-08-13.**
 
 ## Task 1 checklist
 
@@ -112,23 +115,35 @@ Both render the exact copy shipped in `06-04`'s `ReviewNotice.jsx` — "What hap
 business day sentence, and the testing follow-up. Verified visually in the checkout editor preview on
 both the Thank you and Order status pages. No score, bracket, or clinical field appears.
 
-## ⚠️ Two verifications owed — recorded as owed, not passed
+## Two verifications closed by Andrew, 2026-08-13
 
-1. **The logged-out / uncredited state has not been measured on served bytes.** Doing so requires a
-   storefront session that carries the store password but *no* customer login, and the only browser
-   available is Andrew's, logged in as a customer with `quiz_count = 3`. Logging him out to measure
-   was not a call to make unilaterally. **Partial evidence exists and is real but weaker:** the theme
-   editor preview is not customer-authenticated, and it rendered the uncredited branch correctly —
-   "I completed the AlleDrops symptom assessment", "Already completed your assessment? **Log in** to
-   see it here.", both boxes interactive, Add to cart greyed out. That is genuine rendering evidence,
-   but it is not served bytes on the storefront. **To close: open a private window, enter the store
-   password, do not log in, and re-run the same needle counts** — expect `uncredited_label` 1,
-   `login_line` 1, `credited_label` 0.
+1. **Logged-out / uncredited state — VERIFIED BY ANDREW.** The agent could not measure this: it needs
+   a storefront session carrying the store password but *no* customer login, and the only browser
+   available was Andrew's, logged in with `quiz_count = 3`. Logging him out was not a call to make
+   unilaterally. **Andrew checked it himself and confirmed: "logged out state works."** Supporting
+   evidence already on record — the theme editor preview (which is not customer-authenticated)
+   rendered the uncredited branch correctly: "I completed the AlleDrops symptom assessment", "Already
+   completed your assessment? **Log in** to see it here.", both boxes interactive, Add to cart greyed
+   out.
 
-2. **No real order was placed.** Shopify Checkout reports *"This store can't accept payments right
-   now"*, so the thank-you and order-status surfaces could only be verified in the checkout editor
-   preview — which the plan explicitly permits ("or checkout editor preview"). A real end-to-end order
-   remains unproven and should ride along with the first live transaction after payments are enabled.
+   **Provenance note, deliberately explicit:** this is Andrew's visual confirmation, not an agent
+   served-bytes count. It is the same class of evidence as the human browser pass that has caught
+   seven defects on this project — stronger than a source contract, weaker than a needle count. If a
+   future session wants split-based numbers for the uncredited branch, they have not been taken.
+
+2. **No real order — ACCEPTED.** Shopify Checkout reports *"This store can't accept payments right
+   now"*, so thank-you and order-status were verified in the checkout editor preview, which the plan
+   explicitly permits ("or checkout editor preview"). **Andrew's call: "payments not on, so preview is
+   fine."** A real end-to-end order should ride along with the first live transaction once payments
+   are enabled — not tracked as a Phase 6 debt.
+
+## Approval
+
+**Andrew approved Phase 6 on 2026-08-13.** SHOP-01, SHOP-02, SHOP-03 and SHOP-04 marked complete in
+`REQUIREMENTS.md` on that approval. SHOP-05 and SHOP-06 remain Pending by design — their artifacts
+exist (`06-SHOP-05-COPY-DRAFT.md`, `06-SHOP-06-FULFILLMENT-PROCESS.md`) but closing them requires
+William pasting copy, writing a refund policy that does not yet exist, and AOD adopting the
+fulfillment checklist.
 
 ## Deviation — the Analytics reconfirmation was superseded, not skipped
 
