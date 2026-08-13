@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 6 plans written (06-01..06-06)
-last_updated: "2026-08-12T11:27:05.073Z"
-last_activity: 2026-08-12 -- Phase 6 planning complete
+stopped_at: Phase 05.2 planned (5 plans / 3 waves)
+last_updated: "2026-08-13T09:49:16.557Z"
+last_activity: 2026-08-13 -- Phase 05.2 planning complete
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 7
-  total_plans: 62
+  total_plans: 67
   completed_plans: 55
-  percent: 70
+  percent: 82
 ---
 
 # Project State
@@ -28,10 +28,21 @@ parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 6 (Purchase Prerequisites & Returning Patients) — planned, 6 plans / 3 waves
-Plan: 0 of 6 — next step is `/gsd:execute-phase 6`
-Status: Ready to execute
-Last activity: 2026-08-12 -- Phase 6 planning complete
+Phase: 5.2 (Clinical Bracket Revision) — planned, 5 plans / 3 waves
+Plan: 0 of 5 — next step is `/gsd:execute-phase 5.2`
+Status: Phase 5.2 planned and ready to execute on this branch; Phase 6 Wave 1 is in flight elsewhere
+Last activity: 2026-08-13 -- Phase 05.2 planning complete
+
+**Read this branch's state as branch-local.** This is
+`phase-5.2-clinical-bracket-revision`, cut from `main`. Phase 6 Wave 1 (`06-01` and `06-04` complete,
+`06-02` Task 3 open) lives on `thread-phase-6-purchase-prerequisites` and is deliberately **not**
+recorded here — the counts above are `main`'s plus Phase 5.2's five new plans. Do not "correct" them
+against the Phase 6 branch; the two reconcile when both merge to `main`.
+
+**The two phases do not conflict.** ROADMAP Sequencing Constraint 7 requires 5.2 to land before Phase
+6 **Wave 2** only, because `06-03` and `06-05` are the first Phase 6 artifacts that name a bracket
+threshold and the threshold moves 7 → 9. Wave 1 (`06-01`, `06-02`, `06-04`) references no bracket
+boundary and is unaffected.
 
 **Keep the `Status:` value above on one logical line when editing.** `gsd-sdk query
 state.record-session` scrapes this line into the frontmatter `status:` key; a wrapped line got
@@ -40,6 +51,20 @@ and `percent` 70 → 60. Both were restored by hand. Re-check the frontmatter af
 `state.record-session` call. **2026-08-12 again:** record-session set `status: completed` and
 reset `completed_phases` 7→6 / `percent` 70→60 after UI-SPEC approval — restored by hand.
 **Same day:** `state.planned-phase` again reset `completed_phases` 7→6 / `percent` 70→60 — restored by hand.
+**Numbers cited below are as observed on whichever branch each corruption occurred — the pattern is
+the point, not the arithmetic.**
+**Same day after 06-01:** `state update-progress` / `record-session` again set `completed_phases` 7→6 (percent correctly 90 from plan counts) — restored by hand to 7.
+**Same day after 06-04:** `state advance-plan` / `update-progress` / `record-session` again set `completed_phases` 7→6 and naively advanced Plan to 3 (wave-parallel 06-04 is not sequential plan 3) — restored `completed_phases` to 7 and Plan pointer to next incomplete 06-02.
+**2026-08-13, sixth occurrence, new handler:** `state.add-roadmap-evolution` — which only appends a
+prose bullet — also rewrote the whole `progress:` block: `completed_phases` 7→6, `completed_plans`
+57→**58** (nothing was completed), and `percent` 92→**55**. It correctly raised `total_phases` 10→11
+for the inserted phase; everything else it touched was wrong. Restored by hand to 7 / 57 / 92.
+**The `completed_plans` invention is new** — prior corruptions only moved `completed_phases` and
+`percent`. Treat *every* `gsd-sdk query state.*` call as capable of rewriting the entire frontmatter,
+not just the field it advertises, and diff the block afterward. `state.patch` was deliberately NOT
+run for the phase-insert pointer update (the insert-phase workflow calls for it) — the Current
+Position pointer legitimately tracks in-flight 06-02, and no field named in that workflow exists in
+this STATE.md anyway, so the call would have matched nothing while risking another rewrite.
 
 **Branch:** `main` @ `e687cfd`. PRs #25, #26, #27 and #28 all merged. Phase 5 deployed 2026-08-12.
 `HANDOFF.md` is committed and current (PR #28) — read it alongside this file, it carries the
@@ -235,6 +260,7 @@ Andrew clicking. The tally is now six. Keep the human browser pass.
 - Phase 04.1 inserted after Phase 4: Testing-First Quiz Order — move the allergy-testing split and required upload to the front of the quiz so abandonment costs 30 seconds, not 10 minutes (URGENT)
 - Phase 05.1 inserted after Phase 5 on 2026-08-11 (Admin-Configurable Score Scale, SCALE-01..04), then **REMOVED on 2026-08-12 during `/gsd:discuss-phase 5.1` — never planned, never built, zero code written.** The insertion rested on a wrong premise: that the clinical bracket boundaries were tunable. They are not — 0–2 / 3–6 / 7+ (`app/lib/quiz/scoring.ts:4-8`) come from the AOD medical director and are fixed. Only the *colour band stops* (how a 0–60 raw score maps to green / orange / red) were ever meant to be configurable, and those are display-only: rendered from the raw score at `ResultsDisplay.tsx:70`, never persisted, absent from the PDF. Dropping the bracket half removed the whole cost — no `submissions.scale_version`, no migration, no PHI-path review. William's colour-stop answer is a one-line edit to `score-scale.ts:28-36` plus a deploy, tracked as a go-live config item. **The 2026-08-11 unblocking of SCORE-02 and SCORE-03 still stands** — it came from separating colour from brackets, not from the phase
 - Phase 04.2 inserted after Phase 4: Resume In-Progress Intake — **browser-local `localStorage` only.** The server draft store + emailed magic link version was scoped and deliberately DROPPED (~1+ week, two new BAA surfaces); this line originally described it and is corrected here. No draft PHI table, no email provider, no BAA implication. Partially reverses the recorded out-of-scope decision on resume — browser-local is in, cross-device stays out (URGENT)
+- Phase 5.2 inserted after Phase 5: Clinical Bracket Revision — William Miller moved the clinical brackets from 0-2/3-6/7+ to 0-2/3-8/9+ on 2026-08-13, with new recommendation copy for all three and removal of the /60 denominator from the patient view. Reverses the standing 'brackets are fixed, not tunable' premise recorded when Phase 5.1 was cancelled: that was true of us, never of the medical director. Needs a CHECK-constraint migration; must precede Phase 6 Wave 2 because the purchase gate threshold moves 7 -> 9. The colour half of his answer confirmed the shipped bar and costs nothing. (URGENT)
 
 ### Decisions
 

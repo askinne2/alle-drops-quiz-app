@@ -173,6 +173,29 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
 > medical director and are not tunable; only the colour stops were ever in question, and those are a
 > code constant William confirms once. William's answer is a one-line edit to
 > `app/lib/quiz/score-scale.ts:28-36` plus a deploy, not a data edit through a form.
+>
+> **AMENDED A THIRD TIME 2026-08-13 — the fixed-brackets premise did not survive contact with the
+> medical director.** William replied and moved the boundaries: `3–6` → `3–8`, `7+` → `9+`. The two
+> notes above are correct that *we* cannot tune the brackets and that no admin form should exist;
+> they were wrong to read that as "the numbers never change". They change when William changes them,
+> through a phase and a migration. The colour half of his answer confirmed the shipped presentation
+> and needs no numbers at all. See SCORE-04..06 below and
+> `.planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md`.
+
+### Clinical Bracket Revision
+
+Set by William Miller (AOD medical director) on 2026-08-13. Source of truth for all three:
+`.planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md`.
+
+- [ ] **SCORE-04**: The clinical bracket boundaries are `0–2` / `3–8` / `9+` everywhere a bracket is
+  computed, displayed, stored, or asserted — `SCORE_BRACKETS`, the `ScoreBracket` type union, the
+  `score_bracket` CHECK constraint, both PHI renderers, and the test suite. A patient scoring 7 or 8
+  is Moderate, not High (`DEC-clinical-brackets-set-by-medical-director`)
+- [ ] **SCORE-05**: Each bracket renders William's confirmed headline and recommendation body
+  verbatim, and no retired `3–6` / `7+` wording survives on a patient-facing surface
+- [ ] **SCORE-06**: The patient sees their score without the `/ 60` denominator, while the bar's
+  geometry still reads through the derived-ceiling accessor — SCORE-02's "derived, never a literal"
+  guarantee is not weakened by hiding the number (`REQ-derived-max-score`)
 
 ### Purchase Prerequisites & Returning Patients
 
@@ -336,7 +359,10 @@ Acknowledged, not in the v1.0 roadmap.
 | RESUME-04 | Phase 4.2 | Complete (2026-08-11, verified live) |
 | SCORE-01 | Phase 5 | Complete |
 | SCORE-02 | Phase 5 | Complete (unblocked 2026-08-11 — provisional default) |
-| SCORE-03 | Phase 5 | Complete (unblocked 2026-08-11 — provisional colour stops shipped as a code constant, `score-scale.ts:28-36`; William confirms the three numbers before go-live) |
+| SCORE-03 | Phase 5 | Complete (unblocked 2026-08-11 — provisional colour stops shipped as a code constant, `score-scale.ts:28-36`. **Confirmation received 2026-08-13:** William approved the shipped arrangement — brackets drive colour 1:1, three equal-width bands, red-for-most accepted. No numbers changed; clearing `isProvisional` moves to Phase 5.2) |
+| SCORE-04 | Phase 5.2 | Not started — bracket boundaries move to 0–2 / 3–8 / 9+ |
+| SCORE-05 | Phase 5.2 | Not started — William's verbatim recommendation copy |
+| SCORE-06 | Phase 5.2 | Not started — drop the `/ 60` denominator from the patient view |
 | SHOP-01 | Phase 6 | Spike answered 2026-08-12 — definitions created, no fallback needed, SHOP-02/03 unblocked. Not Complete: the Liquid render is unproven and owed to SHOP-02. See `06-SPIKE-SHOP-01.md` |
 | SHOP-02 | Phase 6 | Pending |
 | SHOP-03 | Phase 6 | Pending |
