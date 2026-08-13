@@ -27,7 +27,7 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - [x] **Phase 4.1: Testing-First Quiz Order** *(INSERTED)* - Move the testing split + required upload to the front so abandonment costs seconds, not ten minutes (completed 2026-08-11)
 - [x] **Phase 4.2: Resume In-Progress Intake** *(INSERTED)* - Browser-local (localStorage) resume so a closed tab does not lose a completed intake. No draft PHI store, no BAA needed (completed 2026-08-11)
 - [x] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale (completed 2026-08-11)
-- [ ] **Phase 5.2: Clinical Bracket Revision** *(INSERTED)* - Medical director moved the brackets to 0–2 / 3–8 / 9+; new recommendation copy, no `/60` denominator (URGENT — must precede Phase 6 Wave 2)
+- [x] **Phase 5.2: Clinical Bracket Revision** *(INSERTED)* - Medical director moved the brackets to 0–2 / 3–8 / 9+; new recommendation copy, no `/60` denominator (URGENT — must precede Phase 6 Wave 2)
 - [ ] **Phase 6: Purchase Prerequisites** - Honor-system checkboxes and returning-patient state
 - [ ] **Phase 7: Telehealth Intake Path** - Booking-capable consult page and telehealth branching
 - [ ] **Phase 8: Launch Readiness** - Trackers, clinical copy, BAAs, AOD infrastructure handoff
@@ -626,7 +626,7 @@ Plans:
 
 **Wave 3** *(blocked on 05.2-01, 05.2-02, 05.2-04)*
 
-- [ ] 05.2-05-PLAN.md — Merge, deploy, verify on served bytes, blocking human browser pass at 375px, close SCORE-04/05/06 (`autonomous: false`)
+- [x] 05.2-05-PLAN.md — Merge, deploy, verify on served bytes, blocking human browser pass at 375px, close SCORE-04/05/06 (`autonomous: false`)
 
 **Cross-cutting constraints:**
 
@@ -912,7 +912,7 @@ exposures today.
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
 | 4. Mandatory Allergy Testing | 19/19 | Complete   | 2026-08-10 |
 | 5. Preliminary Score Page | 6/6 | Complete   | 2026-08-11 |
-| 5.2 Clinical Bracket Revision *(INSERTED)* | 4/5 | Executing | - |
+| 5.2 Clinical Bracket Revision *(INSERTED)* | 5/5 | Complete | 2026-08-13 |
 | 6. Purchase Prerequisites | 2/6 | Executing | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |
 | 8. Launch Readiness | 0/TBD | Not started | - |

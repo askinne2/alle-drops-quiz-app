@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 05.2 execution started (wave 1 dispatching)
+stopped_at: Phase 05.2 complete (shipped and approved 2026-08-13)
 last_updated: "2026-08-13T10:01:28.167Z"
-last_activity: 2026-08-13 -- Phase 05.2 execution started
+last_activity: 2026-08-13 -- Phase 05.2 complete: merged, deployed, UAT approved
 progress:
   total_phases: 11
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 67
-  completed_plans: 59
-  percent: 88
+  completed_plans: 60
+  percent: 90
 ---
 
 # Project State
@@ -28,10 +28,56 @@ parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 05.2 (Clinical Bracket Revision) — EXECUTING, waves 1 and 2 complete
-Plan: 4 of 5 (05.2-01, 05.2-02, 05.2-03, 05.2-04 done; only 05.2-05 remains)
-Status: Phase 05.2 code green and DDL live; 05.2-05 needs merge and deploy authorization from Andrew
-Last activity: 2026-08-13 -- Phase 05.2 wave 2 complete; migration 005 executed and verified
+Phase: 05.2 (Clinical Bracket Revision) — **COMPLETE**, 5/5 plans, shipped 2026-08-13
+Plan: 5 of 5 — SCORE-04, SCORE-05 and SCORE-06 all closed
+Status: Phase 05.2 shipped and approved; next is Phase 6 Wave 2, now unblocked by Sequencing Constraint 7
+Last activity: 2026-08-13 -- Phase 05.2 complete: merged, deployed, UAT approved
+
+**Phase 05.2 deploy verification (2026-08-13), on served bytes rather than exit codes.** Two deploys:
+the phase itself, then a UAT fix Andrew found by looking at the live page.
+
+| | pre-phase | after phase | after UAT fix |
+|---|---|---|---|
+| served `/quiz-bundle-js` | 203,837 B | 204,067 B | **203,686 B**, SHA-256 identical to the committed artifact |
+| `Prior to Starting Treatment` | 0 | **1** | 1 |
+| `May Significantly Help Manage Your Symptoms` | 0 | **1** | 1 |
+| `board-certified allergist` | 0 | **2** | 2 |
+| `May Significantly Help You` | 1 | **0** | 0 |
+| `or scheduling an appointment with an allergist` | 1 | **0** | 0 |
+| ` on a 0 to ` | 1 | **0** | 0 |
+| `Score: ` | 1 | 1 | **0** |
+| `, score ` | 1 | 1 | **0** |
+
+`/health` 200 after both. Every needle above was measured **before** its deploy as well as after, so
+none is vacuous. `3-6` was deliberately never used as a needle: `ConsentStep.tsx` ships the clinical
+phrase `3-6 months` into the same bundle, so that count is permanently non-zero and proves nothing.
+
+**Migration 005 is live** on `alledrops_quiz_dev`: `CHECK (score_bracket = ANY (ARRAY['0-2','3-6',
+'3-8','7+','9+']))`, verified from the database by the orchestrator, not accepted from the executor's
+report. Backup `1786617655419` (`ON_DEMAND`/`SUCCESSFUL`) taken and read back first. 48 rows before
+and after, distribution unchanged — no historical row relabelled.
+
+**UAT finding, and the reason the human pass is not optional.** The phase shipped green: 759 tests,
+typecheck clean, every marker verified. Andrew then opened the deployed page and saw the problem
+nothing else could: with the `/60` denominator gone, the bare number was *less* interpretable, not
+more — a `30` sitting above a scale whose top band means `9+`. The numeric score was removed
+entirely. **That is the seventh defect on this project found by a human clicking and missed by a
+fully green suite.** Keep the human browser pass.
+
+**Consequence now load-bearing:** within-zone interpolation is the ONLY thing distinguishing a
+patient at 9 from one at 60, since both read "High" everywhere else on the page. The number used to
+carry that. Do not replace interpolation with a fixed per-zone marker position. Documented above the
+calculation in `ResultsDisplay.tsx`.
+
+**Owed back to William:** he wrote that patients "will still receive a number, and then fall on the
+scale". Andrew read the email as "no number displayed anywhere, just the scale" and decided that
+way, resting on "the main part is utilizing the scale so they can understand". Both readings are
+recorded in `ResultsDisplay.tsx`. Worth a one-line confirmation to William before go-live, since this
+is patient-facing clinical presentation owned by the medical director.
+
+**Small follow-up:** `quizResults__scoreCircle`, `quizResults__scoreNumber` and `scaleBar__value` are
+now dead CSS in `quiz.module.css` — left in deliberately rather than widening a UAT fix into a
+cleanup.
 
 **MIGRATION 005 IS LIVE on `alledrops_quiz_dev`.** Executed 2026-08-13 under Andrew's in-session
 authorization, via `fly ssh console -a alle-drops-quiz-app` (the Fly VM is the only host inside the
