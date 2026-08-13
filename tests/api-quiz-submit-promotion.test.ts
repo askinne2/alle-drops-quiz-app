@@ -85,7 +85,7 @@ function basePayload(overrides: Record<string, unknown> = {}) {
     phone: "6155551234",
     symptom_profile_id: `AOD_TEST_${Date.now()}`,
     quiz_score: 9,
-    score_bracket: "7+",
+    score_bracket: "9+",
     quiz_date: "2026-08-10T00:00:00.000Z",
     answers: { taking_meds: "no" },
     completion_time: 120,
