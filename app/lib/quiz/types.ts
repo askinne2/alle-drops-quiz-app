@@ -107,7 +107,7 @@ export interface QuizSubmission {
   phone: string;
   symptom_profile_id: string;
   quiz_score: number;
-  score_bracket: "0-2" | "3-6" | "7+";
+  score_bracket: "0-2" | "3-8" | "9+";
   quiz_date: string;
   answers: QuizAnswers; // Full answers stored in Google Sheets
   completion_time?: number;

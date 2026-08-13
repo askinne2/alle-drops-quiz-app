@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import zlib from 'node:zlib'
 import { PDFDocument } from 'pdf-lib'
 
 vi.mock('../app/lib/submission-files', () => ({
@@ -26,7 +27,7 @@ const baseRow: SubmissionFullRow = {
   patient_phone: '6155551234',
   patient_state: 'tennessee',
   quiz_score: 9,
-  score_bracket: '7+',
+  score_bracket: '9+',
   answers_json: { q1: 'yes', q2: 'no', q3: 'sometimes' },
   consent_version: 'v1.0',
   consent_accepted_at: '2026-05-07T18:00:00Z',
@@ -40,6 +41,35 @@ const baseRow: SubmissionFullRow = {
 // pdfkit-only code path this plan post-processes. Measured directly against the pre-change
 // source (git HEAD before this plan's edit) — recorded in 04-15-SUMMARY.md.
 const GOLDEN_NO_FILES_PAGE_COUNT = 1
+
+// 05.2-02: pdfkit compresses (FlateDecode) its content streams and encodes drawn text as raw
+// character-code hex strings inside Tj/TJ operators — a naive buffer.toString() search finds
+// nothing. This helper inflates every content stream and decodes each hex run back to text so
+// tests can assert on rendered label text (D-52-04 legacy-bracket regression guard below).
+function pdfRenderedText(buf: Buffer): string {
+  const raw = buf.toString('latin1')
+  const streamRe = /stream\r?\n([\s\S]*?)\r?\nendstream/g
+  const hexRe = /<([0-9a-fA-F]+)>/g
+  let out = ''
+  let sm: RegExpExecArray | null
+  while ((sm = streamRe.exec(raw))) {
+    let inflated: string
+    try {
+      inflated = zlib.inflateSync(Buffer.from(sm[1], 'latin1')).toString('latin1')
+    } catch {
+      continue // not a FlateDecode stream (e.g. an embedded image XObject) — skip
+    }
+    hexRe.lastIndex = 0
+    let hm: RegExpExecArray | null
+    while ((hm = hexRe.exec(inflated))) {
+      const hex = hm[1]
+      for (let i = 0; i + 1 < hex.length; i += 2) {
+        out += String.fromCharCode(parseInt(hex.substr(i, 2), 16))
+      }
+    }
+  }
+  return out
+}
 
 describe('generateVisitSummaryPdf', () => {
   it('returns a non-empty Buffer', async () => {
@@ -73,6 +103,18 @@ describe('generateVisitSummaryPdf', () => {
     const buf = await generateVisitSummaryPdf(row)
     expect(buf).toBeInstanceOf(Buffer)
     expect(buf.length).toBeGreaterThan(1000)
+  })
+
+  // D-52-04 regression guard: a historical row still carrying a retired pre-2026-08-13 bracket
+  // label must render a meaningful legacy label, not fall through to the bare score_bracket
+  // string. Observed failing RED against the pre-Task-2 pdf.ts (BRACKET_LABELS had no '7+' key,
+  // so the ?? fallback rendered the bare "7+") — see 05.2-02-SUMMARY.md.
+  it('renders a legacy 7+ row with the pre-2026-08-13 label, not the raw fallback', async () => {
+    vi.mocked(submissionFiles.listFilesForSubmission).mockResolvedValue([])
+    const row = { ...baseRow, score_bracket: '7+' }
+    const buf = await generateVisitSummaryPdf(row)
+    const text = pdfRenderedText(buf)
+    expect(text).toContain('Bracket: 7+ (High, pre-2026-08-13)')
   })
 })
 

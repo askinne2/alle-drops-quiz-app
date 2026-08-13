@@ -143,12 +143,12 @@ export function ResultsDisplay({
             <div className={styles.scaleBar}>
               <div className={styles.scaleBar__axisRow}>
                 <span className={styles.scaleBar__axisLabel}>Symptom burden</span>
-                <span className={styles.scaleBar__value}>{score} of {scale.max}</span>
+                <span className={styles.scaleBar__value}>Score: {score}</span>
               </div>
               <div
                 className={styles.scaleBar__track}
                 role="img"
-                aria-label={`Symptom burden position: ${currentZone.label.toLowerCase()} zone, ${score} of ${scale.max} on a 0 to ${scale.max} scale.`}
+                aria-label={`Symptom burden position: ${currentZone.label.toLowerCase()} zone, score ${score}.`}
               >
                 <div className={styles.scaleBar__zones} aria-hidden="true">
                   {/* Equal share per zone, NOT `upTo - previousUpTo` — see the comment above. */}
@@ -212,32 +212,35 @@ export function ResultsDisplay({
                 <div className={styles.quizResults__message}>
                   <h3>Your Symptoms Appear Mild and Well-Controlled</h3>
                   <p>
-                    Based on your responses, your allergy symptoms appear to be mild and well-controlled. Continue your
+                    Based on your responses, your allergy symptoms appear to be well-controlled. Continue your
                     current management approach with over-the-counter medications as needed. However, if your symptoms
                     worsen, occur more frequently, or begin to interfere with your daily activities, consider completing
-                    this questionnaire again or scheduling an appointment with an allergist.
+                    this questionnaire again. You can always schedule a telehealth appointment with our board-certified
+                    allergist if you would like to discuss this further.
                   </p>
                 </div>
               </div>
             )}
 
-            {scoreBracket === "3-6" && (
+            {scoreBracket === "3-8" && (
               <div className={styles.quizResults__recommendation}>
                 <div className={styles.quizResults__message}>
-                  <h3>You May Benefit From Seeing an Allergist</h3>
+                  <h3>You May Benefit From Seeing an Allergist Prior to Starting Treatment</h3>
                   <p>
-                    Based on your responses, you may benefit from seeing an allergist. While your symptoms are not
-                    severe, they are affecting your daily life and could be better controlled. An allergist can help
-                    identify your triggers and optimize your treatment plan.
+                    Based on your responses, you may benefit from seeing an allergist to help make a decision on
+                    whether or not SLIT treatment is appropriate for you. We recommend scheduling a Telehealth
+                    appointment with our board-certified allergist. While your symptoms are not severe, they are
+                    affecting your daily life and could be better controlled. An allergist can help identify your
+                    triggers and optimize your treatment plan.
                   </p>
                 </div>
               </div>
             )}
 
-            {scoreBracket === "7+" && (
+            {scoreBracket === "9+" && (
               <div className={styles.quizResults__recommendation}>
                 <div className={styles.quizResults__message}>
-                  <h3>Sublingual Immunotherapy May Significantly Help You</h3>
+                  <h3>Sublingual Immunotherapy May Significantly Help Manage Your Symptoms</h3>
                   <p>
                     Based on your responses, you would likely benefit from beginning sublingual immunotherapy. Your
                     symptoms are moderate-to-severe, significantly affecting your quality of life, or not adequately

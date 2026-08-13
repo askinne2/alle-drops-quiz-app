@@ -168,8 +168,10 @@ export default function QuizResultsPage() {
             >
               <option value="">All</option>
               <option value="0-2">0–2 Low</option>
-              <option value="3-6">3–6 Moderate</option>
-              <option value="7+">7+ High</option>
+              <option value="3-8">3–8 Moderate</option>
+              <option value="9+">9+ High</option>
+              <option value="3-6">3–6 Moderate (legacy)</option>
+              <option value="7+">7+ High (legacy)</option>
             </select>
           </FilterField>
           <FilterField label="From">
@@ -470,8 +472,11 @@ function InfoCell({ label, value }: { label: string; value: string }) {
 
 const BRACKET_BADGE_COLORS: Record<string, { bg: string; color: string; label: string }> = {
   '0-2': { bg: '#dcfce7', color: '#15803d', label: '0–2 Low' },
-  '3-6': { bg: '#fef9c3', color: '#a16207', label: '3–6 Moderate' },
-  '7+':  { bg: '#fee2e2', color: '#b91c1c', label: '7+ High' },
+  '3-8': { bg: '#fef9c3', color: '#a16207', label: '3–8 Moderate' },
+  '9+':  { bg: '#fee2e2', color: '#b91c1c', label: '9+ High' },
+  // Legacy pre-2026-08-13 boundaries — historical rows are never relabelled. See D-52-04.
+  '3-6': { bg: '#fef9c3', color: '#a16207', label: '3–6 Moderate (legacy)' },
+  '7+':  { bg: '#fee2e2', color: '#b91c1c', label: '7+ High (legacy)' },
 }
 
 function BracketBadge({ bracket }: { bracket: string }) {
@@ -520,6 +525,9 @@ const infoGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: '1f
 
 const BRACKET_BANNER_COLORS: Record<string, { bg: string; color: string }> = {
   '0-2': { bg: '#f0fdf4', color: '#14532d' },
+  '3-8': { bg: '#fefce8', color: '#713f12' },
+  '9+':  { bg: '#fff1f2', color: '#881337' },
+  // Legacy pre-2026-08-13 boundaries — historical rows are never relabelled. See D-52-04.
   '3-6': { bg: '#fefce8', color: '#713f12' },
   '7+':  { bg: '#fff1f2', color: '#881337' },
 }

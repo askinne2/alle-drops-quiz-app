@@ -78,3 +78,7 @@ scripts/output/
 *.pem
 *.key
 *.cert
+
+# Claude Code local state — harness worktrees and per-machine settings
+.claude/worktrees/
+.claude/settings.local.json

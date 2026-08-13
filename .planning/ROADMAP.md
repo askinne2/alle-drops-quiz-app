@@ -27,6 +27,7 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - [x] **Phase 4.1: Testing-First Quiz Order** *(INSERTED)* - Move the testing split + required upload to the front so abandonment costs seconds, not ten minutes (completed 2026-08-11)
 - [x] **Phase 4.2: Resume In-Progress Intake** *(INSERTED)* - Browser-local (localStorage) resume so a closed tab does not lose a completed intake. No draft PHI store, no BAA needed (completed 2026-08-11)
 - [x] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale (completed 2026-08-11)
+- [ ] **Phase 5.2: Clinical Bracket Revision** *(INSERTED)* - Medical director moved the brackets to 0–2 / 3–8 / 9+; new recommendation copy, no `/60` denominator (URGENT — must precede Phase 6 Wave 2)
 - [ ] **Phase 6: Purchase Prerequisites** - Honor-system checkboxes and returning-patient state
 - [ ] **Phase 7: Telehealth Intake Path** - Booking-capable consult page and telehealth branching
 - [ ] **Phase 8: Launch Readiness** - Trackers, clinical copy, BAAs, AOD infrastructure handoff
@@ -64,6 +65,14 @@ These produce dead code or duplicated hardcodes if violated:
 6. **Phase 8 runs in parallel, not last.** Its client-owned items have multi-week lead times
    (Workspace → BAA → GCP migration) and two of its items — LAUNCH-01 (Klaviyo) and LAUNCH-02 (Test
    Mode) — are live patient-facing exposures today. Start them immediately.
+
+7. **Phase 5.2 before Phase 6 Wave 2.** Phase 6's purchase gate is keyed to the clinical bracket, and
+   the threshold moves from 7 to 9 on 2026-08-13. Plans `06-03` (the `purchase-prerequisites` theme
+   app block) and `06-05` (SHOP-05 copy) are the first Phase 6 artifacts that name a threshold, and
+   neither has started. Writing them against `7+` and correcting later means re-editing shipped
+   Liquid, a re-deploy, and re-doing 06-06's human UAT. Phase 6 Wave 1 is unaffected — `06-01`,
+   `06-02` and `06-04` never reference a bracket boundary — so this constraint does not stall the
+   Wave 1 work already in flight.
 
 **No scoring phase exists, deliberately.** `calculateTotalScore` takes an explicit question list and
 is always called with `ALL_SCORED_QUESTIONS` (Parts 1–5). New sections cannot alter the score.
@@ -565,6 +574,120 @@ three numbers; they are edited into `PROVISIONAL_SCORE_SCALE` (`app/lib/quiz/sco
 deployed. If AOD later wants to self-serve this without a deploy, it earns a new phase then — scoped to
 colour stops only, off the PHI path.
 
+### Phase 5.2: Clinical Bracket Revision (INSERTED)
+
+**Goal**: The score a patient is shown, the colour band it lands in, the recommendation they read,
+and the bracket stored on their submission all reflect the boundaries the AOD medical director
+actually set — `0–2 / 3–8 / 9+`, not the retired `0–2 / 3–6 / 7+`
+**Depends on**: Phase 5 (the Preliminary Score page and the derived-ceiling accessor must exist first)
+**Must precede**: Phase 6 Wave 2 — see Sequencing Constraint 7
+**Requirements**: SCORE-04, SCORE-05, SCORE-06
+**Source of truth**: `.planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md`
+— William Miller's verbatim reply, the authoritative record of the bracket change
+
+**Why the number is 5.2 and not 5.1.** `5.1` is a retired number. An "Admin-Configurable Score Scale"
+phase held it from 2026-08-11 to 2026-08-12 and was cancelled before planning; Phase 5's notes above
+and REQUIREMENTS.md §"Removed Requirements" both discuss it at length. Reusing the number would make
+two unrelated phases indistinguishable in the planning record. `5.1` stays burned.
+
+**Success Criteria** (what must be TRUE):
+
+  1. A patient scoring 7 or 8 is routed, coloured, and counselled as **Moderate**, not High — the
+     boundary that moved is observable end to end, from `calculateTotalScore` through the rendered
+     page to the `score_bracket` value written to Cloud SQL
+
+  2. Each of the three brackets renders William's confirmed headline and body copy verbatim, with no
+     surviving text from the retired `3–6` / `7+` wording on any patient-facing surface
+
+  3. The patient sees their score without the `/ 60` denominator, and the derived-ceiling accessor
+     still backs the bar's geometry — SCORE-02's "never a literal" guarantee survives the removal
+
+  4. A submission carrying `score_bracket = '9+'` inserts successfully against Cloud SQL, and the
+     pre-existing `'3-6'` / `'7+'` rows still satisfy the constraint and are not rewritten
+
+  5. The colour bar is no longer marked provisional in code, because the presentation question it was
+     marking is answered — equal-width bands tracking the brackets 1:1, confirmed in writing
+
+  6. Deploy is verified on served bytes, not exit codes: the live `/quiz-bundle-js` carries the new
+     copy and no longer carries the retired strings, counted with `split(needle).length - 1`
+
+**Plans**: 5 plans / 3 waves
+
+Plans:
+**Wave 1**
+
+- [x] 05.2-01-PLAN.md — Move the brackets to 0–2 / 3–8 / 9+ in scoring/types/scale, ship William's verbatim copy, drop the `/60` denominator, rebuild the theme bundle in-commit
+- [x] 05.2-03-PLAN.md — Author `migrations/005_widen_score_bracket_check.sql` alone, zero DDL executed, guarded by a contract test
+
+**Wave 2** *(05.2-02 depends on 05.2-01; 05.2-04 depends on 05.2-03)*
+
+- [x] 05.2-02-PLAN.md — Carry the new labels through API validation, the clinical PDF, the admin table and dashboard, the E2E script, and every test fixture
+- [x] 05.2-04-PLAN.md — Named Cloud SQL backup, human-gated DDL execution, constraint proven on query output (`autonomous: false`)
+
+**Wave 3** *(blocked on 05.2-01, 05.2-02, 05.2-04)*
+
+- [ ] 05.2-05-PLAN.md — Merge, deploy, verify on served bytes, blocking human browser pass at 375px, close SCORE-04/05/06 (`autonomous: false`)
+
+**Cross-cutting constraints:**
+
+- **Branching is manual and is an operator precondition.** `.planning/config.json` sets no
+  `git.branching_strategy`, so `/gsd:execute-phase` does not cut the branch. Be on
+  `phase-5.2-clinical-bracket-revision`, cut from `main`, *before* invoking it — not `main`, and not
+  `thread-phase-6-purchase-prerequisites`, which carries in-flight Phase 6 Wave 1 work. Worktree
+  executors legitimately commit on `worktree-agent-*`; that is expected and must not be "fixed".
+- **DDL runs before the deploy** (05.2-04 before 05.2-05), inverting Phase 3's order deliberately.
+  Widening the CHECK is additive, so live code writing `3-6` / `7+` stays valid. Deploying first
+  would put code writing `9+` against a database that rejects it, losing a completed clinical intake
+  at INSERT.
+- **`3-6` is unusable as a served-bytes or bundle needle.** `ConsentStep.tsx` ships the clinical
+  phrase `3-6 months`, so an absence gate on it can never pass and a presence gate passes vacuously.
+
+**UI hint**: yes
+
+**Notes**: **~1 day. Small in code, wide in blast radius, and it touches the PHI write path.**
+
+**What makes this a phase rather than the one-line edit Phase 5's notes predicted.** Those notes —
+and REQUIREMENTS.md, and the "Blocked on Client Decisions" section below — all assert that the
+clinical brackets are *fixed and not tunable*, and that only the colour stops were ever in question.
+That reasoning was sound and is not being discarded: the brackets are not tunable **by us**. They are
+tunable by the medical director, and on 2026-08-13 he tuned them. What was scoped as a one-line edit
+to `score-scale.ts:28-36` is instead a change to `SCORE_BRACKETS`, a type union, a `CHECK`
+constraint, patient-facing clinical copy, and every literal downstream of those.
+
+**The colour half of William's answer costs nothing.** `PROVISIONAL_SCORE_SCALE`
+(`score-scale.ts:51-61`) already derives its zones from `SCORE_BRACKETS` rather than retyping the
+numbers, exactly so the colours follow if the brackets ever move. They now move. The equal-width
+rendering and the brackets-drive-colour arrangement are what William confirmed, so the deployed
+presentation is correct as-is — only `isProvisional` comes off. Note that it is typed as the literal
+`true`, so clearing it is a type change, not just a value change.
+
+**Blast radius, measured not estimated.** 26 files carry bracket literals (`grep` over `app/`,
+`migrations/`, `tests/`, `scripts/`, `extensions/`): `scoring.ts` and its `ScoreBracket` union,
+`types.ts`, `score-scale.ts`, `ResultsDisplay.tsx`, `ConsentStep.tsx`, `quiz-validation.ts`,
+`pdf.ts`, `app._index.tsx`, `app.quiz-results.tsx`, `migrations/001_create_submissions.sql`,
+`scripts/e2e-test.ts`, and 14 test files. The DB constraint is the one that fails closed:
+`001_create_submissions.sql:24` reads `CHECK (score_bracket IN ('0-2','3-6','7+'))`, so without a
+migration every `9+` submission is rejected at INSERT.
+
+**Migration shape — widen, do not replace.** The new constraint must accept the union of old and new
+labels (`'0-2','3-6','3-8','7+','9+'`). Existing rows keep the bracket the patient was actually
+shown; relabelling them would rewrite clinical history to say something that never happened on
+screen. All current rows are test data, so this is a correctness principle here rather than a live
+risk — it stops being free once real patients exist, which is the argument for landing it now.
+Precedent to follow: Phase 4's migration 004 widened a `CHECK` 3→4 values additively
+(`04-19-SUMMARY.md`), and Phase 3's `DROP COLUMN` sequencing lesson (code live before destructive
+DDL) does not bind here because nothing is dropped.
+
+**Two planning assumptions, both recorded in the source doc and neither blocking.** Dropping `/ 60`
+is treated as patient-facing only — the clinical PDF and the admin table keep the denominator, where
+a provider benefits from it. And historical rows keep their original labels. If William says
+otherwise, both are cheap to reverse.
+
+**Do not "fix" the seam.** Phase 5 measured and Andrew accepted that adjacent scores near a bracket
+boundary land ~3px apart on the colour seam, and the reasoning sits above the calculation in
+`ResultsDisplay.tsx`. Moving the boundary from 6→7 to 8→9 relocates that seam; it does not remove it,
+and it is not a defect.
+
 ### Phase 6: Purchase Prerequisites & Returning Patients
 
 **Goal**: A patient buying SLIT is told, at the moment of purchase, what AOD requires before
@@ -713,6 +836,21 @@ form. That phase is gone (see Phase 5's notes) — **the clinical brackets are f
 only the colour stops were ever in question. His answer is now a one-line edit to
 `app/lib/quiz/score-scale.ts:28-36` plus a deploy. Still owed, same as before; cheaper to apply.
 
+**ANSWERED 2026-08-13 — and it was not the one-line edit this section predicted.** William replied in
+the "Quick clinical — Preliminary Score color scale" thread; verbatim record at
+`.planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md`.
+
+The colour question resolved for free: he confirmed the shipped arrangement — colour tracking the
+clinical brackets 1:1, three equal-width bands — and explicitly accepted that most patients render
+red ("a score of 9 really would be a decent amount of allergy related symptoms and thus be considered
+severe"). That is what is already deployed. No colour numbers to edit; `isProvisional` comes off and
+nothing else about the bar changes.
+
+**What he changed instead was the brackets themselves:** `3–6` → `3–8`, `7+` → `9+`, plus replacement
+recommendation copy for all three and removal of the `/ 60` denominator from the patient's view. The
+standing claim above — that the brackets are fixed and not tunable — was true of *us* and never of
+the medical director. Phase 5.2 carries the work. **This decision is no longer blocking anything.**
+
 **2. Domain spelling — gates LAUNCH-07 and the TEST-04 copy string.**
 `alledrops.com` (no R) was chosen in October 2025 *because* "AllerDrops" collides with the live
 federal `ALLERDROPS®` mark (Class 044, sublingual immunotherapy) in the same product category.
@@ -774,6 +912,7 @@ exposures today.
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
 | 4. Mandatory Allergy Testing | 19/19 | Complete   | 2026-08-10 |
 | 5. Preliminary Score Page | 6/6 | Complete   | 2026-08-11 |
-| 6. Purchase Prerequisites | 0/6 | Planned | - |
+| 5.2 Clinical Bracket Revision *(INSERTED)* | 4/5 | Executing | - |
+| 6. Purchase Prerequisites | 2/6 | Executing | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |
 | 8. Launch Readiness | 0/TBD | Not started | - |

@@ -27,7 +27,7 @@ const mockRow: SubmissionFullRow = {
   patient_phone: '6155551234',
   patient_state: 'tennessee',
   quiz_score: 9,
-  score_bracket: '7+',
+  score_bracket: '9+',
   answers_json: { taking_meds: 'no' },
   consent_version: 'v1',
   consent_accepted_at: '2026-05-01T12:00:00.000Z',

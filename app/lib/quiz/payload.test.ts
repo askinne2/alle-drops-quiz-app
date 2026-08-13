@@ -157,12 +157,12 @@ describe("buildSubmitPayload — score is recomputed, never trusted", () => {
     const wrong = buildSubmitPayload({
       ...BASE_INPUT,
       score: 999,
-      scoreBracket: "7+",
+      scoreBracket: "9+",
       startTime: Date.now(),
       symptomProfileId: "AOD_1000000000000",
     });
     expect(wrong.quiz_score).toBe(999);
-    expect(wrong.score_bracket).toBe("7+");
+    expect(wrong.score_bracket).toBe("9+");
   });
 });
 

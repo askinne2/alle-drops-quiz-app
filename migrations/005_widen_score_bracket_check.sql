@@ -1,0 +1,123 @@
+-- migrations/005_widen_score_bracket_check.sql
+-- Widens submissions.score_bracket's CHECK constraint from the retired three-value set
+-- ('0-2', '3-6', '7+') to the five-value UNION of retired and current labels, so the
+-- AOD medical director's 2026-08-13 bracket revision (0-2 / 3-8 / 9+ — see
+-- .planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md) can write
+-- '3-8' and '9+' without rejecting the INSERT.
+--
+-- This migration is ADDITIVE and NON-DESTRUCTIVE (a DROP CONSTRAINT / ADD CONSTRAINT pair that
+-- widens the allowed set, matching 004_create_submission_files.sql's action-CHECK-widening
+-- pattern exactly). It contains ZERO UPDATE, DELETE, TRUNCATE, DROP TABLE, DROP COLUMN, ALTER
+-- COLUMN ... TYPE, or ALTER COLUMN ... SET NOT NULL statements. No historical row is rewritten,
+-- and no row is relabelled — a row must always record the bracket the patient was actually shown
+-- on screen. Per the SOURCE doc's "Owed back to William" item 2, this is a deliberate planning
+-- assumption, not an oversight: existing rows carrying '3-6' or '7+' keep those exact labels
+-- forever. '3-6' and '7+' stay in the CHECK list not because anything will newly write them, but
+-- because those existing rows must keep satisfying the constraint.
+--
+-- All current rows in alledrops_quiz_dev are test data (STATE.md, Andrew: "EVERYTHING IS TEST
+-- DATA until i say otherwise"), so relabelling would cost nothing today — and it is still refused,
+-- on principle, because the constraint change must behave identically whether the table holds
+-- test rows or real patient intake.
+--
+-- REQUIRED before this file is ever run (plan 05.2-04's scope, NOT this commit's):
+--   1. A NAMED ON-DEMAND Cloud SQL backup must be taken first, against instance
+--      alledrops-quiz-data in project alledrops-quiz, and its ID/timestamp/status READ BACK via
+--      `gcloud sql backups list --instance=alledrops-quiz-data --project=alledrops-quiz` and
+--      `gcloud sql backups describe` — never trusted from the create command's exit code alone.
+--      Record the backup ID/timestamp/status in this header (or the executing plan's SUMMARY)
+--      before proceeding.
+--   2. The auto-generated constraint name MUST be confirmed before running, by selecting
+--      `conname` from `pg_constraint` where `conrelid = 'submissions'::regclass` and
+--      `contype = 'c'`. The expected name is `submissions_score_bracket_check` (Postgres's
+--      standard inline-CHECK auto-name), but it MUST be confirmed against pg_constraint at
+--      execution time, not assumed. If the live name differs, BOTH statements below must be
+--      edited to the real name before execution. The `IF EXISTS` on the DROP makes a wrong name
+--      fail SILENTLY — the DROP becomes a no-op, the ADD then fails with a duplicate-constraint
+--      error if the name collides, or worse, succeeds and leaves the OLD narrow constraint in
+--      force alongside a new differently-named one that never actually governs the column. This
+--      is the single most likely way this migration appears to succeed while doing nothing.
+--   3. ORDERING: this migration runs BEFORE the Fly deploy of the Phase 5.2 app code, not after.
+--      Phase 3's "app code live before DDL" rule exists to prevent a DROP running ahead of the
+--      code (003_drop_medical_history_legacy_columns.sql's failure mode: a dropped column makes
+--      every INSERT referencing it fail while the old release is still serving). This migration
+--      is additive in the opposite direction — it only WIDENS what is accepted. The
+--      currently-deployed code, which writes '3-6' and '7+', stays valid under the widened
+--      five-value constraint. But the not-yet-deployed code that writes '9+' would be REJECTED
+--      under the current narrow constraint. Running this migration behind the deploy is therefore
+--      the failure mode here, not ahead of it. Identical deviation and rationale as migration 004
+--      (STATE.md's 04-19 entry: "004 is additive in the opposite direction ... so v50 was
+--      unaffected and the database was left ahead of the code rather than behind").
+--   4. A pre-migration `SELECT COUNT(*) FROM submissions` must be recorded and re-read
+--      immediately before execution (not trusted from a stale snapshot earlier in the session),
+--      and re-checked immediately after. The count must be UNCHANGED before and after — nothing
+--      in this file writes, updates, or deletes a row.
+--   5. The `submissions` table is owned by `alledrops_app`, so this file is executed as
+--      `postgres` in ONE transaction, with `SET ROLE alledrops_app;` before the two ALTER
+--      statements and `RESET ROLE;` after (the 04-19 precedent — `submissions` is owned by
+--      alledrops_app and submission_access_log by postgres, so no single role owns both tables;
+--      this file touches submissions only, but keeps the same SET ROLE discipline for
+--      consistency and because ALTER TABLE requires table ownership). Execution is by hand in
+--      Cloud SQL Studio or `psql` against `alledrops_quiz_dev`; there is no ORM push command, and
+--      Prisma in this repo is the SQLite session store — a completely separate database from the
+--      Postgres PHI store.
+--   6. Plan 05.2-04 owns actually executing this file, after independently re-verifying every
+--      precondition above. This commit (plan 05.2-03) authors the file only — no `gcloud sql`
+--      command and no SQL statement in this file has been executed as part of authoring it.
+--
+-- ============================================================================================
+-- EXECUTED 2026-08-13 against alledrops_quiz_dev, plan 05.2-04 (retry — the first attempt
+-- blocked cleanly on an expired gcloud OAuth token before any gcloud call succeeded and left
+-- the database completely untouched; this run started fresh from Task 1).
+--
+--   Backup: ID 1786617655419, ON_DEMAND, SUCCESSFUL, description
+--     "pre-phase52-widen-score-bracket-check", windowStartTime 2026-08-13T10:40:55.419+00:00.
+--     Read back via `gcloud sql backups list` and `gcloud sql backups describe
+--     1786617655419 --instance=alledrops-quiz-data --project=alledrops-quiz` — not trusted from
+--     the create command's exit code.
+--   Confirmed live constraint name (from pg_constraint, read BEFORE the DDL):
+--     submissions_score_bracket_check — matched the name already written into both ALTER
+--     statements below, so no edit was required.
+--   Pre-migration row count: 48 (fresh SELECT COUNT(*), read in this session).
+--   Post-migration row count: 48 (unchanged).
+--   Pre-migration bracket distribution: 0-2=10, 3-6=11, 7+=27 (sums to 48).
+--   Post-migration bracket distribution: 0-2=10, 3-6=11, 7+=27 — byte-identical; no row
+--     relabelled.
+--   Verification query result (pg_get_constraintdef, read back AFTER the ADD, by query result
+--     not exit code): exactly one check constraint on score_bracket —
+--     CHECK ((score_bracket = ANY (ARRAY['0-2'::text, '3-6'::text, '3-8'::text, '7+'::text,
+--     '9+'::text]))). The table's other check constraint (submissions_patient_state_check) is
+--     unrelated and was also read back to confirm nothing was cross-affected.
+--   Positive probe: BEGIN; INSERT with score_bracket='9+' and placeholder identity values
+--     (symptom_profile_id 'AOD_PHASE52_PROBE_POS', email
+--     phase52-ddl-probe@example.com) succeeded without a constraint violation, count read at 49
+--     inside the open transaction, then ROLLBACK; post-rollback count confirmed back at 48.
+--   Negative probe: BEGIN; INSERT with score_bracket='not-a-bracket' and the same class of
+--     placeholder identity values (symptom_profile_id 'AOD_PHASE52_PROBE_NEG') was REJECTED:
+--     "new row for relation \"submissions\" violates check constraint
+--     \"submissions_score_bracket_check\"", then ROLLBACK; post-rollback count confirmed at 48.
+--   Execution role / SET ROLE deviation: DATABASE_URL on the Fly VM connects directly as
+--     alledrops_app (confirmed via `SELECT current_user, session_user;` before the DDL —
+--     both returned alledrops_app), which owns `submissions` outright per `pg_tables.tableowner`.
+--     No `SET ROLE` was needed or used; this deviates from the header's `SET ROLE
+--     alledrops_app` / `RESET ROLE` instruction (written for the `postgres`-as-connecting-role
+--     case, matching 004's ownership split) because that instruction assumed a different
+--     connecting role than the one actually available on this surface.
+--   Surface: `fly ssh console -a alle-drops-quiz-app`, running a `.cjs` Node script (using the
+--     `pg` package already present in the deployed app's node_modules) against the Fly-held
+--     DATABASE_URL, the only working route from this operator's machine (Cloud SQL's authorized
+--     network is Fly's egress IP only). Both ALTER statements ran inside one BEGIN/COMMIT
+--     transaction. The script and its base64 transfer artifact were deleted from the Fly VM
+--     after use; nothing PHI-bearing was left on the VM filesystem.
+--   Date / session: 2026-08-13, plan 05.2-04 retry.
+-- ============================================================================================
+
+ALTER TABLE submissions DROP CONSTRAINT IF EXISTS submissions_score_bracket_check;
+
+-- The five-value list is the UNION of the retired label set ('0-2', '3-6', '7+') and the
+-- 2026-08-13 clinical revision's label set ('0-2', '3-8', '9+'). '3-6' and '7+' are retained not
+-- because anything will newly write them, but because existing rows carry them and must keep
+-- satisfying the constraint — historical rows are never relabelled.
+ALTER TABLE submissions
+  ADD CONSTRAINT submissions_score_bracket_check
+  CHECK (score_bracket IN ('0-2', '3-6', '3-8', '7+', '9+'));
