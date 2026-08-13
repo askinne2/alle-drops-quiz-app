@@ -8,8 +8,12 @@ import { readObjectBytes } from './storage/gcs'
 
 const BRACKET_LABELS: Record<string, string> = {
   '0-2': '0–2 (Low)',
-  '3-6': '3–6 (Moderate)',
-  '7+':  '7+ (High)',
+  '3-8': '3–8 (Moderate)',
+  '9+':  '9+ (High)',
+  // Legacy pre-2026-08-13 boundaries — historical rows are never relabelled, so these stay
+  // renderable rather than falling through to the bare score_bracket string. See D-52-04.
+  '3-6': '3–6 (Moderate, pre-2026-08-13)',
+  '7+':  '7+ (High, pre-2026-08-13)',
 }
 
 function formatDateTime(iso: string | null): string {
