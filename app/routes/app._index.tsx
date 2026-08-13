@@ -31,8 +31,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         COUNT(*) FILTER (WHERE patient_state = 'tennessee')                AS tennessee,
         COUNT(*) FILTER (WHERE patient_state = 'texas')                    AS texas,
         COUNT(*) FILTER (WHERE score_bracket = '0-2')                      AS low,
-        COUNT(*) FILTER (WHERE score_bracket = '3-6')                      AS moderate,
-        COUNT(*) FILTER (WHERE score_bracket = '7+')                       AS high
+        -- 2026-08-13 bracket revision: IN lists span both label generations because
+        -- historical rows are never relabelled (D-52-04).
+        COUNT(*) FILTER (WHERE score_bracket IN ('3-6', '3-8'))            AS moderate,
+        COUNT(*) FILTER (WHERE score_bracket IN ('7+', '9+'))              AS high
       FROM submissions
     `);
     const row = result.rows[0];
@@ -69,8 +71,8 @@ export default function Index() {
       <s-section heading="Score Brackets">
         <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
           <StatCard label="0–2 Low" value={stats.low} accent="#2e7d32" />
-          <StatCard label="3–6 Moderate" value={stats.moderate} accent="#e65100" />
-          <StatCard label="7+ High" value={stats.high} accent="#b71c1c" />
+          <StatCard label="3–8 Moderate" value={stats.moderate} accent="#e65100" />
+          <StatCard label="9+ High" value={stats.high} accent="#b71c1c" />
         </div>
       </s-section>
 

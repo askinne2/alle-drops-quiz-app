@@ -12,17 +12,19 @@ describe("getScoreScale: max is derived, not a literal", () => {
     expect(scale.max).toBe(60);
   });
 
-  it("isProvisional is true", () => {
-    expect(getScoreScale().isProvisional).toBe(true);
+  it("has no own property named isProvisional", () => {
+    expect(Object.prototype.hasOwnProperty.call(getScoreScale(), "isProvisional")).toBe(false);
   });
 });
 
 describe("getScoreScale: zone shape invariants", () => {
-  it("has exactly three zones in the locked ascending order: 2/low/Low, 6/mid/Moderate, 60/high/High", () => {
+  // CHANGED 2026-08-13 (was 2/6/60). Clinical brackets moved from 0-2/3-6/7+ to 0-2/3-8/9+ —
+  // .planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md.
+  it("has exactly three zones in the locked ascending order: 2/low/Low, 8/mid/Moderate, 60/high/High", () => {
     const { zones } = getScoreScale();
     expect(zones).toEqual([
       { upTo: 2, tone: "low", label: "Low" },
-      { upTo: 6, tone: "mid", label: "Moderate" },
+      { upTo: 8, tone: "mid", label: "Moderate" },
       { upTo: 60, tone: "high", label: "High" },
     ]);
   });

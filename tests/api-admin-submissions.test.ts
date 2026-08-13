@@ -25,7 +25,7 @@ const mockPage: AdminSubmissionsPage = {
       patient_name: 'Jane Doe',
       patient_email: 'jane@example.com',
       patient_state: 'tennessee',
-      score_bracket: '7+',
+      score_bracket: '9+',
       quiz_score: 9,
       created_at: '2026-05-01T12:00:00.000Z',
       customer_id_shopify: 'gid://shopify/Customer/123',
@@ -77,14 +77,14 @@ describe('GET /api/admin/submissions', () => {
     )
 
     const req = new Request(
-      'https://fly.dev/api/admin/submissions?state=tennessee&score_bracket=7%2B&from=2026-01-01&to=2026-12-31&q=jane&cursor=NTA%3D'
+      'https://fly.dev/api/admin/submissions?state=tennessee&score_bracket=9%2B&from=2026-01-01&to=2026-12-31&q=jane&cursor=NTA%3D'
     )
     await loader({ request: req, params: {}, context: {} } as any)
 
     expect(submissions.listAdminSubmissions).toHaveBeenCalledWith(
       expect.objectContaining({
         state: 'tennessee',
-        score_bracket: '7+',
+        score_bracket: '9+',
         from: '2026-01-01',
         to: '2026-12-31',
         q: 'jane',

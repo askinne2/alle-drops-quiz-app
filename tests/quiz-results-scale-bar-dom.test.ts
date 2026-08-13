@@ -35,6 +35,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "fs";
+import { join } from "path";
 import React from "react";
 import { ResultsDisplay, type ResultsDisplayProps } from "../app/components/quiz/ResultsDisplay";
 import { getScoreScale } from "../app/lib/quiz/score-scale";
@@ -47,7 +49,7 @@ afterEach(() => {
 // none may be introduced into this fixture — see 05-04-PLAN.md's threat T-5-21.
 const BASE_PROPS: ResultsDisplayProps = {
   score: 7,
-  scoreBracket: "7+",
+  scoreBracket: "9+",
   patientState: "tennessee",
   symptomProfileId: "AOD_TEST_0001",
   testingStatus: "had_testing",
@@ -130,10 +132,26 @@ describe("SCORE-01 copy", () => {
 });
 
 describe("SCORE-02 derived readout", () => {
-  it('renders "{score} of {max}" with max read from getScoreScale(), not a literal', () => {
-    const scale = getScoreScale();
+  // CHANGED TWICE ON 2026-08-13. First (D-52-01, SCORE-06) the /60 denominator came off, leaving
+  // "Score: {score}". Then Andrew saw the deployed page and removed the number entirely: with no
+  // denominator, a bare "30" above a scale whose top band means "9+" was less interpretable, not
+  // more. NO NUMERIC SCORE IS SHOWN TO THE PATIENT AT ALL.
+  // Source: 05.2-SOURCE-william-2026-08-13.md — "the main part is utilizing the scale so they can
+  // understand". The raw score is still scored, stored, and shown to providers in the clinical PDF
+  // and admin table; this is a patient-facing display decision only.
+  it("renders no numeric score anywhere in the patient-facing results", () => {
+    const { container } = renderResults({ score: 7 });
+
+    expect(screen.queryByText("Score: 7")).toBeNull();
+    expect(screen.queryByText("7")).toBeNull();
+    expect(screen.queryByText(/\bScore:\s*\d/)).toBeNull();
+    expect(container.textContent ?? "").not.toMatch(/\b7\s*(of|\/)\s*60\b/);
+  });
+
+  it("still communicates the result without a number — zone caption and legend carry it", () => {
     renderResults({ score: 7 });
-    expect(screen.getByText(`7 of ${scale.max}`)).toBeTruthy();
+    // 7 is Moderate under 0-2 / 3-8 / 9+. The caption is what replaced the number.
+    expect(screen.getByText("Moderate symptom burden")).toBeTruthy();
   });
 });
 
@@ -198,20 +216,20 @@ describe("SCORE-03 zone rendering and proportional widths", () => {
   the number in the circle. It must not.
 */
 describe("colour tracks the clinical brackets, computed from score (load-bearing)", () => {
-  it("score 7 with bracket 7+ shows the HIGH zone as current, alongside the 7+ recommendation", () => {
-    const { container } = renderResults({ score: 7, scoreBracket: "7+" });
+  it("score 9 with bracket 9+ shows the HIGH zone as current, alongside the 9+ recommendation", () => {
+    const { container } = renderResults({ score: 9, scoreBracket: "9+" });
     const { currentLegendItem } = getScaleBarParts(container);
     expect(currentLegendItem?.textContent).toBe("High");
     expect(
-      screen.getByText("Sublingual Immunotherapy May Significantly Help You"),
+      screen.getByText("Sublingual Immunotherapy May Significantly Help Manage Your Symptoms"),
     ).toBeTruthy();
   });
 
-  it("each bracket's boundary score lands in its own zone: 2 -> Low, 6 -> Moderate, 7 -> High", () => {
+  it("each bracket's boundary score lands in its own zone: 2 -> Low, 8 -> Moderate, 9 -> High", () => {
     const cases = [
       { score: 2, zone: "Low" },
-      { score: 6, zone: "Moderate" },
-      { score: 7, zone: "High" },
+      { score: 8, zone: "Moderate" },
+      { score: 9, zone: "High" },
     ] as const;
 
     for (const { score, zone } of cases) {
@@ -224,12 +242,12 @@ describe("colour tracks the clinical brackets, computed from score (load-bearing
   it("the zone follows `score`, not the `scoreBracket` prop, when the two are made to disagree", () => {
     // Deliberately inconsistent input: a low score carrying a high bracket. The bar must describe
     // the number the patient can see in the circle.
-    const { container } = renderResults({ score: 1, scoreBracket: "7+" });
+    const { container } = renderResults({ score: 1, scoreBracket: "9+" });
     expect(getScaleBarParts(container).currentLegendItem?.textContent).toBe("Low");
     // The recommendation still follows the prop — the two are separately sourced, which is the
     // whole point of the assertion.
     expect(
-      screen.getByText("Sublingual Immunotherapy May Significantly Help You"),
+      screen.getByText("Sublingual Immunotherapy May Significantly Help Manage Your Symptoms"),
     ).toBeTruthy();
   });
 });
@@ -242,10 +260,10 @@ describe("within-zone interpolation (what replaced D-05's protection)", () => {
     return Number.parseFloat(left);
   }
 
-  it("spreads the 7+ bracket across its whole third instead of pinning every 7+ patient to one spot", () => {
-    const atThreshold = markerPercent({ score: 7, scoreBracket: "7+" });
-    const middling = markerPercent({ score: 33, scoreBracket: "7+" });
-    const ceiling = markerPercent({ score: 60, scoreBracket: "7+" });
+  it("spreads the 9+ bracket across its whole third instead of pinning every 9+ patient to one spot", () => {
+    const atThreshold = markerPercent({ score: 9, scoreBracket: "9+" });
+    const middling = markerPercent({ score: 33, scoreBracket: "9+" });
+    const ceiling = markerPercent({ score: 60, scoreBracket: "9+" });
 
     // All three sit inside the final third of the track...
     for (const p of [atThreshold, middling, ceiling]) {
@@ -260,8 +278,8 @@ describe("within-zone interpolation (what replaced D-05's protection)", () => {
     expect(ceiling - atThreshold).toBeGreaterThan(30);
   });
 
-  it("a score at the very bottom of the 7+ bracket sits at the left edge of the red third, not deep inside it", () => {
-    const atThreshold = markerPercent({ score: 7, scoreBracket: "7+" });
+  it("a score at the very bottom of the 9+ bracket sits at the left edge of the red third, not deep inside it", () => {
+    const atThreshold = markerPercent({ score: 9, scoreBracket: "9+" });
     // Within two percentage points of the boundary at 66.67% — visually "just barely into red",
     // which is the outcome D-05 wanted and this rendering preserves.
     expect(atThreshold).toBeLessThan((2 / 3) * 100 + 2);
@@ -269,16 +287,17 @@ describe("within-zone interpolation (what replaced D-05's protection)", () => {
 });
 
 describe("UX — circle caption and two-axis bridge", () => {
-  // CHANGED 2026-08-12: score 7 now reads "High symptom burden", because the zones are the
-  // clinical brackets. Andrew was shown this exact consequence before choosing it — a 7-of-60
-  // patient reads "High symptom burden" directly under their number — and accepted it. Score 1 is
-  // used for the low case so the assertion still proves the caption tracks the score.
+  // CHANGED 2026-08-12, boundary revised 2026-08-13: score 9 now reads "High symptom burden",
+  // because the zones are the clinical brackets. Andrew was shown this exact consequence before
+  // choosing it — a 9-of-60 patient reads "High symptom burden" directly under their number — and
+  // accepted it. Score 1 is used for the low case so the assertion still proves the caption tracks
+  // the score.
   it('shows "{zone} symptom burden" under the circle, driven by raw score not scoreBracket', () => {
     renderResults({ score: 1, scoreBracket: "0-2" });
     expect(screen.getByText("Low symptom burden")).toBeTruthy();
 
     cleanup();
-    renderResults({ score: 45, scoreBracket: "7+" });
+    renderResults({ score: 45, scoreBracket: "9+" });
     expect(screen.getByText("High symptom burden")).toBeTruthy();
   });
 
@@ -314,31 +333,88 @@ describe("DOM structure — the marker-clipping regression guard", () => {
 });
 
 describe("Accessibility contract", () => {
-  it("the track's aria-label carries score, ceiling, and the current zone's label, and names none of the clinical brackets", () => {
-    const scale = getScoreScale();
-    const { container } = renderResults({ score: 7, scoreBracket: "7+" });
+  it("the track's aria-label carries the current zone's label, and names none of the clinical brackets", () => {
+    const { container } = renderResults({ score: 9, scoreBracket: "9+" });
     const { track } = getScaleBarParts(container);
     const label = track.getAttribute("aria-label") ?? "";
 
     expect(label).toContain("Symptom burden position");
-    expect(label).toContain("7");
-    expect(label).toContain(String(scale.max));
-    // "high" as of 2026-08-12 — score 7 is the bottom of the 7+ bracket and the zones now mirror
-    // the brackets. The assertion that matters is unchanged: the label names the ZONE, and names
-    // no clinical bracket string.
+    // The `toContain("9")` assertion that lived here was removed 2026-08-13 when the numeric score
+    // was dropped from the patient view — the label no longer carries any number. Its sibling test
+    // ("carries no number at all") now guards that directly.
+    //
+    // "high" as of 2026-08-12, boundary revised 2026-08-13 — score 9 is the bottom of the 9+
+    // bracket and the zones now mirror the brackets. The assertion that matters is unchanged: the
+    // label names the ZONE, and names no clinical bracket string.
     expect(label.toLowerCase()).toContain("high");
 
     expect(label).not.toContain("0-2");
-    expect(label).not.toContain("3-6");
-    expect(label).not.toContain("7+");
+    expect(label).not.toContain("3-8");
+    expect(label).not.toContain("9+");
   });
 
-  it('the "7 of {max}" readout is normal-flow text with no aria-hidden ancestor', () => {
-    const scale = getScoreScale();
+  // CHANGED TWICE ON 2026-08-13 — see the SCORE-02 block above. The aria-label first lost the /60
+  // denominator, then lost the score entirely when the visible number was removed. A screen-reader
+  // user must not be told a number that sighted users cannot see: that is an accessibility
+  // asymmetry, not a courtesy.
+  it("the aria-label names the zone and carries no number at all", () => {
     const { container } = renderResults({ score: 7 });
-    const readout = screen.getByText(`7 of ${scale.max}`);
-    expect(readout.closest('[aria-hidden="true"]')).toBeNull();
-    void container;
+    const { track } = getScaleBarParts(container);
+    const label = track.getAttribute("aria-label") ?? "";
+
+    expect(label).toContain("moderate");
+    expect(label).not.toContain("on a 0 to");
+    expect(label).not.toMatch(/\bscore\s*\d/i);
+    expect(label).not.toMatch(/\d/);
+  });
+});
+
+describe("SCORE-06 denominator removal", () => {
+  it("the rendered page shows no denominator, for any bracket", () => {
+    for (const bracket of ["0-2", "3-8", "9+"] as const) {
+      const scale = getScoreScale();
+      const { container, unmount } = renderResults({ score: 7, scoreBracket: bracket });
+      const text = container.textContent ?? "";
+
+      expect(text.split(` of ${scale.max}`).length - 1).toBe(0);
+      expect(text.split(" of 60").length - 1).toBe(0);
+
+      unmount();
+    }
+  });
+});
+
+describe("SCORE-06 derived ceiling still backs geometry", () => {
+  it("the marker still reaches exactly 100% at the derived ceiling, and strictly less than 100% one point below it", () => {
+    const scale = getScoreScale();
+
+    const { container: atMax, unmount: unmountAtMax } = renderResults({
+      score: scale.max,
+      scoreBracket: "9+",
+    });
+    expect(getScaleBarParts(atMax).marker.style.left).toBe("100%");
+    unmountAtMax();
+
+    const { container: belowMax, unmount: unmountBelowMax } = renderResults({
+      score: scale.max - 1,
+      scoreBracket: "9+",
+    });
+    const belowMaxLeft = Number.parseFloat(getScaleBarParts(belowMax).marker.style.left);
+    expect(belowMaxLeft).toBeLessThan(100);
+    unmountBelowMax();
+  });
+});
+
+describe("D-52-02 source guard — band heading wraps freely at every width", () => {
+  it(".quizResults__message h3 declares no white-space, text-overflow, or overflow", () => {
+    const source = readFileSync(join(process.cwd(), "app/styles/quiz.module.css"), "utf-8");
+    const match = source.match(/\.quizResults__message h3\s*\{([^}]*)\}/);
+    if (!match) throw new Error(".quizResults__message h3 rule not found in quiz.module.css");
+    const ruleBody = match[1];
+
+    expect(ruleBody.split("white-space").length - 1).toBe(0);
+    expect(ruleBody.split("text-overflow").length - 1).toBe(0);
+    expect(ruleBody.split("overflow").length - 1).toBe(0);
   });
 });
 
@@ -353,7 +429,7 @@ describe("Edge scores", () => {
 
   it("score at the scale's max renders without throwing, marker left is 100%, and exactly one zone is current", () => {
     const scale = getScoreScale();
-    const { container } = renderResults({ score: scale.max, scoreBracket: "7+" });
+    const { container } = renderResults({ score: scale.max, scoreBracket: "9+" });
     const { marker, currentLegendItem } = getScaleBarParts(container);
     expect(marker.style.left).toBe("100%");
     expect(currentLegendItem).not.toBeNull();
@@ -375,7 +451,7 @@ describe("D-06 two-axis labelling", () => {
     fails.
   */
   it("labels both axes exactly once per bracket, via the bridge sentence", () => {
-    for (const bracket of ["0-2", "3-6", "7+"] as const) {
+    for (const bracket of ["0-2", "3-8", "9+"] as const) {
       const { container, unmount } = renderResults({ scoreBracket: bracket });
       const text = container.textContent ?? "";
 
@@ -394,8 +470,8 @@ describe("D-06 two-axis labelling", () => {
 describe("D-09 verbatim band copy", () => {
   const bandHeadings: Record<ResultsDisplayProps["scoreBracket"], string> = {
     "0-2": "Your Symptoms Appear Mild and Well-Controlled",
-    "3-6": "You May Benefit From Seeing an Allergist",
-    "7+": "Sublingual Immunotherapy May Significantly Help You",
+    "3-8": "You May Benefit From Seeing an Allergist Prior to Starting Treatment",
+    "9+": "Sublingual Immunotherapy May Significantly Help Manage Your Symptoms",
   };
   const DISCLAIMER_SENTENCE = "This assessment is a clinical symptom screening tool.";
 

@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS submissions (
 
   -- Quiz outcome (PHI)
   quiz_score               INTEGER NOT NULL,
+  -- See migrations/005_widen_score_bracket_check.sql: the three-value list below is the
+  -- original 2026 CHECK, superseded on 2026-08-13 by a widened five-value CHECK. This DDL is
+  -- executed history and is left unchanged; do not rely on the constraint as written here.
   score_bracket            TEXT NOT NULL CHECK (score_bracket IN ('0-2', '3-6', '7+')),
   answers_json             JSONB NOT NULL,
   personal_history_json    JSONB,

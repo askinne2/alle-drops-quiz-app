@@ -13,9 +13,6 @@ export interface ScaleZone {
 export interface ScoreScale {
   max: number; // SCORE-02's derived ceiling — computed via getMaxScore, never a literal
   zones: ScaleZone[]; // ascending upTo; first zone implicitly starts at 0; last zone's upTo === max
-  isProvisional: true; // D-04's code-visibility requirement, developer/admin-facing only — never
-  // rendered to the patient as a banner, badge, or copy. Typed as the literal `true` so a future
-  // non-provisional scale cannot be assigned to this shape by accident.
 }
 
 /** SCORE-02's derived ceiling. Also the last zone's upper bound, so the two cannot drift apart. */
@@ -41,16 +38,18 @@ const DERIVED_MAX = getMaxScore(ALL_SCORED_QUESTIONS);
  * Derived, not literal, for a second reason: if the medical director ever revises the brackets,
  * the colours follow in the same commit. There is no second set of numbers to forget.
  *
- * **Still provisional.** William has not yet confirmed this presentation — the question went to him
- * on 2026-08-12 and his answer may change the arrangement again. There is no admin form and there
- * will not be one: an "Admin-Configurable Score Scale" phase (5.1 / SCALE-01..04) was inserted
- * 2026-08-11 and cancelled 2026-08-12, because the clinical brackets it was built around are fixed,
- * not tunable. See `.planning/REQUIREMENTS.md` §"Removed Requirements". This marking is developer-
- * and admin-facing only and is never rendered to a patient.
+ * **Confirmed 2026-08-13.** William Miller, the AOD medical director, confirmed this presentation
+ * in reply to the question sent 2026-08-12: colour tracks the clinical brackets 1:1, three
+ * equal-width bands, and most patients rendering red is clinically intended (see
+ * `.planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md`). The
+ * `PROVISIONAL_SCORE_SCALE` constant name is retained only to avoid a phase-wide rename across
+ * every consumer — it is no longer provisional in fact. There is no admin form and there will not
+ * be one: an "Admin-Configurable Score Scale" phase (5.1 / SCALE-01..04) was inserted 2026-08-11
+ * and cancelled 2026-08-12, because the clinical brackets it was built around are fixed, not
+ * tunable. See `.planning/REQUIREMENTS.md` §"Removed Requirements".
  */
 export const PROVISIONAL_SCORE_SCALE: ScoreScale = {
   max: getMaxScore(ALL_SCORED_QUESTIONS),
-  isProvisional: true,
   zones: [
     { upTo: SCORE_BRACKETS.LOW.max, tone: "low", label: "Low" },
     { upTo: SCORE_BRACKETS.MID.max, tone: "mid", label: "Moderate" },

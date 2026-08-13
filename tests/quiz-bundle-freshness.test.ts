@@ -613,3 +613,99 @@ describe("public/quiz-bundle.js carries Phase 5 (preliminary-score-page) content
     expect(count(needle)).toBe(2);
   });
 });
+
+/**
+ * Phase 5.2 (clinical-bracket-revision) rebuild — plan 05.2-01.
+ *
+ * Rebuilt 2026-08-13 via `npm run build:theme` across two commits: Task 1 (91cac1a) moved the
+ * clinical brackets from 0-2/3-6/7+ to 0-2/3-8/9+ and cleared `isProvisional`, Task 2 (a7a5b9f)
+ * shipped William Miller's verbatim 2026-08-13 recommendation copy for all three brackets and
+ * dropped the `/60` denominator from the patient-facing readout and aria-label. See
+ * `.planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md`.
+ *
+ * Pre-phase committed bundle: `8170dccd1cbcab633c39a38ad95f611ce301e1d1:public/quiz-bundle.js`
+ * (203837 bytes). Bundle after Task 1: 203820 bytes. Bundle after Task 2 (current): 204067 bytes.
+ * Every marker below was measured against BOTH bundles independently with
+ * `SOURCE.split(needle).length - 1` (via `git show 8170dccd1cbcab633c39a38ad95f611ce301e1d1:public/quiz-bundle.js`
+ * piped through a `node -e` counter) before being committed to — this file's own documented
+ * line-counting trap (see the module header above) is never used, since it would collapse this
+ * single-line minified bundle to a line-count of 1 for any match anywhere in it.
+ *
+ * `3-6` is deliberately never used as a needle in either direction: `ConsentStep.tsx` line 58
+ * ships the clinical phrase "3-6 months" into this same bundle, so a `3-6` absence gate can never
+ * pass and a `3-6` presence gate passes vacuously regardless of whether this phase's change shipped.
+ *
+ * The Phase 2/3/4/4.1/4.2/5 markers above CANNOT detect Phase 5.2 staleness: every one of them was
+ * already true of the Phase-5.2-stale bundle at 8170dcc, since this phase changes only the
+ * clinical-bracket boundary, the recommendation copy, and the denominator — none of which any prior
+ * phase's marker reads.
+ */
+describe("public/quiz-bundle.js carries Phase 5.2 (clinical-bracket-revision) content — the 0-2/3-8/9+ boundary and William's verbatim copy compiled in", () => {
+  it('contains the new "Prior to Starting Treatment" 3-8 headline tail at least once — proves the moderate-bracket heading is compiled in', () => {
+    // measured against the pre-phase bundle at 8170dccd1cbcab633c39a38ad95f611ce301e1d1: 0;
+    // against the current committed bundle: 1.
+    const needle = "Prior to Starting Treatment";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains the new "May Significantly Help Manage Your Symptoms" 9+ headline tail at least once — proves the high-bracket heading is compiled in', () => {
+    // measured against the pre-phase bundle at 8170dccd1cbcab633c39a38ad95f611ce301e1d1: 0;
+    // against the current committed bundle: 1.
+    const needle = "May Significantly Help Manage Your Symptoms";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('contains "board-certified allergist" at least twice — proves the new 0-2 and 3-8 bodies are both compiled in', () => {
+    // measured against the pre-phase bundle at 8170dccd1cbcab633c39a38ad95f611ce301e1d1: 0;
+    // against the current committed bundle: 2.
+    const needle = "board-certified allergist";
+    expect(count(needle)).toBeGreaterThanOrEqual(2);
+  });
+
+  it('contains the bare "9+" bracket literal at least once — proves the new ScoreBracket union value shipped, not just 0-2/3-8', () => {
+    // measured against the pre-phase bundle at 8170dccd1cbcab633c39a38ad95f611ce301e1d1: 0;
+    // against the current committed bundle: 2. Short literal, so it was measured before being
+    // trusted (per this file's own admissibility rule) rather than assumed collision-free.
+    const needle = "9+";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('has zero occurrences of the retired "May Significantly Help You" 7+ headline — it is NOT a substring of the new "May Significantly Help Manage Your Symptoms" headline', () => {
+    // measured against the pre-phase bundle at 8170dccd1cbcab633c39a38ad95f611ce301e1d1: 1;
+    // against the current committed bundle: 0.
+    const needle = "May Significantly Help You";
+    expect(count(needle)).toBe(0);
+  });
+
+  it('has zero occurrences of the retired "or scheduling an appointment with an allergist" 0-2 tail — proves the old 0-2 body was fully replaced, not appended to', () => {
+    // measured against the pre-phase bundle at 8170dccd1cbcab633c39a38ad95f611ce301e1d1: 1;
+    // against the current committed bundle: 0.
+    const needle = "or scheduling an appointment with an allergist";
+    expect(count(needle)).toBe(0);
+  });
+
+  it('has zero occurrences of the retired " on a 0 to " aria-label denominator fragment — the SCORE-06 marker', () => {
+    // measured against the pre-phase bundle at 8170dccd1cbcab633c39a38ad95f611ce301e1d1: 1;
+    // against the current committed bundle: 0.
+    const needle = " on a 0 to ";
+    expect(count(needle)).toBe(0);
+  });
+
+  // Added 2026-08-13 after Andrew's UAT on the deployed page. SCORE-06 removed the "/60"
+  // denominator; seeing it live, he removed the NUMBER itself — a bare "30" above a scale whose top
+  // band means "9+" read as less interpretable, not more. These two markers guard that the numeric
+  // score is gone from the patient-facing bundle in both its visible and its accessible form.
+  it('has zero occurrences of the retired "Score: " visible readout — the number is gone from the patient view', () => {
+    // measured against the previously committed bundle (204,067 B): 1;
+    // against the current committed bundle (203,686 B): 0.
+    const needle = "Score: ";
+    expect(count(needle)).toBe(0);
+  });
+
+  it('has zero occurrences of the retired ", score " aria-label fragment — a screen reader must not be told a number sighted users cannot see', () => {
+    // measured against the previously committed bundle (204,067 B): 1;
+    // against the current committed bundle (203,686 B): 0.
+    const needle = ", score ";
+    expect(count(needle)).toBe(0);
+  });
+});

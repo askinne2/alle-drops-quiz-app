@@ -81,21 +81,29 @@ export function ResultsDisplay({
     nobody chose. Equal shares hold red to one third.
 
     Interpolation is what stops equal shares from throwing away ordering: within the red third,
-    score 7 lands at its far-left edge and score 60 at its far right, so two `7+` patients at
+    score 9 lands at its far-left edge and score 60 at its far right, so two `9+` patients at
     opposite ends of the bracket still read as visibly different. The trade-off Andrew accepted on
-    2026-08-12 is that marker position is no longer a linear reading of the raw score — the number
-    itself carries that, in the circle and in the "{score} of {max}" readout.
+    2026-08-12 is that marker position is no longer a linear reading of the raw score.
+
+    AMENDED 2026-08-13 — interpolation is now load-bearing, not a refinement. That original
+    trade-off was acceptable because the number carried the linear reading, in the circle and the
+    "{score} of {max}" readout. **Both are gone**: SCORE-06 removed the denominator and Andrew then
+    removed the number itself. Marker position is now the ONLY signal distinguishing a patient at 9
+    from one at 60, since both read "High" everywhere else on the page. Do not replace interpolation
+    with a fixed per-zone marker position — that would erase within-bracket ordering completely,
+    which was survivable while the number was visible and is not survivable now.
 
     KNOWN LIMITATION, MEASURED AND ACCEPTED (2026-08-12) — do not file this as a bug. Because
     interpolation makes position continuous, scores on opposite sides of a zone seam land on top of
-    each other. Rendered and screenshotted at every score: 6 sits at 66.67%, 7 at 67.28%, 8 at
-    67.90% — roughly three pixels apart on a 520px bar. So the 6 -> 7 crossing, the most
-    consequential clinical threshold in the quiz, produces no perceptible marker movement; the
-    colour beneath it, the bolded legend label, and the recommendation copy carry that change
-    instead. Two alternatives were costed and declined: centring the marker in its band (makes the
-    threshold a third-of-the-bar jump, but collapses every 7+ patient onto one position), and
-    insetting each band's usable range away from the seams (preserves both, but needs an arbitrary
-    tuning constant and stops score 0 and score 60 from reaching the bar's ends).
+    each other. **Seam positions recomputed 2026-08-13 for the 0–2 / 3–8 / 9+ boundaries**: score 8
+    sits at 66.67%, 9 at 67.31%, 10 at 67.95% — still roughly three pixels apart on a 520px bar. The
+    boundary move relocated the seam from 6 -> 7 to 8 -> 9; it did not remove it. So the 8 -> 9
+    crossing, the most consequential clinical threshold in the quiz, produces no perceptible marker
+    movement; the colour beneath it, the bolded legend label, and the recommendation copy carry that
+    change instead. Two alternatives were costed and declined: centring the marker in its band
+    (makes the threshold a third-of-the-bar jump, but collapses every 9+ patient onto one position),
+    and insetting each band's usable range away from the seams (preserves both, but needs an
+    arbitrary tuning constant and stops score 0 and score 60 from reaching the bar's ends).
   */
   const zoneIndexRaw = scale.zones.findIndex((z) => score <= z.upTo);
   const zoneIndex = zoneIndexRaw === -1 ? scale.zones.length - 1 : zoneIndexRaw;
@@ -129,13 +137,29 @@ export function ResultsDisplay({
       <div className={styles.quizResults__mainGrid}>
         <div className={styles.quizResults__leftColumn}>
           <div className={styles.quizResults__scoreContainer}>
-            <div className={styles.quizResults__scoreCircle}>
-              <span className={styles.quizResults__scoreNumber}>{score}</span>
-            </div>
             {/*
-              Immediate meaning for the naked number: the current symptom-burden zone label
-              (same vocabulary as the bar legend), not the clinical bracket. Keeps D-05/D-06 —
-              circle and bar stay on the raw-score axis; recommendation stays on scoreBracket.
+              NO NUMBER IS SHOWN TO THE PATIENT. Andrew removed the numeric score entirely on
+              2026-08-13, after seeing the deployed page: with the `/60` denominator gone (SCORE-06),
+              a bare "30" sat above a scale whose top band means "9+" — three times the threshold,
+              with nothing left to make its magnitude readable. Removing the denominator made the
+              number less interpretable, not more, so the number goes too.
+
+              DECIDED by Andrew on 2026-08-13, reading William's email as "no number of 60 displayed
+              anywhere, just the scale". The source sentence is genuinely ambiguous and both readings
+              are recorded so nobody re-litigates this from half the quote: William wrote that
+              patients "will still receive a number, and then fall on the scale, but they would not
+              see the total of 60", and also "the main part is utilizing the scale so they can
+              understand". The second half is what governs. Verbatim source:
+              05.2-SOURCE-william-2026-08-13.md.
+
+              What carries the result now: this caption, the colour band, the bolded legend word,
+              and the recommendation copy below. The zone label uses the symptom-burden vocabulary,
+              not the clinical bracket — D-05/D-06 still hold, and the recommendation still keys off
+              scoreBracket.
+
+              The raw score is NOT gone from the system — it is still scored, still stored, and
+              still shown to providers in the clinical PDF and the admin table. This is a
+              patient-facing display decision only.
             */}
             <p className={styles.quizResults__scoreBurdenCaption}>
               {currentZone.label} symptom burden
@@ -143,12 +167,11 @@ export function ResultsDisplay({
             <div className={styles.scaleBar}>
               <div className={styles.scaleBar__axisRow}>
                 <span className={styles.scaleBar__axisLabel}>Symptom burden</span>
-                <span className={styles.scaleBar__value}>{score} of {scale.max}</span>
               </div>
               <div
                 className={styles.scaleBar__track}
                 role="img"
-                aria-label={`Symptom burden position: ${currentZone.label.toLowerCase()} zone, ${score} of ${scale.max} on a 0 to ${scale.max} scale.`}
+                aria-label={`Symptom burden position: ${currentZone.label.toLowerCase()} zone.`}
               >
                 <div className={styles.scaleBar__zones} aria-hidden="true">
                   {/* Equal share per zone, NOT `upTo - previousUpTo` — see the comment above. */}
@@ -212,32 +235,35 @@ export function ResultsDisplay({
                 <div className={styles.quizResults__message}>
                   <h3>Your Symptoms Appear Mild and Well-Controlled</h3>
                   <p>
-                    Based on your responses, your allergy symptoms appear to be mild and well-controlled. Continue your
+                    Based on your responses, your allergy symptoms appear to be well-controlled. Continue your
                     current management approach with over-the-counter medications as needed. However, if your symptoms
                     worsen, occur more frequently, or begin to interfere with your daily activities, consider completing
-                    this questionnaire again or scheduling an appointment with an allergist.
+                    this questionnaire again. You can always schedule a telehealth appointment with our board-certified
+                    allergist if you would like to discuss this further.
                   </p>
                 </div>
               </div>
             )}
 
-            {scoreBracket === "3-6" && (
+            {scoreBracket === "3-8" && (
               <div className={styles.quizResults__recommendation}>
                 <div className={styles.quizResults__message}>
-                  <h3>You May Benefit From Seeing an Allergist</h3>
+                  <h3>You May Benefit From Seeing an Allergist Prior to Starting Treatment</h3>
                   <p>
-                    Based on your responses, you may benefit from seeing an allergist. While your symptoms are not
-                    severe, they are affecting your daily life and could be better controlled. An allergist can help
-                    identify your triggers and optimize your treatment plan.
+                    Based on your responses, you may benefit from seeing an allergist to help make a decision on
+                    whether or not SLIT treatment is appropriate for you. We recommend scheduling a Telehealth
+                    appointment with our board-certified allergist. While your symptoms are not severe, they are
+                    affecting your daily life and could be better controlled. An allergist can help identify your
+                    triggers and optimize your treatment plan.
                   </p>
                 </div>
               </div>
             )}
 
-            {scoreBracket === "7+" && (
+            {scoreBracket === "9+" && (
               <div className={styles.quizResults__recommendation}>
                 <div className={styles.quizResults__message}>
-                  <h3>Sublingual Immunotherapy May Significantly Help You</h3>
+                  <h3>Sublingual Immunotherapy May Significantly Help Manage Your Symptoms</h3>
                   <p>
                     Based on your responses, you would likely benefit from beginning sublingual immunotherapy. Your
                     symptoms are moderate-to-severe, significantly affecting your quality of life, or not adequately
