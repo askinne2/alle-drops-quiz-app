@@ -1,117 +1,111 @@
 # HANDOFF — AlleDrops Symptom Quiz
 
-**Written:** 2026-08-12
+**Written:** 2026-08-13 (supersedes the 2026-08-12 entry written before Phase 6 execution began)
 **Repo:** `/Users/andrewskinner/Local Sites/alle-drops-quiz-app`
-**Branch:** `main` @ `128678a` — clean, everything merged
-**Fly:** deployed 2026-08-12, served `/quiz-bundle-js` **203,797 B**, byte-identical to the committed artifact
+**Branch:** `main` @ `3bcff8d` — clean, Phase 5.2 merged and deployed
+**Fly:** deployed 2026-08-13, served `/quiz-bundle-js` **203,686 B**, SHA-256 identical to the committed artifact. `/health` 200.
 
-**Resume with:** record the SHOP-01 spike result, then `/gsd:discuss-phase 6`. Two live findings below exist **only in this file and in agent memory** — they are not in `.planning/` yet.
+**Resume with:** Phase 6 Wave 2 — it is unblocked as of today. Its work lives on a **different branch**, `thread-phase-6-purchase-prerequisites`, which carries its own richer HANDOFF at commit `3f501fe`. Read that one too before touching Phase 6.
 
 ---
 
 ## Goal
 
-Phase 5 is shipped, amended twice, and deployed. Phase 5.1 was deleted before it was built. Next is **Phase 6 — Purchase Prerequisites & Returning Patients**, whose gating spike (SHOP-01) was run today and came back green.
+Ship **Phase 6 — Purchase Prerequisites & Returning Patients**: honor-system purchase confirmations on the two SLIT product pages, returning-patient credit from Shopify metafields, and clinical-review expectations on post-purchase surfaces. Six plans in three waves. Wave 1 is two-thirds done; Wave 2 is now unblocked.
+
+Phase 5.2 — which had to land first — is **complete**.
 
 ---
 
 ## Current progress
 
-**Phase 5.1 removed entirely (PR #25).** It rested on a wrong premise: that the clinical brackets were tunable. They are not — 0–2 / 3–6 / 7+ in `app/lib/quiz/scoring.ts:4-8` come from the AOD medical director. Only the *colour band stops* were ever meant to be configurable. Dropping the bracket half removed `scale_version`, the `submissions` migration, and the PHI-path review. Nothing had been built; grep confirmed zero code references. SCALE-01..04 deleted, coverage corrected 46 → 42.
+### Phase 5.2 — Clinical Bracket Revision: COMPLETE, shipped 2026-08-13
 
-**Scale bar now tracks the clinical brackets 1:1 (PR #25).** Zones read from `SCORE_BRACKETS` (2 / 6 / 60) rather than independent stops, rendered as **three equal-width bands** with the marker **interpolated inside its own band**. Those two halves are one decision — these boundaries at the old span-proportional widths would paint 90% of the bar red. This deliberately reverses D-05; the protection D-05 gave moved into the rendering rather than disappearing.
+The AOD medical director revised the clinical brackets. This was inserted, planned, executed and shipped in one day, 5 plans in 3 waves.
 
-**Two redundant lines removed (PR #26).** "What this means for you" and "{zone} on the symptom scale" are gone. D-06's two-axis labelling now rests entirely on the bridge sentence.
+| | before | after |
+|---|---|---|
+| Brackets | `0–2 / 3–6 / 7+` | **`0–2 / 3–8 / 9+`** |
+| Recommendation copy | prior wording | William's verbatim text, all three brackets |
+| Patient-facing score | `{score} of 60` | **no number at all** |
+| DB `score_bracket` CHECK | 3 labels | 5-label union, historical rows never relabelled |
 
-**STATE.md reconciled (PR #27).** It had said Phase 5 was *executing at plan 1 of 6* on a commit four ahead of reality.
+- **Migration 005 is live** on `alledrops_quiz_dev`: `CHECK (score_bracket = ANY (ARRAY['0-2','3-6','3-8','7+','9+']))`. Backup **`1786617655419`** (`ON_DEMAND`/`SUCCESSFUL`) taken and read back first. 48 rows before and after; distribution unchanged.
+- **SCORE-04, SCORE-05, SCORE-06 all closed** in `REQUIREMENTS.md`.
+- Gates: typecheck exit 0, **762 tests / 50 files**, zero new dependencies.
 
-**SHOP-01 spike run and answered — see "SHOP-01 result" below.**
+### Phase 6 — Wave 1, in flight on another branch
+
+`thread-phase-6-purchase-prerequisites` @ `3f501fe`. **2 of 6 plans complete** (`06-01`, `06-04`); `06-02` has Tasks 1–2 done and Task 3 open. Nothing from Phase 6 is deployed.
 
 ---
 
-## ⚠️ Findings that exist ONLY here (not in `.planning/`)
+## What worked
 
-### 1. LAUNCH-01 is violated — Klaviyo is live on the PHI quiz page
+- **Measuring the before-state before deploying.** Every served-bytes needle was counted on the *previously* deployed bundle first, so 0-before/≥1-after was proven rather than asserted. This is what makes the verification non-vacuous, and it caught nothing only because the change was correct.
+- **Independently re-verifying the DDL from the database** rather than accepting the executor's report — `pg_get_constraintdef` via `fly ssh console`, plus `gcloud sql backups describe` for the backup.
+- **`fly ssh console -a alle-drops-quiz-app` is the working route to Cloud SQL.** The instance's only authorized network is `216.246.40.114/32` (Fly egress); this laptop is not on it. Write the script into `/app` (not `/tmp`) — Node resolves `pg` from the script's own directory, not cwd.
+- **Positive AND negative INSERT probes.** Proving `'9+'` is accepted without also proving junk is rejected would have proven only that something ran.
+- **Giving executors the environment facts up front** (gcloud's active project, the ownership of `submissions`, the Fly route) rather than letting each rediscover them.
 
-Verified in the browser on the live storefront, `https://allergist-on-demand.myshopify.com/pages/allergy-quiz` (store password gated).
+## What didn't work
 
-Shopify web pixel `web-pixel-597524686` is a **Klaviyo pixel**: subscribes to `page_viewed` and `product_added_to_cart`, POSTs to `https://a.klaviyo.com/client/events`, builds payloads referencing `email` and `phone`. Every visit to the allergy assessment page reports to Klaviyo, which has no BAA.
+- **`gcloud` OAuth expired mid-phase** and blocked plan `05.2-04` at its first call. Fix is `gcloud auth login andrew@21adsmedia.com` interactively. **gcloud's active project is `smart-rope-305817`** — pass `--project alledrops-quiz` explicitly on every call; do **not** `gcloud config set project`.
+- **Plan-level branch assertions are unsatisfiable under worktree isolation.** Executors legitimately commit on `worktree-agent-<id>`, and `gsd-executor.md:452-476` FATALs on anything else. Branch correctness is an *operator precondition* — be on the right branch before invoking `/gsd:execute-phase`. `.planning/config.json` sets no `git.branching_strategy`, so the orchestrator will not cut the branch for you.
+- **Worktrees fork from `main`, not from the current branch.** Every agent this phase found its plan file missing at spawn. The safe fix is `git merge --ff-only <phase-branch>` while staying on the `worktree-agent-*` branch — never check out the phase branch inside a worktree.
+- **`gsd-sdk query state.*` handlers corrupt `STATE.md` frontmatter.** Eight occurrences now, across four handlers. The `updated` list they report does **not** bound what they write; one rewrote `completed_plans` for a call that only appends a prose bullet. **Snapshot `sed -n '9,14p' .planning/STATE.md` before every such call and diff after.**
+- **`3-6` is a poisoned needle.** `ConsentStep.tsx` ships the clinical phrase `3-6 months` into the bundle, so an absence gate can never pass and a presence gate passes vacuously. Never use it in either direction.
+- **Do not "fix" the colour seam.** Scores either side of a zone boundary land ~3px apart (8 at 66.67%, 9 at 67.31%). Measured and accepted. Reasoning sits above the calculation in `ResultsDisplay.tsx`.
 
-**It cannot see clinical content.** Answers, score, name and DOB are collected inside the cross-origin iframe on `fly.dev`; same-origin policy plus the worker sandbox block it. The exposure is page-view-plus-identity.
+---
 
-**A DOM scan will NOT find this** — the pixel runs in a sandboxed web worker, so `document.querySelectorAll('script')` returns clean and reports no Klaviyo. That false negative is why it stayed open. The check that works:
+## ⚠️ The finding that matters most from this phase
+
+**The human browser pass rejected a deploy that had 759 passing tests, a clean typecheck, and six independently verified served-bytes markers.**
+
+Removing the `/60` denominator (SCORE-06, as written) made the bare number *less* interpretable, not more — a `30` sitting above a scale whose top band means `9+`. Andrew saw it on the live page; no test could have. The numeric score was then removed entirely.
+
+**Seventh defect on this project found by a human clicking and missed by a fully green suite.** Keep the human browser pass.
+
+**Consequence now load-bearing:** within-zone interpolation is the ONLY signal distinguishing a patient at 9 from one at 60, since both read "High" everywhere else. The number used to carry that. Do not replace interpolation with a fixed per-zone marker position.
+
+---
+
+## ⚠️ Findings that exist ONLY here and in agent memory
+
+### LAUNCH-01 is violated — Klaviyo is live on the PHI quiz page
+
+Unchanged since 2026-08-12. Andrew has deferred it three times.
+
+Shopify web pixel `web-pixel-597524686` is a **Klaviyo pixel**: subscribes to `page_viewed` and `product_added_to_cart`, POSTs to `https://a.klaviyo.com/client/events`, builds payloads referencing `email` and `phone`. Klaviyo has no BAA.
+
+**It cannot see clinical content** — answers, score, name and DOB are collected inside the cross-origin iframe on `fly.dev`. The exposure is page-view-plus-identity.
+
+**A DOM scan will NOT find it** — the pixel runs in a sandboxed web worker, so `document.querySelectorAll('script')` returns clean. That false negative is why it stayed open. The check that works:
 
 ```js
 fetch('/web-pixels/strict/app/web-pixel-<id>@<hash>.js')
   .then(r => r.text()).then(t => t.match(/https?:\/\/[a-z0-9.\-]+/gi))
 ```
 
-Pixel IDs/hashes change — find current ones in the network log under `/web-pixels/strict/app/`.
-
 **Fix:** Shopify admin → Settings → Customer events. Andrew's to make; not an agent action.
 
-**Also third-party on that page:** the Appointly booking app (`s1.staq-cdn.com`, `d3emjguzbsq9q3.cloudfront.net`, `booking-api.apntly.com`) plus a `cloudflare.com/cdn-cgi/trace` call returning visitor IP and geo. Probably intentional for Phase 7 booking, never explicitly decided.
+**Also third-party on that page:** the Appointly booking app (`s1.staq-cdn.com`, `d3emjguzbsq9q3.cloudfront.net`, `booking-api.apntly.com`), plus a `cloudflare.com/cdn-cgi/trace` call returning visitor IP and geo. Probably intentional for Phase 7 booking, never explicitly decided.
 
-**Not inspected:** the merchant `shopify-custom-pixel`, and `web-pixel-506659022` (1KB, no external hosts, looks benign).
+### Two Phase 6 findings from 2026-08-12
 
-**Andrew chose "nothing yet" on 2026-08-12** rather than write it up or amend the docs.
-
-### 2. LAUNCH-02 is already satisfied
-
-The iframe URL on the live storefront carries `test=0`. `enable_test_mode` defaults to `false` in `extensions/quiz-block/blocks/symptom-quiz.liquid`. Just needs recording as done — `REQUIREMENTS.md` still lists it as plain "Pending".
-
-### 3. `REQUIREMENTS.md:214` is stale
-
-It says the app block's Medical Disclaimer field reads "This text needs changed." It does not — the live page renders the real clinical disclaimer. The `ConsentStep.tsx:56` `[PENDING]` marker and the `CONSENT_VERSION` bump are separate and unverified.
-
----
-
-## SHOP-01 result (the Phase 6 gating spike)
-
-**Verdict: no fallback design needed. The obstacle is cleared.**
-
-The question was never whether the metafields are written — they are, and `app/routes/app.verify-metafields.tsx` reads them fine via the **Admin API**. The question is **Liquid readability on the storefront**, which needs a metafield *definition*.
-
-Found: both metafields existed as **unstructured** (no definition) on 4 customers — which is exactly why Liquid could not see them.
-
-**Created both definitions in the Shopify admin on 2026-08-12** (Andrew authorized):
-
-| Definition name | Key | Type | Used in |
-|---|---|---|---|
-| Completed assessments | `alledrops.quiz_count` | Integer | 4 customers |
-| Last completed assessment | `alledrops.last_completed_at` | Date and time | 4 customers |
-
-Settings on both: **Storefront API access ON**, Customer Account API access **No access**, **"Filter or group data in Analytics" OFF** — left off deliberately; pushing a health-adjacent field into Analytics segmentation is what turns an approved non-PHI flag into a problem. Keep it off.
-
-**Still unproven:** that `customer.metafields.alledrops.quiz_count` actually *renders* in Liquid for a logged-in customer. Creating the definition is the documented prerequisite but was not empirically confirmed — that test needs a logged-in customer session plus Liquid on a template, which is really the first step of SHOP-02 rather than the spike.
-
----
-
-## What worked
-
-- **Served-bytes verification, never exit codes.** Fetch the deployed `/quiz-bundle-js`, compare byte length and `split(needle).length - 1` counts against the committed artifact. Caught nothing broken today but is the reason "deployed" is trustworthy.
-- **Rendering every score and screenshotting it.** Built a local HTML with the real CSS at scores 0/1/2/3/5/6/7/8/20/45/60. This is the only reason the 6→7 marker collapse was found — tests all passed.
-- **Fetching web-pixel bundles rather than scanning the DOM.** See LAUNCH-01 above. The DOM scan actively lied.
-- **`git branch <name>` + `git reset --keep`** to move a commit accidentally made on `main` onto a branch without losing uncommitted working-tree edits. Used successfully today.
-- **`claude-in-chrome` for anything needing Andrew's real sessions.** It attaches to his logged-in Chrome.
-
-## What didn't work
-
-- **`chrome-devtools` MCP has no Shopify admin session** — it drives a separate browser. Use `claude-in-chrome` for admin/storefront work.
-- **`mcp__claude-in-chrome__browser_batch` returned "No tab available"** with a valid tabId. Fell back to individual `computer` calls, which work fine. Don't burn time debugging it.
-- **`shopify-dev-mcp` docs search did not answer** whether Liquid customer-metafield reads require the Storefront API toggle. Results were all Customer Account API / UI extensions. Settled empirically instead.
-- **Interpolation does not solve the 6→7 boundary.** Scores 6, 7 and 8 land ~3px apart on the orange/red seam, so the most consequential clinical threshold shows no marker movement. Measured, surfaced, and **accepted** by Andrew. Two alternatives were costed and declined — both written up above the calculation in `ResultsDisplay.tsx`. **Do not "fix" this as a bug.**
-- **Do not revert the equal-width zones to span-proportional.** With bracket-aligned boundaries that produces the 90%-red bar nobody chose.
+1. **This is a development store on a Custom plan**, not Basic/Grow. Phase 6's CONTEXT/RESEARCH/ROADMAP all reason from Basic/Grow. D-09 / D-11 conclude checkout-step extension targets are "Plus-only, therefore out of scope" — not verifiable on a dev store. Re-confirm after the LAUNCH-06 transfer.
+2. **There is no refund policy and no shipping policy.** ROADMAP success criterion 4 for Phase 6 says the clinical-review language must appear "in the refund policy". There is none to amend. `06-05`'s deliverable is authoring guidance for a document written from nothing, not an edit.
 
 ---
 
 ## Next steps
 
-1. **Record the SHOP-01 spike result** in `.planning/` — verdict, the two definitions and their settings, and the one unproven Liquid step. Currently only in this file.
-2. **Decide on the LAUNCH-01 Klaviyo finding.** Options were: shareable write-up for AOD, planning-doc update, or dig further (the uninspected custom pixel, and whether Klaviyo fires on the product/consult pages too). Andrew deferred on 2026-08-12.
-3. **`/gsd:discuss-phase 6`** — with the metafield question settled, this can be about SHOP-02/03's real design. Note SHOP-05 and SHOP-06 are not code (Shopify admin content / AOD process, William owns).
-4. **Apply William's colour-stop answer when it arrives.** He was emailed 2026-08-12, but that email describes the **previous** design (linear 0–60, independent 20/40/60 stops) — the deployed page is already a version past it. Applying his answer is an edit to the `zones` array in `score-scale.ts` plus a deploy.
-5. **Clear `isProvisional: true`** in `score-scale.ts` once he confirms.
+1. **Send William the one-line correction.** Andrew's 2026-08-13 email says *"there is **no** a place to upload allergy testing results at Step 3"* — a typo that reads as the opposite of the truth. He also has the review link (`/quiz-embed?test=1`).
+2. **Confirm the removed score with William.** His email said patients *"will still receive a number, and then fall on the scale"*. Andrew read it as "no number displayed anywhere, just the scale" and shipped that. Both readings are recorded verbatim in `ResultsDisplay.tsx`. This is patient-facing clinical presentation owned by the medical director — one line closes it.
+3. **Phase 6 Wave 2 is unblocked.** Switch to `thread-phase-6-purchase-prerequisites`, rebase or merge `main` in to pick up the new brackets, then plan `06-03` and `06-05` **against the `9+` threshold, not `7+`**. Sequencing Constraint 7 in ROADMAP is now satisfied.
+4. **`06-02` Task 3 is still open** — the SHOP-01 Liquid render measurement. It needs a logged-in customer session Andrew controls (Shopify login is an emailed code; an agent cannot do this half). Options are in the Phase 6 branch's HANDOFF.
+5. **Optional cleanup:** `quizResults__scoreCircle`, `quizResults__scoreNumber` and `scaleBar__value` are now dead CSS in `app/styles/quiz.module.css`.
 
 ---
 
@@ -119,14 +113,15 @@ Settings on both: **Storefront API access ON**, Customer Account API access **No
 
 | | |
 |--|--|
-| **Branch** | `main` @ `128678a`, clean |
-| **How to verify** | `npm run typecheck && npm test` → expect **734 passing / 49 files**. Bundle: `npm run build:theme`, then compare to served bytes. |
-| **Key files** | `app/lib/quiz/score-scale.ts` · `app/components/quiz/ResultsDisplay.tsx` · `app/lib/quiz/scoring.ts` · `tests/quiz-results-scale-bar-dom.test.ts` · `tests/quiz-bundle-freshness.test.ts` · `.planning/STATE.md` |
-| **Deploy** | `fly deploy -a alle-drops-quiz-app` from `main` only. Fly prints a "not listening on the expected address" warning on every deploy — **false alarm**, health returns 200. |
-| **Blockers** | None blocking Phase 6. William owes the colour-stop confirmation (go-live, not code). LAUNCH-01 is live and unremediated by choice. `04-19` remains the one open plan (55/56) — Phase 4 human UAT, blocked on the Fly BAA, GCP cutover, and William. |
+| **Branch** | `main` @ `3bcff8d`, clean. Phase 6 work is on `thread-phase-6-purchase-prerequisites` @ `3f501fe` — **read that branch's HANDOFF.md too**. |
+| **How to verify** | `npm run typecheck && npm test` → expect **762 tests / 50 files**. Deployed check: fetch `https://alle-drops-quiz-app.fly.dev/quiz-bundle-js` with a cache-buster and count with `split(needle).length - 1`, never `grep -c`. |
+| **Key files** | `app/lib/quiz/scoring.ts` (SCORE_BRACKETS) · `app/components/quiz/ResultsDisplay.tsx` (the reasoning comments are load-bearing) · `migrations/005_widen_score_bracket_check.sql` · `.planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md` (the clinical source of truth) · `.planning/ROADMAP.md` Sequencing Constraint 7 |
+| **Store** | `allergist-on-demand.myshopify.com`. Live theme: Sense, id `135799767246`. |
+| **Deploy** | `fly deploy -a alle-drops-quiz-app` from `main`. `shopify app deploy` is a separate system and Phase 6's `06-06` owns it. Fly prints a "not listening on the expected address" warning every deploy — **false alarm**, health returns 200. |
+| **Blockers** | LAUNCH-01 live and unremediated by choice. `04-19` remains the one open plan from Phase 4 (human UAT, blocked on the Fly BAA, GCP cutover, and William). `06-02` Task 3 needs a customer login Andrew controls. |
 
 ## Git hygiene
 
-- **Always branch.** Never commit to `main` — I slipped once today and had to recover with `git branch` + `git reset --keep`.
+- **Always branch before starting work.** `.planning/config.json` sets no `git.branching_strategy`, so `/gsd:execute-phase` will not cut it for you, and worktrees fork from whatever is checked out.
+- Phase 5.2 was merged and deployed by an agent under Andrew's explicit in-session authorization, overriding CLAUDE.md's default "agents do not merge to main". That override is per-session and does not carry forward.
 - Deploy from `main` only, after merge.
-- `shopify app deploy` is a separate system from `fly deploy` and was **not** needed for any of today's work (bundle is Fly-served, no extension changes).
