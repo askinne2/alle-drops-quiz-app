@@ -66,15 +66,50 @@
 --      command and no SQL statement in this file has been executed as part of authoring it.
 --
 -- ============================================================================================
--- EXECUTION RECORD — filled in by plan 05.2-04, not this commit.
+-- EXECUTED 2026-08-13 against alledrops_quiz_dev, plan 05.2-04 (retry — the first attempt
+-- blocked cleanly on an expired gcloud OAuth token before any gcloud call succeeded and left
+-- the database completely untouched; this run started fresh from Task 1).
 --
---   Backup ID / timestamp / status (read back, not assumed from exit code):
---   Confirmed live constraint name (from pg_constraint):
---   Pre-migration row count:
---   Post-migration row count:
---   Verification query result (constraint definition read back after ADD):
---   Execution role / SET ROLE deviation notes, if any:
---   Date / session:
+--   Backup: ID 1786617655419, ON_DEMAND, SUCCESSFUL, description
+--     "pre-phase52-widen-score-bracket-check", windowStartTime 2026-08-13T10:40:55.419+00:00.
+--     Read back via `gcloud sql backups list` and `gcloud sql backups describe
+--     1786617655419 --instance=alledrops-quiz-data --project=alledrops-quiz` — not trusted from
+--     the create command's exit code.
+--   Confirmed live constraint name (from pg_constraint, read BEFORE the DDL):
+--     submissions_score_bracket_check — matched the name already written into both ALTER
+--     statements below, so no edit was required.
+--   Pre-migration row count: 48 (fresh SELECT COUNT(*), read in this session).
+--   Post-migration row count: 48 (unchanged).
+--   Pre-migration bracket distribution: 0-2=10, 3-6=11, 7+=27 (sums to 48).
+--   Post-migration bracket distribution: 0-2=10, 3-6=11, 7+=27 — byte-identical; no row
+--     relabelled.
+--   Verification query result (pg_get_constraintdef, read back AFTER the ADD, by query result
+--     not exit code): exactly one check constraint on score_bracket —
+--     CHECK ((score_bracket = ANY (ARRAY['0-2'::text, '3-6'::text, '3-8'::text, '7+'::text,
+--     '9+'::text]))). The table's other check constraint (submissions_patient_state_check) is
+--     unrelated and was also read back to confirm nothing was cross-affected.
+--   Positive probe: BEGIN; INSERT with score_bracket='9+' and placeholder identity values
+--     (symptom_profile_id 'AOD_PHASE52_PROBE_POS', email
+--     phase52-ddl-probe@example.com) succeeded without a constraint violation, count read at 49
+--     inside the open transaction, then ROLLBACK; post-rollback count confirmed back at 48.
+--   Negative probe: BEGIN; INSERT with score_bracket='not-a-bracket' and the same class of
+--     placeholder identity values (symptom_profile_id 'AOD_PHASE52_PROBE_NEG') was REJECTED:
+--     "new row for relation \"submissions\" violates check constraint
+--     \"submissions_score_bracket_check\"", then ROLLBACK; post-rollback count confirmed at 48.
+--   Execution role / SET ROLE deviation: DATABASE_URL on the Fly VM connects directly as
+--     alledrops_app (confirmed via `SELECT current_user, session_user;` before the DDL —
+--     both returned alledrops_app), which owns `submissions` outright per `pg_tables.tableowner`.
+--     No `SET ROLE` was needed or used; this deviates from the header's `SET ROLE
+--     alledrops_app` / `RESET ROLE` instruction (written for the `postgres`-as-connecting-role
+--     case, matching 004's ownership split) because that instruction assumed a different
+--     connecting role than the one actually available on this surface.
+--   Surface: `fly ssh console -a alle-drops-quiz-app`, running a `.cjs` Node script (using the
+--     `pg` package already present in the deployed app's node_modules) against the Fly-held
+--     DATABASE_URL, the only working route from this operator's machine (Cloud SQL's authorized
+--     network is Fly's egress IP only). Both ALTER statements ran inside one BEGIN/COMMIT
+--     transaction. The script and its base64 transfer artifact were deleted from the Fly VM
+--     after use; nothing PHI-bearing was left on the VM filesystem.
+--   Date / session: 2026-08-13, plan 05.2-04 retry.
 -- ============================================================================================
 
 ALTER TABLE submissions DROP CONSTRAINT IF EXISTS submissions_score_bracket_check;
