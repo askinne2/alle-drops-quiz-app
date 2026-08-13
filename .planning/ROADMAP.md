@@ -621,7 +621,7 @@ Plans:
 
 **Wave 2** *(05.2-02 depends on 05.2-01; 05.2-04 depends on 05.2-03)*
 
-- [ ] 05.2-02-PLAN.md — Carry the new labels through API validation, the clinical PDF, the admin table and dashboard, the E2E script, and every test fixture
+- [x] 05.2-02-PLAN.md — Carry the new labels through API validation, the clinical PDF, the admin table and dashboard, the E2E script, and every test fixture
 - [ ] 05.2-04-PLAN.md — Named Cloud SQL backup, human-gated DDL execution, constraint proven on query output (`autonomous: false`)
 
 **Wave 3** *(blocked on 05.2-01, 05.2-02, 05.2-04)*
@@ -912,7 +912,7 @@ exposures today.
 | 3. Mandatory Medical History | 7/7 | Complete   | 2026-08-09 |
 | 4. Mandatory Allergy Testing | 19/19 | Complete   | 2026-08-10 |
 | 5. Preliminary Score Page | 6/6 | Complete   | 2026-08-11 |
-| 5.2 Clinical Bracket Revision *(INSERTED)* | 2/5 | Executing | - |
+| 5.2 Clinical Bracket Revision *(INSERTED)* | 3/5 | Executing | - |
 | 6. Purchase Prerequisites | 2/6 | Executing | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |
 | 8. Launch Readiness | 0/TBD | Not started | - |

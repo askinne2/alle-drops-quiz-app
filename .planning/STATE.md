@@ -10,8 +10,8 @@ progress:
   total_phases: 11
   completed_phases: 7
   total_plans: 67
-  completed_plans: 57
-  percent: 82
+  completed_plans: 58
+  percent: 87
 ---
 
 # Project State
@@ -28,10 +28,43 @@ parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 05.2 (Clinical Bracket Revision) — EXECUTING, Wave 1 complete
-Plan: 2 of 5 (05.2-01 + 05.2-03 done; next incomplete: 05.2-02, then the 05.2-04 human gate)
-Status: Phase 05.2 wave 1 merged and verified; wave 2 next, and 05.2-04 needs DDL authorization
-Last activity: 2026-08-13 -- Phase 05.2 wave 1 complete (05.2-01, 05.2-03)
+Phase: 05.2 (Clinical Bracket Revision) — EXECUTING, wave 2 partial
+Plan: 3 of 5 (05.2-01, 05.2-03, 05.2-02 done; 05.2-04 BLOCKED; 05.2-05 waits on it)
+Status: Phase 05.2 code complete and green; 05.2-04 blocked on an expired gcloud OAuth token
+Last activity: 2026-08-13 -- Phase 05.2 plan 05.2-02 merged; 05.2-04 blocked on gcloud reauth
+
+**BLOCKER — `05.2-04` cannot run until `gcloud auth login` is done interactively.** The cached
+OAuth token for `andrew@21adsmedia.com` expired. Both `gcloud sql backups create` and a pure
+`gcloud sql backups list` fail with "Reauthentication failed. cannot prompt during non-interactive
+execution", so this is an auth gate rather than a permissions or instance problem. Confirmed
+independently by the orchestrator, not taken from the agent's report. Fix:
+`gcloud auth login andrew@21adsmedia.com` in an interactive terminal, then re-run
+`gcloud sql backups list --instance=alledrops-quiz-data --project=alledrops-quiz --limit=3`; a table
+(even empty) means the gate is clear. **`alledrops_quiz_dev` is untouched** — zero DDL, zero DML, no
+backup created, and the executor declined to work around the block rather than substituting a
+service-account key or mutating global gcloud config. Andrew's DDL authorization (the `fly ssh
+console` route) still stands and does not need re-obtaining.
+
+**Note for whoever runs it:** `gcloud`'s active project is `smart-rope-305817`, so every call needs
+an explicit `--project alledrops-quiz`. Do not `gcloud config set project` — other work depends on
+the current value.
+
+**Code-side wave 2 is done and verified on the merged tree:** typecheck exit 0, **759 tests / 50
+files** green (753 before this plan). The write/read asymmetry that D-52-04 exists to protect was
+confirmed in source: `quiz-validation.ts` narrows *new* submissions to `["0-2","3-8","9+"]`, while
+every *read* path carries all five labels — `pdf.ts` `BRACKET_LABELS`, and
+`app.quiz-results.tsx`'s `BRACKET_BADGE_COLORS` and `BRACKET_BANNER_COLORS` (5 keys each, legacy
+entries marked `pre-2026-08-13` / `(legacy)`), with `?? row.score_bracket` beneath as a final
+fallback. `app._index.tsx` aggregates `IN ('3-6', '3-8')` and `IN ('7+', '9+')`. A RED-proofed
+regression test asserts a legacy `7+` row renders `"Bracket: 7+ (High, pre-2026-08-13)"` rather than
+a bare fallback.
+
+**Planning defect found during execution, worth carrying forward.** `05.2-02` Task 3's acceptance
+criteria demanded zero `score_bracket: '7+'` occurrences in `tests/pdf.test.ts`, while the same
+task's `<action>`/`<behavior>` required adding a `'7+'`-fixtured legacy-label regression case — the
+plan contradicted itself. The executor followed the more specific instruction and added the case.
+That was the right call: the legacy-render guard is the plan's own central risk mitigation for
+D-52-04, and honouring the literal criterion would have deleted it.
 
 **Wave 1 verified on the merged result, not on the agents' own reports.** Both plans ran in
 isolated worktrees and were green separately; the combination was checked after merge:
