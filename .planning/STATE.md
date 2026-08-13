@@ -10,7 +10,7 @@ progress:
   total_phases: 11
   completed_phases: 7
   total_plans: 67
-  completed_plans: 55
+  completed_plans: 57
   percent: 82
 ---
 
@@ -28,10 +28,27 @@ parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 05.2 (Clinical Bracket Revision) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 05.2
-Last activity: 2026-08-13 -- Phase 05.2 execution started
+Phase: 05.2 (Clinical Bracket Revision) — EXECUTING, Wave 1 complete
+Plan: 2 of 5 (05.2-01 + 05.2-03 done; next incomplete: 05.2-02, then the 05.2-04 human gate)
+Status: Phase 05.2 wave 1 merged and verified; wave 2 next, and 05.2-04 needs DDL authorization
+Last activity: 2026-08-13 -- Phase 05.2 wave 1 complete (05.2-01, 05.2-03)
+
+**Wave 1 verified on the merged result, not on the agents' own reports.** Both plans ran in
+isolated worktrees and were green separately; the combination was checked after merge:
+`npm run typecheck` exit 0, **753 tests / 50 files** green (baseline 734/49). Spot-verified in
+source rather than inferred from the suite: `SCORE_BRACKETS` reads LOW 0–2 / MID 3–8 / HIGH 9–∞,
+`ScoreBracket` is `"0-2" | "3-8" | "9+"`, `isProvisional` is gone entirely, migration 005's CHECK
+carries the five-label union, and all three of William's headlines are present in
+`app/components/quiz/`. `ResultsDisplay.tsx` no longer references the ceiling at all, while
+`score-scale.ts` still computes `max` via `getMaxScore(ALL_SCORED_QUESTIONS)` — SCORE-02's
+"derived, never a literal" guarantee survives the denominator being hidden.
+
+**Worktrees fork from `main`, not from the phase branch.** Both agents hit this: their worktree HEAD
+predated the phase branch tip, so the plan files were not on disk at spawn. One fast-forwarded to
+`8170dcc` while staying on its `worktree-agent-*` branch; the other read the plan via
+`git show phase-5.2-clinical-bracket-revision:<path>` without changing HEAD. Both handled it
+correctly and neither rewrote history. Expect this on every wave — it is harness behavior, not a
+defect, and the fix is never to check out the phase branch inside a worktree.
 
 **Read this branch's state as branch-local.** This is
 `phase-5.2-clinical-bracket-revision`, cut from `main`. Phase 6 Wave 1 (`06-01` and `06-04` complete,
