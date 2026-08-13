@@ -35,6 +35,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "fs";
+import { join } from "path";
 import React from "react";
 import { ResultsDisplay, type ResultsDisplayProps } from "../app/components/quiz/ResultsDisplay";
 import { getScoreScale } from "../app/lib/quiz/score-scale";
@@ -130,10 +132,12 @@ describe("SCORE-01 copy", () => {
 });
 
 describe("SCORE-02 derived readout", () => {
-  it('renders "{score} of {max}" with max read from getScoreScale(), not a literal', () => {
-    const scale = getScoreScale();
+  // CHANGED 2026-08-13 (D-52-01, SCORE-06). The readout no longer shows the /60 denominator —
+  // William Miller confirmed the total is what "throws it off" and skews the scale's appearance.
+  // See .planning/phases/05.2-clinical-bracket-revision/05.2-SOURCE-william-2026-08-13.md.
+  it('renders "Score: {score}", with no denominator', () => {
     renderResults({ score: 7 });
-    expect(screen.getByText(`7 of ${scale.max}`)).toBeTruthy();
+    expect(screen.getByText("Score: 7")).toBeTruthy();
   });
 });
 
@@ -203,7 +207,7 @@ describe("colour tracks the clinical brackets, computed from score (load-bearing
     const { currentLegendItem } = getScaleBarParts(container);
     expect(currentLegendItem?.textContent).toBe("High");
     expect(
-      screen.getByText("Sublingual Immunotherapy May Significantly Help You"),
+      screen.getByText("Sublingual Immunotherapy May Significantly Help Manage Your Symptoms"),
     ).toBeTruthy();
   });
 
@@ -229,7 +233,7 @@ describe("colour tracks the clinical brackets, computed from score (load-bearing
     // The recommendation still follows the prop — the two are separately sourced, which is the
     // whole point of the assertion.
     expect(
-      screen.getByText("Sublingual Immunotherapy May Significantly Help You"),
+      screen.getByText("Sublingual Immunotherapy May Significantly Help Manage Your Symptoms"),
     ).toBeTruthy();
   });
 });
@@ -315,15 +319,13 @@ describe("DOM structure — the marker-clipping regression guard", () => {
 });
 
 describe("Accessibility contract", () => {
-  it("the track's aria-label carries score, ceiling, and the current zone's label, and names none of the clinical brackets", () => {
-    const scale = getScoreScale();
+  it("the track's aria-label carries the current zone's label, and names none of the clinical brackets", () => {
     const { container } = renderResults({ score: 9, scoreBracket: "9+" });
     const { track } = getScaleBarParts(container);
     const label = track.getAttribute("aria-label") ?? "";
 
     expect(label).toContain("Symptom burden position");
     expect(label).toContain("9");
-    expect(label).toContain(String(scale.max));
     // "high" as of 2026-08-12, boundary revised 2026-08-13 — score 9 is the bottom of the 9+
     // bracket and the zones now mirror the brackets. The assertion that matters is unchanged: the
     // label names the ZONE, and names no clinical bracket string.
@@ -334,12 +336,69 @@ describe("Accessibility contract", () => {
     expect(label).not.toContain("9+");
   });
 
-  it('the "7 of {max}" readout is normal-flow text with no aria-hidden ancestor', () => {
-    const scale = getScoreScale();
+  // CHANGED 2026-08-13 (D-52-01, SCORE-06). The aria-label no longer carries the /60 denominator
+  // or the "on a 0 to X scale" fragment, and the visible readout is "Score: {score}" instead of
+  // "{score} of {max}".
+  it('the aria-label carries the score with no denominator, and the "Score: 7" readout is normal-flow text with no aria-hidden ancestor', () => {
     const { container } = renderResults({ score: 7 });
-    const readout = screen.getByText(`7 of ${scale.max}`);
+    const { track } = getScaleBarParts(container);
+    const label = track.getAttribute("aria-label") ?? "";
+
+    expect(label).toContain("score 7");
+    expect(label).not.toContain("on a 0 to");
+
+    const readout = screen.getByText("Score: 7");
     expect(readout.closest('[aria-hidden="true"]')).toBeNull();
     void container;
+  });
+});
+
+describe("SCORE-06 denominator removal", () => {
+  it("the rendered page shows no denominator, for any bracket", () => {
+    for (const bracket of ["0-2", "3-8", "9+"] as const) {
+      const scale = getScoreScale();
+      const { container, unmount } = renderResults({ score: 7, scoreBracket: bracket });
+      const text = container.textContent ?? "";
+
+      expect(text.split(` of ${scale.max}`).length - 1).toBe(0);
+      expect(text.split(" of 60").length - 1).toBe(0);
+
+      unmount();
+    }
+  });
+});
+
+describe("SCORE-06 derived ceiling still backs geometry", () => {
+  it("the marker still reaches exactly 100% at the derived ceiling, and strictly less than 100% one point below it", () => {
+    const scale = getScoreScale();
+
+    const { container: atMax, unmount: unmountAtMax } = renderResults({
+      score: scale.max,
+      scoreBracket: "9+",
+    });
+    expect(getScaleBarParts(atMax).marker.style.left).toBe("100%");
+    unmountAtMax();
+
+    const { container: belowMax, unmount: unmountBelowMax } = renderResults({
+      score: scale.max - 1,
+      scoreBracket: "9+",
+    });
+    const belowMaxLeft = Number.parseFloat(getScaleBarParts(belowMax).marker.style.left);
+    expect(belowMaxLeft).toBeLessThan(100);
+    unmountBelowMax();
+  });
+});
+
+describe("D-52-02 source guard — band heading wraps freely at every width", () => {
+  it(".quizResults__message h3 declares no white-space, text-overflow, or overflow", () => {
+    const source = readFileSync(join(process.cwd(), "app/styles/quiz.module.css"), "utf-8");
+    const match = source.match(/\.quizResults__message h3\s*\{([^}]*)\}/);
+    if (!match) throw new Error(".quizResults__message h3 rule not found in quiz.module.css");
+    const ruleBody = match[1];
+
+    expect(ruleBody.split("white-space").length - 1).toBe(0);
+    expect(ruleBody.split("text-overflow").length - 1).toBe(0);
+    expect(ruleBody.split("overflow").length - 1).toBe(0);
   });
 });
 
@@ -395,8 +454,8 @@ describe("D-06 two-axis labelling", () => {
 describe("D-09 verbatim band copy", () => {
   const bandHeadings: Record<ResultsDisplayProps["scoreBracket"], string> = {
     "0-2": "Your Symptoms Appear Mild and Well-Controlled",
-    "3-8": "You May Benefit From Seeing an Allergist",
-    "9+": "Sublingual Immunotherapy May Significantly Help You",
+    "3-8": "You May Benefit From Seeing an Allergist Prior to Starting Treatment",
+    "9+": "Sublingual Immunotherapy May Significantly Help Manage Your Symptoms",
   };
   const DISCLAIMER_SENTENCE = "This assessment is a clinical symptom screening tool.";
 
