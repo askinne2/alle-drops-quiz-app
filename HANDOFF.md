@@ -5,26 +5,35 @@
 **Branch:** `main` @ pushed, clean. `origin/main` is current — the 38-commit stale gap is closed.
 **Shopify:** **`alledrops-quiz-production-24`** deployed 2026-08-13. **Fly:** unchanged — Phase 6 touched no Fly-served code.
 
-**Resume with:** the theme-repo pull in "Do this first" below, then Phase 7 or Phase 8.
+**Resume with:** Phase 7 or Phase 8. The theme-repo pull is **done** — see below.
 
 ---
 
-## Do this first — the local theme repo can silently delete the live purchase gate
+## DONE 2026-08-13 — theme repo pulled and pushed (kept for the reasoning)
 
-`/Users/andrewskinner/Local Sites/allergist-on-demand` holds `templates/product.regional-drops.json`
-**dated 28 Nov 2025**, containing:
+**The hazard, now closed.** Until 2026-08-13, `/Users/andrewskinner/Local Sites/allergist-on-demand`
+held `templates/product.regional-drops.json` **dated 28 Nov 2025**, containing:
 
 ```
 purchase_prerequisites refs: 0        ← the Phase 6 block is absent
 show_dynamic_checkout: true           ← express checkout ON
 ```
 
-The live theme has the opposite of both. **A `shopify theme push` from that repo would delete the
-purchase gate and restore the Shop Pay bypass, with no visible symptom** — the block fails open by
-design, so its absence produces no error, no broken layout, nothing. Add to cart simply starts
-working again. That is the worst failure mode available here.
+The live theme had the opposite of both. **A `shopify theme push` from that repo would have deleted
+the purchase gate and restored the Shop Pay bypass, with no visible symptom** — the block fails open
+by design, so its absence produces no error, no broken layout, nothing. Add to cart simply starts
+working again. That is the worst failure mode available here, and it is why this was done first.
 
-**Recommended sequence (not yet done):**
+**Completed 2026-08-13.** Theme repo commits `80ad904` (pre-pull snapshot of 9 uncommitted files) and
+`2dea432` (live pull), pushed to `origin/main`. Only **two** files had drifted, because those 9
+uncommitted files turned out to be live content from a prior partial pull. The pull added the
+`purchase_prerequisites` block to `block_order` between `quantity_selector` and `buy_buttons`, flipped
+`show_dynamic_checkout` to `false`, **removed a stale Quiz Kit "Your match" badge block** the local
+repo carried on the SLIT PDP but live does not, and dropped `privacy_policy_url` from
+`page.quiz.json` (the key no longer exists in the block schema; it was an empty string, so nothing was
+ever linked — but the PHI quiz page has no privacy policy link and no setting to add one).
+
+Original sequence, for the record:
 
 1. `cd` to the theme repo and **commit the 9 modified files first** — `sections/footer-group.json`,
    `sections/header-group.json`, `templates/index.json`, `page.about`, `page.contact`, `page.faq`,
@@ -89,21 +98,36 @@ Not touched: clinical copy is William's. But the reassignment rested on a false 
 
 ## Open items, ranked
 
-1. **Theme repo pull** — see "Do this first".
-2. **William owes three things:** paste the SHOP-05 order confirmation copy (which also supplies the
+1. **William owes three things:** paste the SHOP-05 order confirmation copy (which also supplies the
    support details `06-04`'s shipped notice already points patients to), write the refund policy —
    **there is none, and no shipping policy either** — and approve the D-13 replacement copy above.
    Also still open from Phase 5.2: the one-line typo correction, and confirming the removed numeric
    score.
-3. **LAUNCH-01 — Klaviyo on the PHI quiz page.** Unremediated by choice, deferred four times. New
-   this session: Klaviyo also has a **checkout-editor block** (`Klaviyo Opt-in at checkout`) available
-   on thank-you and order-status. Not placed — but LAUNCH-01's surface is wider than the single web
-   pixel on record. Also unrecorded until now: quiz-answer-shaped **tags** on customer records
+2. **LAUNCH-01 — Klaviyo is GONE, Apntly is now the last tracker standing.** Andrew removed Klaviyo
+   on 2026-08-13. Verified three ways: served HTML (`klaviyo` = 0 with live controls non-zero),
+   **runtime resource requests (0 Klaviyo hosts across 254 on the PHI quiz page)**, and Admin →
+   Customer events (pixel `web-pixel-597524686` gone, along with the previously-uninspected
+   `shopify-custom-pixel` and `web-pixel-506659022`).
+
+   **Use the runtime check, not an HTML scan.** The Klaviyo pixel ran in a sandboxed web worker, so
+   `document.querySelectorAll('script')` and raw-HTML greps returned clean the entire time it was
+   live. That false negative is why this stayed open for months. What works:
+   `performance.getEntriesByType('resource')` → group by `new URL(u).host`.
+
+   **Open:** Customer events now lists exactly one pixel — **`Apntly:Appointment Booking App`** — and
+   it is registered on the PHI-collecting quiz page, with `s1.staq-cdn.com`,
+   `booking-api.apntly.com`, `d3emjguzbsq9q3.cloudfront.net` and a `www.cloudflare.com` IP/geo call
+   all live in the runtime trace. `CLAUDE.md` rule 4 names Klaviyo but not Apntly. Flagged since
+   2026-08-12 as "probably intentional for Phase 7 booking, never explicitly decided" — it now needs
+   an explicit keep/remove decision and a BAA answer if it stays.
+
+   Also still unrecorded anywhere but here: quiz-answer-shaped **tags** on customer records
    (`complicated regimen`, `prescribed medication`, `frequent doctor visits`, …) written by a
-   third-party **Quiz Kit** app, not this one.
-4. **`04-19`** — still the one open plan from Phase 4. Human UAT, blocked on the Fly BAA, the GCP
+   third-party **Quiz Kit** app, not this one. The theme pull also removed a stale Quiz Kit "Your
+   match" badge block from the local SLIT product template.
+3. **`04-19`** — still the one open plan from Phase 4. Human UAT, blocked on the Fly BAA, the GCP
    cutover, and William. Not startable.
-5. **`HardcodedRoutes` warning** on `purchase-prerequisites.liquid:91` — theme check wants
+4. **`HardcodedRoutes` warning** on `purchase-prerequisites.liquid:91` — theme check wants
    `{{ routes.account_login_url }}` instead of the literal `/account/login`. Works on this
    single-locale store. Changing it means changing `06-UI-SPEC.md` and the contract test together.
 

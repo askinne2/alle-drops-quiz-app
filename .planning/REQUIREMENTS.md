@@ -262,9 +262,32 @@ Set by William Miller (AOD medical director) on 2026-08-13. Source of truth for 
 
 ### Launch Readiness (non-code blockers)
 
-- [ ] **LAUNCH-01**: No Klaviyo, Meta Pixel, Google Analytics, or other tracker loads on any
+- [~] **LAUNCH-01**: No Klaviyo, Meta Pixel, Google Analytics, or other tracker loads on any
   PHI-collecting page, verified in the browser on the live store — theme/Shopify-app level, zero
   references in this repo (`CON-no-third-party-trackers-on-phi-pages`) — owner: Andrew
+
+  > **Klaviyo half CLOSED 2026-08-13.** Andrew removed Klaviyo from the store. Verified three
+  > independent ways, because each alone has a known blind spot:
+  >
+  > 1. **Served HTML** — `klaviyo` = 0 on `/pages/allergy-quiz`, `/products/tennessee-alledrops` and
+  >    `/`, with live controls non-zero (`alle-drops-quiz-app.fly.dev` = 2 on the quiz page,
+  >    `appointly` = 15) so the zeros are not a failed fetch.
+  > 2. **Runtime resource requests** — **0 Klaviyo hosts across 254 requests** on the PHI quiz page;
+  >    `webPixelsManagerAPI` is `undefined`. **This is the check that matters**: the Klaviyo pixel ran
+  >    in a sandboxed web worker, so HTML scans returned clean the entire time it was live. Never
+  >    accept an HTML-level zero as proof a pixel is gone.
+  > 3. **Admin → Customer events** — the authoritative registry. `web-pixel-597524686` (Klaviyo) is
+  >    gone. The previously-uninspected merchant `shopify-custom-pixel` and `web-pixel-506659022` are
+  >    also gone.
+  >
+  > **Still open — this is why the box is `[~]` and not `[x]`.** Customer events now lists exactly one
+  > pixel: **`Apntly:Appointment Booking App`** (Web, Optimized), and it is registered on the
+  > PHI-collecting quiz page. Its hosts are live in the runtime trace (`s1.staq-cdn.com`,
+  > `booking-api.apntly.com`, `d3emjguzbsq9q3.cloudfront.net`), plus a `www.cloudflare.com` call that
+  > returns visitor IP and geo. `CLAUDE.md` rule 4 forbids third-party scripts on any page collecting
+  > PHI and names Klaviyo but not Apntly. It has been flagged since 2026-08-12 as "probably intentional
+  > for Phase 7 booking, never explicitly decided" — with Klaviyo gone it is the last tracker standing
+  > and needs an explicit keep/remove decision plus a BAA answer if it stays.
 - [x] **LAUNCH-02**: The Test Mode button and container do not render on the production storefront
   page (UX-AUDIT CONTENT-2) — owner: Andrew, one line in the theme customizer
 
@@ -395,7 +418,7 @@ Acknowledged, not in the v1.0 roadmap.
 | SHOP-06 | Phase 6 | Pending — checklist drafted (`06-SHOP-06-FULFILLMENT-PROCESS.md`); closes on AOD adoption |
 | TELE-01 | Phase 7 | Pending |
 | TELE-02 | Phase 7 | Pending |
-| LAUNCH-01 | Phase 8 | Pending |
+| LAUNCH-01 | Phase 8 | **Klaviyo half closed 2026-08-13** (verified on served bytes, runtime requests, and the Admin pixel registry). Open: the Apntly booking pixel is still registered on the PHI quiz page and needs an explicit keep/remove decision |
 | LAUNCH-02 | Phase 8 | Satisfied (2026-08-12 — live iframe URL carries `test=0`; `enable_test_mode` defaults false in the block schema). Re-confirm on served bytes at go-live |
 | LAUNCH-03 | Phase 8 | Blocked (William / counsel) |
 | LAUNCH-04 | Phase 8 | Pending |
