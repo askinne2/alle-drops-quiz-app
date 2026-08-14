@@ -491,3 +491,74 @@ describe("D-04 no patient-facing provisional language", () => {
     expect((container.textContent ?? "").toLowerCase()).not.toContain("provisional");
   });
 });
+
+describe("Next Steps (William 2026-08-13)", () => {
+  it("always renders the Next Steps heading, telehealth CTA, Learn More, Contact, and Return Home", () => {
+    for (const bracket of ["0-2", "3-8", "9+"] as const) {
+      const { unmount } = renderResults({ scoreBracket: bracket, testingStatus: "had_testing" });
+      expect(screen.getByText("Next Steps")).toBeTruthy();
+      expect(
+        screen.getByText("While our clinical team is reviewing information, here are your next steps:")
+      ).toBeTruthy();
+      expect(screen.getByText("Learn More About SLIT")).toBeTruthy();
+      expect(screen.getByText("Contact Our Team")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Return Home" })).toBeTruthy();
+      unmount();
+    }
+  });
+
+  it("uses William's telehealth label per bracket", () => {
+    const { unmount: u1 } = renderResults({ scoreBracket: "0-2" });
+    expect(screen.getByText("Schedule a Telehealth Appointment")).toBeTruthy();
+    u1();
+    const { unmount: u2 } = renderResults({ scoreBracket: "3-8" });
+    expect(screen.getByText("We recommend scheduling a Telehealth Appointment")).toBeTruthy();
+    u2();
+    const { unmount: u3 } = renderResults({ scoreBracket: "9+" });
+    expect(screen.getByText("(Optional) Schedule a Telehealth appointment")).toBeTruthy();
+    u3();
+  });
+
+  it("shows Schedule Allergy Testing only when testingStatus is needs_testing", () => {
+    const { unmount: u1 } = renderResults({ testingStatus: "needs_testing" });
+    expect(screen.getByText("Schedule Allergy Testing")).toBeTruthy();
+    u1();
+    const { unmount: u2 } = renderResults({ testingStatus: "had_testing" });
+    expect(screen.queryByText("Schedule Allergy Testing")).toBeNull();
+    u2();
+  });
+
+  it("shows Explore Our Products and the do-not-purchase disclaimer only on 9+", () => {
+    const { unmount: high } = renderResults({ scoreBracket: "9+", testingStatus: "needs_testing" });
+    expect(screen.getByText("Explore Our Products")).toBeTruthy();
+    expect(
+      screen.getByText("Please do not complete your product purchase until our clinical team has emailed", {
+        exact: false,
+      })
+    ).toBeTruthy();
+    high();
+
+    const { unmount: mid } = renderResults({ scoreBracket: "3-8", testingStatus: "had_testing" });
+    expect(screen.queryByText("Explore Our Products")).toBeNull();
+    expect(screen.queryByText("Go to AlleDrops Product Page")).toBeNull();
+    mid();
+  });
+
+  it("renders Next Steps as a numbered list pointing at TELE-01, Testing Options, How It Works, and Contact", () => {
+    const { container } = renderResults({ scoreBracket: "0-2", testingStatus: "needs_testing" });
+    const list = container.querySelector("ol");
+    expect(list).not.toBeNull();
+    expect(list?.querySelectorAll("li").length).toBe(4);
+
+    expect(screen.getByRole("link", { name: "Schedule a Telehealth Appointment" }).getAttribute("href")).toBe(
+      "/products/allergy-consultation"
+    );
+    expect(screen.getByRole("link", { name: "Schedule Allergy Testing" }).getAttribute("href")).toBe(
+      "/pages/test-options"
+    );
+    expect(screen.getByRole("link", { name: "Learn More About SLIT" }).getAttribute("href")).toBe(
+      "/pages/how-it-works"
+    );
+    expect(screen.getByRole("link", { name: "Contact Our Team" }).getAttribute("href")).toBe("/pages/contact");
+  });
+});

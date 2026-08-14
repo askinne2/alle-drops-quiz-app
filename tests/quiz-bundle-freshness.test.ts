@@ -174,6 +174,11 @@ describe("public/quiz-bundle.js carries Phase 4 (mandatory-allergy-testing) cont
     expect(count(needle)).toBeGreaterThanOrEqual(1);
   });
 
+  it('contains the Next Steps intro — proves the 2026-08-13 results CTAs compiled in', () => {
+    const needle = "here are your next steps";
+    expect(count(needle)).toBeGreaterThanOrEqual(1);
+  });
+
   it('contains the "1-2 business days" clinical-review sentence at least once — proves the terminal results screen\'s confirmation copy is compiled in (needle repointed by plan 05-05)', () => {
     // This assertion's needle was originally the Phase 4 (04-08) post-consent confirmation
     // subtitle. Plan 05-05 (SCORE-01, Phase 5) retired that exact sentence when ResultsDisplay

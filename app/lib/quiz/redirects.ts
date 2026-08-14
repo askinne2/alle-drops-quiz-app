@@ -9,13 +9,15 @@
  * authenticated past the storefront password:
  *
  *   /pages/test-options            -> 200, titled "Test Options"
- *   /products/allergy-consultation -> 200
+ *   /products/allergy-consultation -> 200 (TELE-01 booking page; Appointly
+ *                                      Schedule CTA opens the widget there)
  *   /pages/consult                 -> 404
  *
  * `/pages/consult` was the previous consult fallback and it does not exist. Blanking the consult
  * setting in the theme editor therefore sent a patient who had just completed a clinical intake to
  * a 404. The consult fallback is now the product page, which is also the value the live theme block
- * carries, so the configured path and the fallback path agree instead of diverging.
+ * carries, so the configured path and the fallback path agree instead of diverging. Allergy
+ * Consultation is the TELE-01 destination — do not reintroduce `/pages/consult`.
  *
  * The test-options fallback is unchanged: that page is verified to exist.
  *
