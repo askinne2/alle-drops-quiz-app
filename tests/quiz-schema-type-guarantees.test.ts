@@ -98,12 +98,12 @@ describe("quiz schema type guarantees (D-09)", () => {
     expect(getQuestionById("testing_year")).toBeDefined();
   });
 
-  it("exactly five Part 7 items carry showIf, all pointing at testing_status — a flat gate, no chaining", () => {
+  it("exactly six Part 7 items carry showIf, all pointing at testing_status — a flat gate, no chaining", () => {
     // 04-16 added two more gated members (testing_files, testing_upload_requirements) to the
-    // original three (testing_year, testing_location, testing_allergens) — still a flat,
-    // single-level gate, no chaining.
+    // original three (testing_year, testing_location, testing_allergens). needs_testing_recommendation
+    // is the sixth — still a flat, single-level gate, no chaining.
     const gated = PART7_ALLERGY_TESTING.filter((i) => i.showIf);
-    expect(gated.length).toBe(5);
+    expect(gated.length).toBe(6);
     for (const item of gated) {
       expect(item.showIf?.questionId).toBe("testing_status");
     }
@@ -120,10 +120,12 @@ describe("quiz schema type guarantees (D-09)", () => {
     }
   });
 
-  it("PART7_ALLERGY_TESTING contains exactly one kind: 'info' item", () => {
+  it("PART7_ALLERGY_TESTING contains exactly two kind: 'info' items", () => {
     const infoItems = PART7_ALLERGY_TESTING.filter((i) => i.kind === "info");
-    expect(infoItems.length).toBe(1);
-    expect(infoItems[0]?.id).toBe("testing_upload_requirements");
+    expect(infoItems.length).toBe(2);
+    expect(infoItems.map((i) => i.id).sort()).toEqual(
+      ["needs_testing_recommendation", "testing_upload_requirements"].sort()
+    );
   });
 
   it("ALL_SCORED_QUESTIONS still has no part === 7 member after the 04-16 additions", () => {

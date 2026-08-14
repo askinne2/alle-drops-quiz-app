@@ -78,6 +78,8 @@ const HAD_TESTING_LABEL = "I've already had allergy testing";
 const TESTING_YEAR_LABEL = "What year did you have your allergy testing done?";
 const TESTING_LOCATION_LABEL = "Where did you have your allergy testing done?";
 const TESTING_ALLERGENS_LABEL = "What Allergens Did You React To?";
+const NEEDS_TESTING_RECOMMENDATION =
+  "We highly recommend allergy testing prior to initiating treatment. You can navigate to our Testing Options page to learn more";
 
 function renderPart7(answers: QuizAnswers, onAnswerChange: (...args: unknown[]) => void = vi.fn()) {
   const utils = render(
@@ -252,6 +254,7 @@ describe("Part 7 item list sanity (non-vacuity control)", () => {
     expect(ids).toContain("testing_year");
     expect(ids).toContain("testing_location");
     expect(ids).toContain("testing_allergens");
+    expect(ids).toContain("needs_testing_recommendation");
   });
 });
 
@@ -283,6 +286,21 @@ describe("TEST-02 — needs_testing branch collects nothing beyond the choice it
     expect(screen.queryByText(TESTING_YEAR_LABEL)).toBeNull();
     expect(screen.queryByText(TESTING_LOCATION_LABEL)).toBeNull();
     expect(screen.queryByText(TESTING_ALLERGENS_LABEL)).toBeNull();
+  });
+
+  it("shows the needs_testing recommendation note, and hides it on had_testing", () => {
+    const { rerender } = renderPart7({ testing_status: "needs_testing" });
+    const note = screen.getByRole("note");
+    expect(note.textContent).toContain(NEEDS_TESTING_RECOMMENDATION);
+
+    rerender(
+      React.createElement(QuizPartRenderer, {
+        items: PART_7_ITEMS,
+        answers: { testing_status: "had_testing" },
+        onAnswerChange: vi.fn(),
+      })
+    );
+    expect(screen.queryByText(NEEDS_TESTING_RECOMMENDATION)).toBeNull();
   });
 });
 

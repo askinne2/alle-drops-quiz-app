@@ -21,10 +21,33 @@ export interface ResultsDisplayProps {
  * `redirects.ts`'s doc comment: "the thin browser-global wrapper belongs in the calling
  * component") — `ResultsDisplay` is now its own caller, not a delegate of `QuizContainer`.
  */
-function getRedirectUrl(): string {
+function getTestOptionsUrl(): string {
   if (typeof window === "undefined") return REDIRECT_FALLBACK.testOptions;
   const cfg = (window as unknown as { AlleDropsQuizConfig?: QuizRedirectConfig }).AlleDropsQuizConfig;
   return getRedirectTarget("testOptions", cfg);
+}
+
+function getConsultUrl(): string {
+  // TELE-01 destination: `/products/allergy-consultation`. Appointly's booking
+  // widget opens from that page's Schedule CTA; calendar mapping is a go-live
+  // clinic config, not a quiz-bundle concern.
+  if (typeof window === "undefined") return REDIRECT_FALLBACK.consult;
+  const cfg = (window as unknown as { AlleDropsQuizConfig?: QuizRedirectConfig }).AlleDropsQuizConfig;
+  return getRedirectTarget("consult", cfg);
+}
+
+const LEARN_MORE_SLIT_PATH = "/pages/how-it-works";
+const CONTACT_PATH = "/pages/contact";
+
+function telehealthCtaLabel(bracket: ScoreBracket): string {
+  switch (bracket) {
+    case "0-2":
+      return "Schedule a Telehealth Appointment";
+    case "3-8":
+      return "We recommend scheduling a Telehealth Appointment";
+    case "9+":
+      return "(Optional) Schedule a Telehealth appointment";
+  }
 }
 
 /** The product-handle slice of the runtime config, or undefined when unset or server-side. */
@@ -277,53 +300,80 @@ export function ResultsDisplay({
           </div>
 
           {/*
-            One shared action area, conditioned on testingStatus and independent of scoreBracket
-            (04-UI-SPEC.md Component Inventory §5). Every action is a plain <a> or a
-            navigateParent() call — no callback prop is reintroduced; that is what makes this
-            screen terminal (TEST-05).
+            Next Steps — William Miller, 2026-08-13. Replaces the two-button action row that was
+            keyed only on testingStatus. Every action is a plain <a href> (iframe click interceptor
+            in quiz-embed.tsx forwards it to the parent storefront) or navigateParent() — no
+            callback prop is reintroduced; that is what keeps this screen terminal (TEST-05).
 
-            needs_testing omits the "Go to AlleDrops Product Page" link. This is a
-            PLANNER-RATIFIED decision, not a CONTEXT.md lock (04-UI-SPEC.md §5 flagged it for
-            ratification): showing a direct path to the purchasable SLIT product to a patient who
-            just told the quiz they have not yet been tested reads as implying a purchase path
-            exists before testing is done — precisely what TEST-06 exists to prevent ("no
-            surface... offers or implies a path to purchase without testing"). Surfaced for
-            override at plan 04-19's UAT checkpoint.
+            High-score "Explore Our Products" is shown even when testingStatus is needs_testing.
+            That reverses the Phase 4 TEST-06 omission of a product CTA for untested patients.
+            William asked for it explicitly, gated by the do-not-buy-until-report disclaimer
+            below. That disclaimer is clinic-action copy (we will recommend), not a promise that
+            a later review entitles the patient to buy — DEC-no-approval-promise-copy still binds.
           */}
-          <div className={styles.quizResults__actions}>
-            {testingStatus === "needs_testing" ? (
-              <>
+          <div className={styles.quizResults__nextSteps}>
+            <h3 className={styles.quizResults__nextStepsHeading}>Next Steps</h3>
+            <p className={styles.quizResults__nextStepsIntro}>
+              While our clinical team is reviewing information, here are your next steps:
+            </p>
+            <ol className={styles.quizResults__nextStepsList}>
+              <li>
                 <a
                   className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                  href={getRedirectUrl()}
+                  href={getConsultUrl()}
                 >
-                  Schedule Allergy Testing
+                  {telehealthCtaLabel(scoreBracket)}
                 </a>
-                <button
-                  type="button"
-                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
-                  onClick={() => navigateParent("/")}
-                >
-                  Return Home
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonNext}`}
-                  onClick={() => navigateParent("/")}
-                >
-                  Return Home
-                </button>
+              </li>
+              {testingStatus === "needs_testing" && (
+                <li>
+                  <a
+                    className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
+                    href={getTestOptionsUrl()}
+                  >
+                    Schedule Allergy Testing
+                  </a>
+                </li>
+              )}
+              <li>
                 <a
                   className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
-                  href={`/products/${getProductHandle(patientState, getProductConfig())}`}
+                  href={LEARN_MORE_SLIT_PATH}
                 >
-                  Go to AlleDrops Product Page
+                  Learn More About SLIT
                 </a>
-              </>
-            )}
+              </li>
+              {scoreBracket === "9+" && (
+                <li>
+                  <a
+                    className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
+                    href={`/products/${getProductHandle(patientState, getProductConfig())}`}
+                  >
+                    Explore Our Products
+                  </a>
+                  <p className={styles.quizResults__nextStepsDisclaimer}>
+                    Please do not complete your product purchase until our clinical team has emailed
+                    your final Clinical Report. At that time, we will recommend whether or not SLIT
+                    will be appropriate for you.
+                  </p>
+                </li>
+              )}
+              <li>
+                <a
+                  className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev}`}
+                  href={CONTACT_PATH}
+                >
+                  Contact Our Team
+                </a>
+              </li>
+            </ol>
+            <button
+              type="button"
+              className={`${styles.quizNavigation__button} ${styles.quizNavigation__buttonPrev} ${styles.quizResults__nextStepsHome}`}
+              onClick={() => navigateParent("/")}
+            >
+              Return Home
+            </button>
           </div>
 
           <div className={styles.quizResults__profile}>

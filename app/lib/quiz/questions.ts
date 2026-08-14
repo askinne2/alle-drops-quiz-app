@@ -487,6 +487,20 @@ export const PART7_ALLERGY_TESTING: QuizItem[] = [
     // gate, or any mechanism that treats this value as authoritative beyond intake-record-keeping.
   },
   {
+    kind: "info",
+    id: "needs_testing_recommendation",
+    // LOCKED copy, verbatim — William Miller, 2026-08-13 (Re: Quick clinical — Preliminary Score
+    // color scale). Same inert info-card pattern as no_pcp_recommendation (HIST-04). Do not add a
+    // link: InfoBlockCard is inert by design, and a mid-quiz navigation would be the redirect
+    // William explicitly did not want. The Testing Options CTA lives on the results Next Steps.
+    paragraphs: [
+      "We highly recommend allergy testing prior to initiating treatment. You can navigate to our Testing Options page to learn more",
+    ],
+    order: 70.5,
+    part: 7,
+    showIf: { questionId: "testing_status", equals: "needs_testing" },
+  },
+  {
     kind: "question",
     id: "testing_year",
     type: "text_input_short",
