@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "08.1-11 Task 2 checkpoint (Shopify store transfer; waiting on Robert legal name/address)"
-last_updated: "2026-10-05T16:02:50.525Z"
+stopped_at: "08.1-11 Task 2 checkpoint (transfer SENT to info@allergistondemand.com 2026-10-05; waiting on AOD to accept)"
+last_updated: "2026-10-05T17:00:00.000Z"
 last_activity: 2026-10-05
 progress:
   total_phases: 12
@@ -24,13 +24,13 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 AOD-owned infrastructure, without PHI leaving the BAA chain.
 **Current focus:** Phase 08.1 — AOD Infrastructure Cutover. 10 of 13 plans done; the app,
 PHI database and uploads run on Cloud Run / Cloud SQL / GCS in aod-production-510006 under the
-Google Cloud BAA (accepted 2026-10-05). Next: 08.1-11 Task 2 (Shopify store transfer). See HANDOFF.md.
+Google Cloud BAA (accepted 2026-10-05). 08.1-11 Task 2: store transfer sent 2026-10-05, waiting on AOD (Robert) to accept. See HANDOFF.md.
 
 ## Current Position
 
 Phase: 08.1 (AOD Infrastructure Cutover) — EXECUTING
 Plan: 11 of 13 (10 complete)
-Status: Paused at 08.1-11 Task 2 human checkpoint — Payments off, AOD legal info (waiting on Robert), send transfer to hostmaster@alledrops.com, AOD accepts
+Status: Paused at 08.1-11 Task 2 human checkpoint — Payments off, apps + distribution recorded, transfer SENT to info@allergistondemand.com (2026-10-05); waiting on Robert to accept (plan + AOD card), then add legal name/address himself
 Last activity: 2026-10-05
 
 **Phase 6 deploy verification (2026-08-13), on served bytes.** Shopify app version
