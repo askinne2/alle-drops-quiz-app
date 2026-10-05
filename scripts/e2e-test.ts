@@ -1,25 +1,45 @@
 /**
- * E2E Bracket Test Suite
+ * E2E Bracket Test Suite (LAUNCH-04 evidence script for Cloud Run)
  *
- * Tests the full submission → DB → ledger → PDF pipeline for all 3 score brackets.
+ * Proves the full pipeline against a deployed Cloud Run service:
+ *   upload -> submit -> DB row -> ledger -> PDF -> GCS signed-URL byte round trip -> cleanup.
+ * Also checks that a forged X-Forwarded-For is not what lands in consent_ip_address, and that
+ * PDF responses are streamed (no Content-Length). Cleanup deletes every test row child-first and
+ * asserts zero remain.
+ *
+ * All data is synthetic (e2e+*@example.com). Real patient submissions wait on LAUNCH-05.
  *
  * Usage:
- *   npx tsx scripts/e2e-test.ts
+ *   cloud-sql-proxy --port 5436 aod-production-510006:us-east1:aod-quiz-db
+ *   BASE_URL=https://alle-drops-quiz-app-502519175239.us-east1.run.app \
+ *     DATABASE_URL="postgresql://postgres:<owner-password>@127.0.0.1:5436/alledrops_quiz?sslmode=disable" \
+ *     SHOPIFY_API_SECRET=... npx tsx scripts/e2e-test.ts
+ *
+ * DATABASE_URL must be the DB owner role (postgres) - cleanup needs DELETE, which the runtime
+ * role alledrops_app does not have. The password lives in Secret Manager (quiz-db-owner-password).
  *
  * Required env (from .env or process.env):
- *   DATABASE_URL         — Cloud SQL Postgres connection string
- *   SHOPIFY_API_SECRET   — used to sign customer JWT tokens
+ *   BASE_URL             - explicit target, no default (refuses to guess a deployment)
+ *   DATABASE_URL         - owner-role Postgres connection string (via the proxy)
+ *   SHOPIFY_API_SECRET   - used to sign customer JWT tokens
  *
  * Optional env:
- *   SHOPIFY_API_KEY      — used as JWT audience claim (set if Fly has this secret)
- *   BASE_URL             — default https://alle-drops-quiz-app.fly.dev
+ *   SHOPIFY_API_KEY      - used as JWT audience claim (set if the service has this secret)
+ *
+ * Output logs IDs and counts only - never names, emails, filenames, tokens or signed URLs.
  */
 
 import 'dotenv/config';
 import { Pool } from 'pg';
 import { SignJWT } from 'jose';
 
-const BASE_URL = process.env.BASE_URL ?? 'https://alle-drops-quiz-app.fly.dev';
+const BASE_URL = process.env.BASE_URL || '';
+const FORGED_XFF = '203.0.113.77';
+// 1x1 transparent PNG (synthetic test file).
+const PNG_BYTES = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
 const timestamp = Date.now();
 
 // Unique fake customer GID per run — stamped via UPDATE after INSERT so JWT lookups work.
@@ -88,7 +108,8 @@ const TEST_CASES = [
   },
 ] as const;
 
-const TEST_EMAILS = TEST_CASES.map((tc) => tc.payload.email);
+const FILE_CASE_INDEX = 2; // the HIGH case carries the uploaded file
+
 const TEST_PROFILE_IDS = TEST_CASES.map((tc) => tc.payload.symptom_profile_id);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -114,6 +135,29 @@ async function createCustomerJwt(): Promise<string> {
   return builder.sign(key);
 }
 
+// ─── Step 0: upload a synthetic file ─────────────────────────────────────────
+
+interface UploadResult {
+  token: string;
+  sizeBytes: number;
+}
+
+async function step0_upload(): Promise<UploadResult> {
+  console.log('\nStep 0: Upload synthetic file');
+  const form = new FormData();
+  form.append('file', new Blob([PNG_BYTES], { type: 'image/png' }), 'e2e-synthetic.png');
+
+  const resp = await fetch(`${BASE_URL}/api/quiz/upload`, { method: 'POST', body: form });
+  if (resp.status !== 200) {
+    fail(`POST /api/quiz/upload returned ${resp.status}`);
+  }
+  const json = (await resp.json()) as { token?: string; sizeBytes?: number };
+  if (!json.token) fail('upload response missing token');
+  if (typeof json.sizeBytes !== 'number') fail('upload response missing sizeBytes');
+  pass(`staged upload sizeBytes=${json.sizeBytes}`);
+  return { token: json.token!, sizeBytes: json.sizeBytes! };
+}
+
 // ─── Step 1: POST all 3 submissions ──────────────────────────────────────────
 
 interface SubmitResult {
@@ -121,20 +165,24 @@ interface SubmitResult {
   symptom_profile_id: string;
 }
 
-async function step1_postSubmissions(): Promise<SubmitResult[]> {
+async function step1_postSubmissions(upload: UploadResult): Promise<SubmitResult[]> {
   console.log('\nStep 1: POST submissions');
   const results: SubmitResult[] = [];
 
-  for (const tc of TEST_CASES) {
+  for (const [i, tc] of TEST_CASES.entries()) {
+    const payload =
+      i === FILE_CASE_INDEX
+        ? { ...tc.payload, answers: { ...tc.payload.answers, testing_files: [upload.token] } }
+        : tc.payload;
     const resp = await fetch(`${BASE_URL}/api/quiz/submit`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tc.payload),
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': FORGED_XFF },
+      body: JSON.stringify(payload),
     });
 
     if (resp.status !== 200) {
-      const text = await resp.text();
-      fail(`[${tc.label}] POST returned ${resp.status}: ${text}`);
+      // Status only: the error body could echo submitted fields.
+      fail(`[${tc.label}] POST returned ${resp.status}`);
     }
 
     const json = (await resp.json()) as {
@@ -161,6 +209,7 @@ interface DbRow {
   patient_state: string;
   consent_version: string | null;
   answers_json: Record<string, unknown> | null;
+  consent_ip: string | null;
 }
 
 async function step2_dbVerify(pool: Pool): Promise<void> {
@@ -168,7 +217,7 @@ async function step2_dbVerify(pool: Pool): Promise<void> {
 
   const { rows } = await pool.query<DbRow>(
     `SELECT id, symptom_profile_id, score_bracket, patient_state, consent_version,
-            answers_json
+            answers_json, host(consent_ip_address) AS consent_ip
        FROM submissions
       WHERE symptom_profile_id = ANY($1::text[])`,
     [TEST_PROFILE_IDS],
@@ -196,10 +245,16 @@ async function step2_dbVerify(pool: Pool): Promise<void> {
       fail(`[${tc.label}] answers_json is null or not an object`);
     }
 
+    if (r.consent_ip === FORGED_XFF) {
+      fail(`[${tc.label}] consent_ip_address equals the forged X-Forwarded-For value`);
+    }
+
     pass(
       `[${tc.label}] bracket=${r.score_bracket} state=${r.patient_state} consent=${r.consent_version}`,
     );
   }
+
+  pass(`consent_ip_address is not the forged X-Forwarded-For value (${rows.length} rows checked)`);
 
   // Stamp fake customer_id so JWT-based ledger + PDF lookups can resolve ownership.
   await pool.query(
@@ -211,7 +266,7 @@ async function step2_dbVerify(pool: Pool): Promise<void> {
 
 // ─── Step 3: Ledger verify ───────────────────────────────────────────────────
 
-async function step3_ledgerVerify(ids: SubmitResult[]): Promise<void> {
+async function step3_ledgerVerify(ids: SubmitResult[]): Promise<string> {
   console.log('\nStep 3: Customer ledger verification');
 
   const token = await createCustomerJwt();
@@ -220,11 +275,10 @@ async function step3_ledgerVerify(ids: SubmitResult[]): Promise<void> {
   });
 
   if (resp.status !== 200) {
-    const text = await resp.text();
-    fail(`GET /api/me/assessments returned ${resp.status}: ${text}`);
+    fail(`GET /api/me/assessments returned ${resp.status}`);
   }
 
-  const ledger = (await resp.json()) as { id: string }[];
+  const ledger = (await resp.json()) as { id: string; files?: { id: string }[] }[];
   const ledgerIds = new Set(ledger.map((e) => e.id));
 
   for (const { id } of ids) {
@@ -233,6 +287,12 @@ async function step3_ledgerVerify(ids: SubmitResult[]): Promise<void> {
     }
     pass(`id=${id} appears in ledger`);
   }
+
+  const fileEntry = ledger.find((e) => e.id === ids[FILE_CASE_INDEX].id);
+  const fileId = fileEntry?.files?.[0]?.id;
+  if (!fileId) fail('file-bearing submission has no files[0].id in ledger');
+  pass('ledger lists the promoted file');
+  return fileId!;
 }
 
 // ─── Step 4: PDF verify ──────────────────────────────────────────────────────
@@ -248,13 +308,16 @@ async function step4_pdfVerify(ids: SubmitResult[]): Promise<void> {
     });
 
     if (resp.status !== 200) {
-      const text = await resp.text();
-      fail(`GET /api/me/assessment/${id}/pdf returned ${resp.status}: ${text}`);
+      fail(`GET /api/me/assessment/${id}/pdf returned ${resp.status}`);
     }
 
     const contentType = resp.headers.get('content-type') ?? '';
     if (!contentType.includes('application/pdf')) {
       fail(`id=${id}: Content-Type is "${contentType}", expected application/pdf`);
+    }
+
+    if (resp.headers.get('content-length') !== null) {
+      fail(`id=${id}: PDF response carries Content-Length, expected chunked streaming`);
     }
 
     const buf = Buffer.from(await resp.arrayBuffer());
@@ -266,22 +329,78 @@ async function step4_pdfVerify(ids: SubmitResult[]): Promise<void> {
   }
 }
 
+// ─── Step 4b: GCS signed-URL byte round trip ─────────────────────────────────
+
+async function step4b_fileRoundTrip(
+  submissionId: string,
+  fileId: string,
+  upload: UploadResult,
+): Promise<void> {
+  console.log('\nStep 4b: GCS signed-URL round trip');
+
+  const token = await createCustomerJwt();
+  const resp = await fetch(`${BASE_URL}/api/me/assessment/${submissionId}/files/${fileId}?as=json`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (resp.status !== 200) {
+    fail(`file URL route returned ${resp.status}`);
+  }
+  const json = (await resp.json()) as { url?: string };
+  if (!json.url) fail('file URL route response missing url');
+
+  const dl = await fetch(json.url!);
+  if (dl.status !== 200) {
+    fail(`signed URL download returned ${dl.status}`);
+  }
+  const bytes = Buffer.from(await dl.arrayBuffer());
+  if (bytes.length !== upload.sizeBytes) {
+    fail(`downloaded ${bytes.length} bytes, upload reported ${upload.sizeBytes}`);
+  }
+  if (upload.sizeBytes === PNG_BYTES.length && !bytes.equals(PNG_BYTES)) {
+    fail('downloaded bytes differ from uploaded bytes');
+  }
+  pass(`signed URL returned ${bytes.length} bytes, matches upload`);
+}
+
 // ─── Step 5: Cleanup ─────────────────────────────────────────────────────────
 
-async function step5_cleanup(pool: Pool): Promise<void> {
-  console.log('\nStep 5: Cleanup');
+const SUBMISSION_SCOPE = `submission_id IN (SELECT id FROM submissions WHERE symptom_profile_id = ANY($1::text[]))`;
 
+/** Child-first delete (FKs have no CASCADE), scoped to this run's synthetic profile ids. */
+async function deleteTestRows(pool: Pool): Promise<number> {
+  await pool.query(`DELETE FROM submission_files WHERE ${SUBMISSION_SCOPE}`, [TEST_PROFILE_IDS]);
+  await pool.query(`DELETE FROM submission_access_log WHERE ${SUBMISSION_SCOPE}`, [TEST_PROFILE_IDS]);
   const result = await pool.query(
     `DELETE FROM submissions WHERE symptom_profile_id = ANY($1::text[])`,
     [TEST_PROFILE_IDS],
   );
+  return result.rowCount ?? 0;
+}
 
-  pass(`Deleted ${result.rowCount ?? 0} test row(s)`);
+async function step5_cleanup(pool: Pool): Promise<void> {
+  console.log('\nStep 5: Cleanup');
+
+  const deleted = await deleteTestRows(pool);
+  pass(`Deleted ${deleted} test row(s)`);
+
+  const { rows } = await pool.query<{ count: string }>(
+    `SELECT count(*) FROM submissions WHERE symptom_profile_id = ANY($1::text[])`,
+    [TEST_PROFILE_IDS],
+  );
+  if (Number(rows[0].count) !== 0) {
+    fail(`${rows[0].count} test row(s) remain after cleanup`);
+  }
+  pass('0 test rows remain');
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 console.log('=== E2E Bracket Test Suite ===');
+
+if (!BASE_URL) {
+  console.error('ERROR: BASE_URL is not set');
+  process.exit(1);
+}
 console.log(`Target: ${BASE_URL}`);
 console.log(`Run ID: ${timestamp}`);
 
@@ -318,23 +437,30 @@ const pool = new Pool(parseConnectionString(process.env.DATABASE_URL!));
 let submissionIds: SubmitResult[] = [];
 
 try {
-  submissionIds = await step1_postSubmissions();
+  const upload = await step0_upload();
+  submissionIds = await step1_postSubmissions(upload);
   await step2_dbVerify(pool);
-  await step3_ledgerVerify(submissionIds);
+  const fileId = await step3_ledgerVerify(submissionIds);
   await step4_pdfVerify(submissionIds);
+  await step4b_fileRoundTrip(submissionIds[FILE_CASE_INDEX].id, fileId, upload);
   await step5_cleanup(pool);
 
   console.log('\n=== ALL STEPS PASSED ===\n');
+  console.log(
+    `Promoted submission IDs (remove GCS objects under submissions/<id>/): ${submissionIds
+      .map((r) => r.id)
+      .join(', ')}`,
+  );
   process.exit(0);
 } catch (err) {
-  console.error('\n[ERROR] Unexpected exception:', err);
+  console.error('\n[ERROR] Unexpected exception:', err instanceof Error ? err.message : 'unknown error');
   // Attempt cleanup even on unexpected errors so test rows don't linger.
   if (submissionIds.length > 0) {
     console.log('\nAttempting emergency cleanup...');
-    await pool
-      .query(`DELETE FROM submissions WHERE symptom_profile_id = ANY($1::text[])`, [TEST_PROFILE_IDS])
-      .then((r) => console.log(`  Deleted ${r.rowCount ?? 0} row(s)`))
-      .catch((e) => console.error(`  Cleanup failed: ${e}`));
+    await deleteTestRows(pool)
+      .then((n) => console.log(`  Deleted ${n} row(s)`))
+      .catch((e) => console.error(`  Cleanup failed: ${e instanceof Error ? e.message : 'unknown error'}`));
+    console.log(`  Submission IDs for GCS cleanup: ${submissionIds.map((r) => r.id).join(', ')}`);
   }
   process.exit(1);
 } finally {
