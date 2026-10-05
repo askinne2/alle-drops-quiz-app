@@ -39,6 +39,14 @@ describe("scripts/e2e-test.ts contract", () => {
     expect(src.toLowerCase()).toContain("x-forwarded-for");
   });
 
+  it("exercises the ledger's signed download links (issue #36)", () => {
+    expect(src).toContain("pdf_url");
+    expect(src).toContain("signedUrl");
+    expect(src).toContain("sig=");
+    expect(src).not.toContain("?token=");
+    expect(src).not.toMatch(/token=\$\{/);
+  });
+
   it("checks PDF responses carry no Content-Length", () => {
     expect(src).toContain("content-length");
   });

@@ -3,6 +3,9 @@
  *
  * Proves the full pipeline against a deployed Cloud Run service:
  *   upload -> submit -> DB row -> ledger -> PDF -> GCS signed-URL byte round trip -> cleanup.
+ * The PDF and file steps run twice: once with an Authorization header and once through the
+ * ledger's signed short-lived links (pdf_url / files[].url, issue #36), plus a tampered-sig and a
+ * legacy JWT-query-param probe that must both 401.
  * Also checks that a forged X-Forwarded-For is not what lands in consent_ip_address, and that
  * PDF responses are streamed (no Content-Length). Cleanup deletes every test row child-first and
  * asserts zero remain.
@@ -266,7 +269,24 @@ async function step2_dbVerify(pool: Pool): Promise<void> {
 
 // ─── Step 3: Ledger verify ───────────────────────────────────────────────────
 
-async function step3_ledgerVerify(ids: SubmitResult[]): Promise<string> {
+interface LedgerLinks {
+  fileId: string;
+  /** submission id -> signed pdf_url from the ledger */
+  pdfUrls: Map<string, string>;
+  /** signed files[0].url for the file-bearing submission */
+  fileUrl: string;
+}
+
+/**
+ * Re-target a ledger-issued signed link at BASE_URL (the links are absolute on SHOPIFY_APP_URL,
+ * which may differ from the deployment under test). Path and c/exp/sig are kept verbatim.
+ */
+function signedUrl(absolute: string): string {
+  const u = new URL(absolute);
+  return `${BASE_URL}${u.pathname}${u.search}`;
+}
+
+async function step3_ledgerVerify(ids: SubmitResult[]): Promise<LedgerLinks> {
   console.log('\nStep 3: Customer ledger verification');
 
   const token = await createCustomerJwt();
@@ -278,88 +298,140 @@ async function step3_ledgerVerify(ids: SubmitResult[]): Promise<string> {
     fail(`GET /api/me/assessments returned ${resp.status}`);
   }
 
-  const ledger = (await resp.json()) as { id: string; files?: { id: string }[] }[];
-  const ledgerIds = new Set(ledger.map((e) => e.id));
+  const raw = await resp.text();
+  if (raw.includes('token=')) fail('ledger body contains a token= URL param');
+
+  const ledger = JSON.parse(raw) as {
+    id: string;
+    pdf_url?: string;
+    files?: { id: string; url?: string }[];
+  }[];
+  const byId = new Map(ledger.map((e) => [e.id, e]));
+  const pdfUrls = new Map<string, string>();
 
   for (const { id } of ids) {
-    if (!ledgerIds.has(id)) {
+    const entry = byId.get(id);
+    if (!entry) {
       fail(`id=${id} not found in customer ledger`);
     }
-    pass(`id=${id} appears in ledger`);
+    if (!entry!.pdf_url || !entry!.pdf_url.includes('sig=')) {
+      fail(`id=${id}: ledger entry has no signed pdf_url`);
+    }
+    pdfUrls.set(id, entry!.pdf_url!);
+    pass(`id=${id} appears in ledger with a signed pdf_url`);
   }
 
-  const fileEntry = ledger.find((e) => e.id === ids[FILE_CASE_INDEX].id);
+  const fileEntry = byId.get(ids[FILE_CASE_INDEX].id);
   const fileId = fileEntry?.files?.[0]?.id;
+  const fileUrl = fileEntry?.files?.[0]?.url;
   if (!fileId) fail('file-bearing submission has no files[0].id in ledger');
-  pass('ledger lists the promoted file');
-  return fileId!;
+  if (!fileUrl || !fileUrl.includes('sig=')) fail('file-bearing submission has no signed files[0].url');
+  pass('ledger lists the promoted file with a signed url');
+  return { fileId: fileId!, pdfUrls, fileUrl: fileUrl! };
+}
+
+async function assertPdfResponse(resp: Response, id: string, via: string): Promise<void> {
+  if (resp.status !== 200) {
+    fail(`id=${id} (${via}): PDF route returned ${resp.status}`);
+  }
+
+  const contentType = resp.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/pdf')) {
+    fail(`id=${id} (${via}): Content-Type is "${contentType}", expected application/pdf`);
+  }
+
+  const disposition = resp.headers.get('content-disposition') ?? '';
+  if (!disposition.startsWith('attachment')) {
+    fail(`id=${id} (${via}): Content-Disposition is not attachment`);
+  }
+
+  if (resp.headers.get('content-length') !== null) {
+    fail(`id=${id} (${via}): PDF response carries Content-Length, expected chunked streaming`);
+  }
+
+  const buf = Buffer.from(await resp.arrayBuffer());
+  if (buf.length < 4 || buf.slice(0, 4).toString('ascii') !== '%PDF') {
+    fail(`id=${id} (${via}): body does not start with %PDF`);
+  }
+
+  pass(`id=${id} (${via}) → ${buf.length} bytes, starts %PDF`);
 }
 
 // ─── Step 4: PDF verify ──────────────────────────────────────────────────────
 
-async function step4_pdfVerify(ids: SubmitResult[]): Promise<void> {
+async function step4_pdfVerify(ids: SubmitResult[], links: LedgerLinks): Promise<void> {
   console.log('\nStep 4: PDF verification');
 
   const token = await createCustomerJwt();
 
   for (const { id } of ids) {
-    const resp = await fetch(`${BASE_URL}/api/me/assessment/${id}/pdf`, {
+    // Header path (extension fetch calls).
+    const viaHeader = await fetch(`${BASE_URL}/api/me/assessment/${id}/pdf`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    await assertPdfResponse(viaHeader, id, 'bearer');
 
-    if (resp.status !== 200) {
-      fail(`GET /api/me/assessment/${id}/pdf returned ${resp.status}`);
-    }
-
-    const contentType = resp.headers.get('content-type') ?? '';
-    if (!contentType.includes('application/pdf')) {
-      fail(`id=${id}: Content-Type is "${contentType}", expected application/pdf`);
-    }
-
-    if (resp.headers.get('content-length') !== null) {
-      fail(`id=${id}: PDF response carries Content-Length, expected chunked streaming`);
-    }
-
-    const buf = Buffer.from(await resp.arrayBuffer());
-    if (buf.length < 4 || buf.slice(0, 4).toString('ascii') !== '%PDF') {
-      fail(`id=${id}: body does not start with %PDF`);
-    }
-
-    pass(`id=${id} → ${buf.length} bytes, starts %PDF`);
+    // Signed-link path (extension <s-link href> navigations) — no Authorization header.
+    const viaSig = await fetch(signedUrl(links.pdfUrls.get(id)!));
+    await assertPdfResponse(viaSig, id, 'signed link');
   }
+
+  // Negative checks on one id: a tampered sig and a legacy JWT query param are both 401.
+  const probeId = ids[0].id;
+  const tampered = new URL(signedUrl(links.pdfUrls.get(probeId)!));
+  const sig = tampered.searchParams.get('sig') ?? '';
+  tampered.searchParams.set('sig', (sig[0] === 'A' ? 'B' : 'A') + sig.slice(1));
+  const badSig = await fetch(tampered.toString());
+  if (badSig.status !== 401) fail(`tampered signed link returned ${badSig.status}, expected 401`);
+  pass('tampered signed link → 401');
+
+  const legacy = new URL(`${BASE_URL}/api/me/assessment/${probeId}/pdf`);
+  legacy.searchParams.set('token', token);
+  const legacyResp = await fetch(legacy.toString());
+  if (legacyResp.status !== 401) fail(`legacy JWT query param returned ${legacyResp.status}, expected 401`);
+  pass('legacy JWT query param → 401');
 }
 
 // ─── Step 4b: GCS signed-URL byte round trip ─────────────────────────────────
 
 async function step4b_fileRoundTrip(
   submissionId: string,
-  fileId: string,
+  links: LedgerLinks,
   upload: UploadResult,
 ): Promise<void> {
   console.log('\nStep 4b: GCS signed-URL round trip');
 
   const token = await createCustomerJwt();
-  const resp = await fetch(`${BASE_URL}/api/me/assessment/${submissionId}/files/${fileId}?as=json`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const viaHeader = await fetch(
+    `${BASE_URL}/api/me/assessment/${submissionId}/files/${links.fileId}?as=json`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  await assertFileRoundTrip(viaHeader, upload, 'bearer');
+
+  // Signed-link path, no Authorization header. ?as=json is appended to the ledger's link.
+  const viaSig = await fetch(`${signedUrl(links.fileUrl)}&as=json`);
+  await assertFileRoundTrip(viaSig, upload, 'signed link');
+}
+
+async function assertFileRoundTrip(resp: Response, upload: UploadResult, via: string): Promise<void> {
   if (resp.status !== 200) {
-    fail(`file URL route returned ${resp.status}`);
+    fail(`file URL route (${via}) returned ${resp.status}`);
   }
   const json = (await resp.json()) as { url?: string };
-  if (!json.url) fail('file URL route response missing url');
+  if (!json.url) fail(`file URL route (${via}) response missing url`);
 
   const dl = await fetch(json.url!);
   if (dl.status !== 200) {
-    fail(`signed URL download returned ${dl.status}`);
+    fail(`signed URL download (${via}) returned ${dl.status}`);
   }
   const bytes = Buffer.from(await dl.arrayBuffer());
   if (bytes.length !== upload.sizeBytes) {
-    fail(`downloaded ${bytes.length} bytes, upload reported ${upload.sizeBytes}`);
+    fail(`(${via}) downloaded ${bytes.length} bytes, upload reported ${upload.sizeBytes}`);
   }
   if (upload.sizeBytes === PNG_BYTES.length && !bytes.equals(PNG_BYTES)) {
-    fail('downloaded bytes differ from uploaded bytes');
+    fail(`(${via}) downloaded bytes differ from uploaded bytes`);
   }
-  pass(`signed URL returned ${bytes.length} bytes, matches upload`);
+  pass(`(${via}) signed URL returned ${bytes.length} bytes, matches upload`);
 }
 
 // ─── Step 5: Cleanup ─────────────────────────────────────────────────────────
@@ -440,9 +512,9 @@ try {
   const upload = await step0_upload();
   submissionIds = await step1_postSubmissions(upload);
   await step2_dbVerify(pool);
-  const fileId = await step3_ledgerVerify(submissionIds);
-  await step4_pdfVerify(submissionIds);
-  await step4b_fileRoundTrip(submissionIds[FILE_CASE_INDEX].id, fileId, upload);
+  const links = await step3_ledgerVerify(submissionIds);
+  await step4_pdfVerify(submissionIds, links);
+  await step4b_fileRoundTrip(submissionIds[FILE_CASE_INDEX].id, links, upload);
   await step5_cleanup(pool);
 
   console.log('\n=== ALL STEPS PASSED ===\n');
