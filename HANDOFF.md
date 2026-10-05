@@ -1,170 +1,71 @@
 # HANDOFF — AlleDrops Symptom Quiz
 
-**Written:** 2026-08-13 (end of session; supersedes all earlier entries the same day)
+**Written:** 2026-10-05, mid-phase (supersedes 2026-08-14)
 **Repo:** `/Users/andrewskinner/Local Sites/alle-drops-quiz-app`
-**Branch:** `main`, clean and pushed. `origin/main` current — the 38-commit stale gap is closed.
-**Shopify:** `alledrops-quiz-production-24` deployed 2026-08-13. **Fly:** unchanged — Phase 6 touched no Fly-served code.
+**Sister:** `/Users/andrewskinner/Local Sites/allergist-on-demand` (theme)
+**Branch:** `thread-aod-cloud-run-url-swap` (local docs commits not pushed yet; see Git state)
 
 ---
 
 ## Goal
 
-Ship **Phase 6 — Purchase Prerequisites & Returning Patients**: honor-system purchase confirmations on
-the two SLIT product pages, returning-patient credit read from Shopify metafields, and clinical-review
-expectations on post-purchase surfaces. **Done.** Success criteria were: the gate is live on both SLIT
-PDPs and absent from the consult, express checkout cannot bypass it, and the review notice reaches the
-patient after ordering. All met and verified on served bytes.
+**Phase 08.1: AOD infrastructure cutover.** Move the app from Fly to Cloud Run, with Cloud SQL and GCS, inside AOD's own GCP project `aod-production-510006` (org `alledrops.com`) so one Google BAA covers everything. Then transfer the `allergist-on-demand` Shopify store to AOD. Plans are in `.planning/phases/08.1-aod-infrastructure-cutover-port-the-app-fly-to-cloud-run-clo/`.
 
-Next milestone is Phase 7 (Telehealth Intake Path) or Phase 8 (Launch Readiness). Phase 8 holds the
-remaining live exposures and is older.
+**Progress:** 10 of 13 plans done. Plan 11 (store transfer) is waiting on Andrew and Robert.
 
 ---
 
-## Current progress
+## Current state (verified 2026-10-05)
 
-**Phase 6 is COMPLETE — 6/6 plans, deployed, approved by Andrew 2026-08-13.**
-
-| requirement | status |
+| Surface | State |
 |---|---|
-| SHOP-01 metafield definitions + Liquid readability | **Complete** |
-| SHOP-02 returning-patient credit at purchase | **Complete** |
-| SHOP-03 ATC requires both confirmations | **Complete** |
-| SHOP-04 thank-you clinical-review notice | **Complete** |
-| SHOP-05 admin copy + refund policy | Pending — **William** |
-| SHOP-06 fulfillment verification step | Pending — **AOD adoption** |
+| Cloud Run | `alle-drops-quiz-app` in us-east1, URL `https://alle-drops-quiz-app-502519175239.us-east1.run.app`. Runs merged main `998b1e0` as `quiz-app-runtime`. `/health` 200. |
+| Cloud SQL | `aod-quiz-db`: Postgres 18, **ENTERPRISE** (not Plus), `db-g1-small`, backups + PITR, `ENCRYPTED_ONLY`, no authorized networks (connector only), deletion protection. DBs `alledrops_quiz` (PHI, migrations 001–005) and `shopify_sessions` (Prisma). 0 submissions (all test data deleted). |
+| GCS | `gs://aod-quiz-uploads-prod`: public access blocked, uniform access, 7-day soft delete, `pending/` deleted after 2 days. Empty. |
+| Secrets | `quiz-database-url` and `quiz-session-database-url` are at **v2** (v1 had a zsh-mangled host). Also `shopify-api-secret`, `shopify-admin-access-token`, `quiz-db-owner-password` (owner only). No SA key files. |
+| Logging | `_Default` exclusion `exclude-token-urls` covers `token=` and `sig=`. |
+| Shopify | App version **`alledrops-quiz-production-27`** active. Theme quiz page `app_url` set to the Cloud Run URL by Andrew. Admin, storefront quiz and customer account all run on Cloud Run. |
+| Fly | `alle-drops-quiz-app` **scaled to 0**, not destroyed. Rollback: `fly scale count 1 -a alle-drops-quiz-app`, then set the theme `app_url` back to the Fly URL. |
+| BAAs | Workspace HIPAA amendment accepted Sep 27, 2026. **Google Cloud HIPAA BAA + Cloud DPA accepted Oct 5, 2026** by hostmaster@alledrops.com (Andrew clicked; get William's written OK for AOD's records). |
+| Billing | $50/month budget alert on billing account `01D226-059166-DCF07F` (emails hostmaster). The card on file ends 2478; Robert believes it isn't AOD's and will switch it. |
+| Access | Project-level org-policy exception adds 21 ads customer `C03w0y0tb`; `andrew@21adsmedia.com` is Owner. gcloud config **`aod-andrew`**. The `aod` config is hostmaster (billing/org admin). |
 
-- Gates at ship: typecheck exit 0, **812 tests / 53 files**, zero new dependencies, **no
-  `shopify theme push`**, no `fly deploy`.
-- Live evidence, gate behavior and the editor checklist: `06-06-SUMMARY.md`.
-- Drafts waiting on William/AOD, neither agent-actionable: `06-SHOP-05-COPY-DRAFT.md` (paste-ready
-  order confirmation body + refund-policy SPEC) and `06-SHOP-06-FULFILLMENT-PROCESS.md`.
+**Requirements:** LAUNCH-04 **done**. LAUNCH-06 open until the store transfer is verified and Fly is retired. LAUNCH-05 open (NPP, privacy policy, officers, training — AOD/counsel).
 
-**LAUNCH-01 — Klaviyo removed and verified gone** (Andrew, 2026-08-13). Marked `[~]` not `[x]`
-because `Apntly:Appointment Booking App` is now the *only* registered pixel and it sits on the
-PHI-collecting quiz page. See Next steps #3.
-
-**Theme repo pulled and version-controlled** (`allergist-on-demand` @ `80ad904`, `2dea432`, pushed).
-Local now equals live.
-
-**Also this session:** Phase 5.2 merged forward into Phase 6; `origin/main` unstuck after 38 unpushed
-commits; four false planning premises corrected (see What didn't work).
+**PRs merged today:** #32 (code port), #37 (URL swap), #38 (signed 15-minute download links, closes #36).
 
 ---
 
 ## What worked
 
-- **Three independent checks before believing Klaviyo was gone** — served HTML, *runtime resource
-  requests*, and the Admin pixel registry. Only the runtime check would have caught it while it was
-  live; the other two return clean either way.
-- **Non-vacuity controls on every measurement.** Counting a needle that *should* be present
-  (`fly.dev iframe = 2`, `appointly = 15`) alongside the one that should be absent is what separates
-  "verified absent" from "fetch failed."
-- **Probing on an unpublished duplicate theme** rather than the live theme (`06-02` Task 3), then
-  re-pulling live's `layout/theme.liquid` afterwards to prove it was never touched.
-- **Mutation-testing the contract test** before trusting 37 green assertions — injecting a banned
-  phrase and swapping the selector scoping each produced the expected failures.
-- **Theme editor deep link** works even though the Themes list page does not.
-- **Shopify CLI** for everything the broken Admin UI blocks: `theme list / duplicate / pull / push /
-  delete`.
-- **Editing `STATE.md` by hand** rather than through `gsd-sdk`, given the known frontmatter corruption.
+- **Andrew runs the risky commands with `!`.** Claude Code's auto-mode classifier blocks `gcloud run deploy`, IAM grants, secret writes and some pushes, even with Andrew's OK. Hand him the exact command; don't work around the block.
+- **Deploy from a clean worktree of `origin/main`**, using `env.yaml` (non-secret values) plus `--set-secrets`. The full command is in `docs/cloud-run.md`.
+- **The org-policy exception** needs `roles/orgpolicy.policyAdmin` at org level for a moment (hostmaster grants it, uses it, then removes it). External-domain Owner can only be added through the console invite, not gcloud.
+- **Google Cloud BAA** is only reachable at `https://console.cloud.google.com/tos?id=baa`. It doesn't show on the Privacy & Security page until accepted.
 
 ## What didn't work
 
-- **`shopify app generate extension --template theme_app_extension` fails**: *"You have reached the
-  limit of extension(s) of type theme per app."* Only **one theme app extension per app** is allowed
-  and `quiz-block` holds it. `06-03`'s planned `extensions/purchase-prerequisites/` directory is not
-  buildable; the block lives in `extensions/quiz-block/` instead. **Consequence:** `shopify app deploy`
-  ships the purchase gate and the PHI quiz iframe as one version — a rollback of one rolls back the other.
-- **The Admin Themes list page is broken on this store** — empty content area, no Themes item in the
-  Online Store nav. **Five failed attempts across three sessions.** Stop retrying it.
-- **The first Phase 6 UAT was vacuous and nearly passed.** All-zeros across three products, three
-  **byte-identical 11,565 B** responses — the storefront password page, not the products. Those zeros
-  read as "consult absent, express checkout gone." *Three identical byte counts for three different
-  products is the tell.* The `storefront_digest` cookie expires; re-enter the store password.
-- **An HTML scan cannot detect a Shopify web pixel.** Klaviyo's ran in a sandboxed worker, so
-  `document.querySelectorAll('script')` and raw-HTML greps returned clean the whole time it was live.
-  That false negative is why LAUNCH-01 stayed open for months. Use
-  `performance.getEntriesByType('resource')` grouped by `new URL(u).host`.
-- **Four planning premises were found false.** Each had been shaping decisions:
-  1. **ROADMAP Sequencing Constraint 7** — claimed Phase 6 Wave 2 depended on Phase 5.2's bracket
-     change. It never did; the gate keys on `quiz_count`, not a bracket. Struck through in `ROADMAP.md`.
-  2. **D-03 / T-6-19** — justified the theme-push ban with "local `settings_data.json` has Klaviyo
-     `disabled: false`." It reads `true`; fixed in theme commit `9c36e0f` during Phase 4. The ban still
-     stands, for the different and larger reason in Next steps.
-  3. **Phase 4 / TEST-06** — reassigned the D-13 clause to Phase 8 believing it renders from
-     `product.description` and is unreachable without a theme push. It is an editable theme-editor
-     Rich text block.
-  4. **`06-SPIKE-SHOP-01.md`** — recorded the metafield Analytics toggle as OFF. It was ON on both
-     definitions. Andrew's decision: it stays ON. Struck through at source.
+- **zsh `$P:us-east1`** expands `:u` (uppercase). It broke the first deploy and, silently, the v1 DB secrets: every DB route returned 500 while `/health` stayed 200. **Always brace `${P}`.** `/health` never touches the DB, so it's not evidence the DB works.
+- **Customer "Download PDF" had returned 401 since 2026-05-10** (`596210e` removed `?token=` from the PDF route; the extension kept using it). The file link only worked for about 60 s. PR #38 fixed both.
 
 ---
 
 ## Next steps
 
-1. **Do NOT send William another email yet.** Andrew emailed him the morning of 2026-08-13 and is
-   waiting on that reply; he batches communication rather than sending a second thread on top. A
-   Missive draft was created this session and then discarded — do not recreate it. When William
-   replies, the outstanding asks below go out together in one message.
-
-   **Also: Andrew intends to handle the product copy edit and the order-confirmation contact settings
-   himself**, so items 2 and the SHOP-05 paste below are not necessarily blocked on William at all —
-   only the clinical wording is genuinely his call. What William still owes:
-   - Approve the clinical substance of the SHOP-05 order confirmation copy. **The paste itself is
-     Andrew's** — and it is what makes the already-shipped SHOP-04 notice true, since that notice
-     tells patients to use "the support details on your order confirmation email" while
-     `Settings → Policies → Contact information` is **Required and unset** and the sender is
-     `andrew@21adsmedia.com`. Needs a real phone number or address; do not invent one.
-   - **Write a refund policy — there is none, and no shipping policy either.** SPEC bullets are in
-     `06-SHOP-05-COPY-DRAFT.md`. Needs counsel.
-   - Approve the D-13 replacement copy (see #2).
-   - From Phase 5.2, still open: the one-line typo correction ("there is **no** a place to upload…"),
-     and confirming the removed numeric score.
-2. **⚠️ The live product page contradicts the gate it now carries.** The `Rich text` section on
-   `regional-drops`, directly beneath the new prerequisites panel, reads: *"With the advent of regional
-   allergy drops, there is no longer a need for needles or allergy tests to receive allergy
-   treatment."* The page asks the patient to confirm testing is on file, one paragraph under text
-   saying testing isn't needed. Replacement copy is drafted in
-   `.planning/phases/04-mandatory-allergy-testing/04-STOREFRONT-COPY-DRAFT.md`. Editable in the theme
-   editor — **no theme push required**, contrary to the Phase 4 note. **Andrew plans to make this
-   edit himself**; William's input is on the clinical wording, not the mechanics.
-3. **Decide on Apntly.** With Klaviyo gone it is the **only** registered pixel and it sits on the
-   PHI-collecting quiz page. Live in the runtime trace: `s1.staq-cdn.com`, `booking-api.apntly.com`,
-   `d3emjguzbsq9q3.cloudfront.net`, plus a `www.cloudflare.com` call returning visitor IP and geo.
-   `CLAUDE.md` rule 4 names Klaviyo but not Apntly. Flagged since 2026-08-12 as "probably intentional
-   for Phase 7 booking, never explicitly decided." Needs a keep/remove call and a BAA answer if it stays.
-4. **Never `shopify theme push` from `allergist-on-demand`.** The repo now matches live, so a push is
-   roughly a no-op *today* — but it drifts again the moment anyone edits in the theme editor, and the
-   failure mode is silent: the gate fails open by design, so deleting it produces no error, no broken
-   layout. Add to cart simply starts working.
-5. **Start Phase 7 or Phase 8.** Phase 8 (Launch Readiness) holds the remaining live exposures and is
-   older; Phase 7 (Telehealth Intake Path, TELE-01/02) is clean greenfield with no external blockers.
-6. **Unrecorded elsewhere:** quiz-answer-shaped **tags** on customer records (`complicated regimen`,
-   `prescribed medication`, `frequent doctor visits`, …) written by a third-party **Quiz Kit** app, not
-   this one. Same class as LAUNCH-01, different vendor.
-7. **Minor:** `04-19` remains the one open Phase 4 plan (human UAT; blocked on Fly BAA, GCP cutover,
-   William). `HardcodedRoutes` warning on `purchase-prerequisites.liquid:91` wants
-   `{{ routes.account_login_url }}`; changing it means changing `06-UI-SPEC.md` and the contract test
-   together. Also: the PHI quiz page has **no privacy policy link** and the block no longer offers a
-   setting for one.
+1. **Plan 11, Task 2 (Andrew):** Shopify Payments off; add AOD legal name and address (**waiting on Robert**); screenshot Settings → Apps; record the Dev Dashboard distribution type (don't change it); send the store transfer to `hostmaster@alledrops.com`; AOD accepts with its own card. Resume signal: `transfer accepted on DATE; apps: ...; distribution: ...`
+   - **Finding:** the admin token belongs to **"Alledrops Quiz App"** (`gid://shopify/App/300360105985`), not the deployed "AlleDrops Quiz Production" (`300363153409`). Plan 12 checks it still works after the transfer; the fallback is a new token from the production app.
+2. **Plan 12:** post-transfer app and token check (query in the 08.1-11 checkpoint notes); William cancels the empty `1mzvmx-tf` store.
+3. **Plan 13:** destroy Fly + Tigris/Litestream (needs Andrew's explicit OK); dev-project hygiene (keep `alledrops-quiz` as dev; rotate the dev DB password; delete the non-expiring SA key; remove the Fly egress authorized network); open PR3 with all local docs commits.
+4. **Later:** Dependabot shows 84 alerts on main (visible now that `package-lock.json` is committed). Triage as a separate issue. Get William's written OK for the BAA acceptance.
 
 ---
 
-## Resume context
+## Git state
 
-| | |
-|--|--|
-| **Branch** | `main`, pushed and current. `thread-phase-6-purchase-prerequisites` is merged and can be deleted. |
-| **How to verify** | `npm run typecheck && npm test` → expect **812 tests / 53 files**. |
-| **Live check** | Fetch `/products/tennessee-alledrops` from a password-authenticated session, cache-busted. Count with `split(needle).length - 1`, never `grep -c`. Expect `Before you order` = 1, `shopify-payment-button` = 0. Confirm byte counts differ across pages before trusting any zero. |
-| **Key files** | `extensions/quiz-block/blocks/purchase-prerequisites.liquid` · `extensions/quiz-block/assets/purchase-prerequisites.js` · `tests/purchase-prerequisites-block-contract.test.ts` · `.planning/phases/06-purchase-prerequisites/06-06-SUMMARY.md` · `06-SHOP-05-COPY-DRAFT.md` · `06-SHOP-06-FULFILLMENT-PROCESS.md` |
-| **Store** | `allergist-on-demand.myshopify.com`. Live theme Sense `135799767246`. Template `regional-drops` → TN + TX. Consult is `telehealth-appointment`, structurally ungated. Storefront is password-protected. |
-| **Deploy** | `shopify app deploy` from `main` (currently `-24`). `fly deploy -a alle-drops-quiz-app` is a separate system, untouched by Phase 6. |
-| **Blockers / open questions** | William owes copy + a refund policy that does not exist. Apntly keep/remove undecided. Payments are off on the store, so no real order has ever exercised thank-you/order-status. |
-| **Decisions that do NOT carry forward** | Analytics segmentation stays ON (supersedes the spike). Phase 5.2 and Phase 6 were merged to `main` by an agent under explicit per-session authorization — **neither override carries forward**. |
+- `main` = `998b1e0` (PR #38). Cloud Run runs this.
+- Local branch `thread-aod-cloud-run-url-swap` has **unpushed docs commits** (plan 09/10 summaries, the runbook secret note, STATE/ROADMAP, LAUNCH-04 checkbox, this handoff). Push it and open a docs PR, or fold it into PR3 at plan 13.
+- Theme repo branch `thread-aod-cloud-run-app-url` (`4f50f1d`) holds the `page.quiz.json` app_url copy. Not pushed.
 
-## Git hygiene
+## Resume
 
-- **Always branch before starting work.** `.planning/config.json` sets no `git.branching_strategy`, so
-  `/gsd:execute-phase` will not cut it for you, and worktrees fork from whatever is checked out.
-- Agents do not merge to `main` by default.
-- Deploy from `main` only, after merge.
+`/gsd:execute-phase 08.1` resumes at plan 11 (Task 2 checkpoint). Runbook: `docs/cloud-run.md`. Verify: `npm run typecheck && npm test` (920 tests on main at `998b1e0`).
