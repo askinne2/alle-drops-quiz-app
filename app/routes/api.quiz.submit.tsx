@@ -27,6 +27,7 @@ import { validateQuizData, type QuizSubmissionData } from "../lib/quiz-validatio
 import { findOrCreateCustomer } from "../lib/shopify/customers";
 import { updateNonPhiQuizMetafields } from "../lib/shopify/metafields";
 import { insertSubmission } from "../lib/submissions";
+import { getTrustedClientIp } from "../lib/client-ip";
 import { insertSubmissionFiles, type NewSubmissionFile } from "../lib/submission-files";
 import { getBucket, buildPermanentKey, copyObject, deleteObject, GCS_PENDING_PREFIX } from "../lib/storage/gcs";
 
@@ -86,7 +87,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       requestData = entries;
     }
   } catch (err) {
-    console.error("[submit] parse error:", err);
+    // Log the error class only: JSON.parse messages quote a snippet of the (PHI) request body.
+    console.error("[submit] parse error:", err instanceof Error ? err.name : "unknown");
     return jsonResponse({ error: "Could not parse request body" }, 400);
   }
 
@@ -154,7 +156,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             "[submit] Protected Customer Data not approved — submission stored without customer link."
           );
         } else {
-          console.warn("[submit] customer lookup failed:", custErr);
+          console.warn("[submit] customer lookup failed:", custErr instanceof Error ? custErr.name : "unknown");
         }
         customerLinkSkipped = true;
       }
@@ -171,16 +173,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       ...quizData,
       customer_id_shopify: customerIdShopify,
       consent_version: typeof quizData.consent_version === 'string' ? quizData.consent_version : undefined,
-      consent_ip_address:
-        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        request.headers.get("cf-connecting-ip") ||
-        null,
+      consent_ip_address: getTrustedClientIp(request.headers),
       consent_user_agent: request.headers.get("user-agent"),
     });
     submissionId = inserted.id;
     submissionCreatedAt = inserted.created_at;
   } catch (dbErr) {
-    console.error("[submit] Cloud SQL INSERT failed:", dbErr);
+    // pg errors carry `detail` ("Failing row contains ...") which echoes PHI values: log code only.
+    console.error("[submit] Cloud SQL INSERT failed:", {
+      code: (dbErr as { code?: string } | null)?.code ?? "unknown",
+    });
     return jsonResponse({ error: "Could not save assessment" }, 500);
   }
 
