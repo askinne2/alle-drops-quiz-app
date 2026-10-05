@@ -1,6 +1,6 @@
 {%- comment -%}
   AlleDrops Symptom Quiz App Block
-  Renders the quiz inside a cross-origin iframe hosted on Fly.
+  Renders the quiz inside a cross-origin iframe hosted on Cloud Run.
 {%- endcomment -%}
 
 {%- style -%}
@@ -47,8 +47,8 @@
     {%- endif -%}
 
     {%- comment -%} Build embed URL {%- endcomment -%}
-    {%- assign fly_url = block.settings.app_url | strip -%}
-    {%- if fly_url == blank -%}{%- assign fly_url = 'https://alle-drops-quiz-app.fly.dev' -%}{%- endif -%}
+    {%- assign app_origin_url = block.settings.app_url | strip -%}
+    {%- if app_origin_url == blank -%}{%- assign app_origin_url = 'https://alle-drops-quiz-app-502519175239.us-east1.run.app' -%}{%- endif -%}
     {%- assign _consult_enc = block.settings.consult_redirect_url | url_encode -%}
     {%- assign _test_enc = block.settings.test_options_redirect_url | url_encode -%}
     {%- assign _test_flag = '0' -%}{%- if block.settings.enable_test_mode -%}{%- assign _test_flag = '1' -%}{%- endif -%}
@@ -61,7 +61,7 @@
     {%- endcomment -%}
     {%- assign _tn_enc = block.settings.tn_product_handle | url_encode -%}
     {%- assign _tx_enc = block.settings.tx_product_handle | url_encode -%}
-    {%- assign _embed_src = fly_url | append: '/quiz-embed?consult=' | append: _consult_enc | append: '&testOptions=' | append: _test_enc | append: '&test=' | append: _test_flag | append: '&tnProduct=' | append: _tn_enc | append: '&txProduct=' | append: _tx_enc -%}
+    {%- assign _embed_src = app_origin_url | append: '/quiz-embed?consult=' | append: _consult_enc | append: '&testOptions=' | append: _test_enc | append: '&test=' | append: _test_flag | append: '&tnProduct=' | append: _tn_enc | append: '&txProduct=' | append: _tx_enc -%}
 
     <iframe
       id="alledrops-quiz-{{ block.id }}"
@@ -72,11 +72,11 @@
     ></iframe>
 
     {%- comment -%}
-      Reduce the embed URL to a bare scheme-plus-host origin. Derived from fly_url rather than
+      Reduce the embed URL to a bare scheme-plus-host origin. Derived from app_origin_url rather than
       from block.settings.app_url so the blank-fallback above is inherited. This is the only
       origin the page trusts for quiz messages.
     {%- endcomment -%}
-    {%- assign _origin_parts = fly_url | split: '/' -%}
+    {%- assign _origin_parts = app_origin_url | split: '/' -%}
     {%- assign _app_origin = _origin_parts[0] | append: '//' | append: _origin_parts[2] -%}
 
     <script>
@@ -204,8 +204,8 @@
       "type": "text",
       "id": "app_url",
       "label": "App URL",
-      "default": "https://alle-drops-quiz-app.fly.dev",
-      "info": "Fly app URL. Swap to quiz.alledrops.com once the custom domain is set up. Security-relevant: this value is also the only origin the page trusts for messages from the quiz, so an incorrect or stale value silently stops all quiz scrolling and navigation with no visible error."
+      "default": "https://alle-drops-quiz-app-502519175239.us-east1.run.app",
+      "info": "App URL (Cloud Run). Changes again at LAUNCH-07. Swap to the custom domain once it is set up. Security-relevant: this value is also the only origin the page trusts for messages from the quiz, so an incorrect or stale value silently stops all quiz scrolling and navigation with no visible error."
     },
     {
       "type": "checkbox",

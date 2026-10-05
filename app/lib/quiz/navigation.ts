@@ -1,7 +1,7 @@
 /**
  * Canonical spec for what the parent storefront page will accept as a navigation target.
  *
- * The quiz runs in a cross-origin iframe on the Fly origin, so it cannot navigate the
+ * The quiz runs in a cross-origin iframe on the app origin, so it cannot navigate the
  * storefront directly — it posts a message and the parent page performs the navigation.
  * Everything in a `postMessage` payload is attacker-controlled, so the parent must validate
  * the path before resolving it. This module is that validation, expressed as pure string
@@ -47,9 +47,9 @@
  * authority-shaped payload. Exactly these three bypassed the positional checks and resolved
  * cross-origin; no other control character did:
  *
- *   new URL("/\t/evil.com",  "https://alle-drops-quiz-app.fly.dev").origin === "https://evil.com"
- *   new URL("/\n\\evil.com", "https://alle-drops-quiz-app.fly.dev").origin === "https://evil.com"
- *   new URL("/\t\t/evil.com","https://alle-drops-quiz-app.fly.dev").origin === "https://evil.com"
+ *   new URL("/\t/evil.com",  "https://app.example").origin === "https://evil.com"
+ *   new URL("/\n\\evil.com", "https://app.example").origin === "https://evil.com"
+ *   new URL("/\t\t/evil.com","https://app.example").origin === "https://evil.com"
  *
  * The rule is "anywhere in the string", not "at index 1", because stripping is global and several
  * deeper placements are directly exploitable. No legitimate quiz path contains a raw tab or
