@@ -1,18 +1,22 @@
-FROM node:20-alpine
+FROM node:20.19-alpine
 RUN apk add --no-cache openssl
-
-EXPOSE 3000
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY package.json package-lock.json* ./
+# No glob: a missing lockfile must fail the build loudly.
+COPY package.json package-lock.json ./
 
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY . .
 
-RUN npm run build && npm run build:theme
+RUN npx prisma generate && npm run build && npm run build:theme
 
-CMD ["npm", "run", "docker-start"]
+# Cloud Run injects PORT=8080; react-router-serve reads it.
+EXPOSE 8080
+
+USER node
+
+CMD ["npm", "run", "start"]
