@@ -27,6 +27,7 @@ import { validateQuizData, type QuizSubmissionData } from "../lib/quiz-validatio
 import { findOrCreateCustomer } from "../lib/shopify/customers";
 import { updateNonPhiQuizMetafields } from "../lib/shopify/metafields";
 import { insertSubmission } from "../lib/submissions";
+import { getTrustedClientIp } from "../lib/client-ip";
 import { insertSubmissionFiles, type NewSubmissionFile } from "../lib/submission-files";
 import { getBucket, buildPermanentKey, copyObject, deleteObject, GCS_PENDING_PREFIX } from "../lib/storage/gcs";
 
@@ -171,10 +172,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       ...quizData,
       customer_id_shopify: customerIdShopify,
       consent_version: typeof quizData.consent_version === 'string' ? quizData.consent_version : undefined,
-      consent_ip_address:
-        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        request.headers.get("cf-connecting-ip") ||
-        null,
+      consent_ip_address: getTrustedClientIp(request.headers),
       consent_user_agent: request.headers.get("user-agent"),
     });
     submissionId = inserted.id;
