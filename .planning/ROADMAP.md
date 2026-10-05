@@ -933,3 +933,38 @@ exposures today.
 | 6. Purchase Prerequisites | 2/6 | Executing | - |
 | 7. Telehealth Intake Path | 0/TBD | Not started | - |
 | 8. Launch Readiness | 0/TBD | Not started | - |
+
+### Phase 08.1: AOD Infrastructure Cutover: port the app Fly to Cloud Run, Cloud SQL and GCS in AOD aod-production-510006, then Shopify client-transfer of the existing store (INSERTED)
+
+**Goal:** The quiz app, its PHI database and its upload storage run inside AOD's own Google
+Cloud project (`aod-production-510006`, org `alledrops.com`) under one Google BAA, and the
+built Shopify store is owned by AOD. Fly is retired. The 21 ads `alledrops-quiz` project is
+kept as the dev environment (test data only, no PHI) with rotated DB passwords and no SA key
+(amended 2026-10-05 per planning decision D-08; it is not deleted).
+**Requirements**: LAUNCH-06 (AOD infrastructure handoff), LAUNCH-04 (live DB round trip on the new stack)
+**Depends on:** Nothing for the code port, which runs in parallel with Phase 8. The infra build
+waits on Robert approving the project-only org-policy exception for `andrew@21adsmedia.com`
+(asked 2026-10-05). Any PHI waits on the Google BAA being confirmed accepted (LAUNCH-05).
+**Decisions already made (2026-10-05):** Cloud Run, not Fly, so the Fly BAA question goes away.
+Fresh Cloud SQL with no data migration (every current row is test data), on the ENTERPRISE tier,
+smallest size, with backups and PITR on. No SA key files (blocked by org policy), so storage uses
+the runtime service account. Shopify: transfer the existing **Client transfer** store
+`allergist-on-demand` to `hostmaster@alledrops.com`, with no rebuild; AOD enters its own card when
+it accepts; cancel the empty `1mzvmx-tf` store afterwards.
+**Playbook:** `~/Documents/Claude/Projects/AoD/policy-drafts/setup-instructions-for-google-doc.md`
+**Plans:** 13 plans in 11 waves (waves 1-2 startable now; wave 3 is Checkpoint A, gated on Robert's exception)
+
+Plans:
+- [ ] 08.1-01-PLAN.md — db.ts socket TLS, gcs.ts ADC-only, trusted XFF consent IP, chunked PDFs (+ tests)
+- [ ] 08.1-02-PLAN.md — Prisma sessions to Postgres baseline; Cloud Run Dockerfile, ignore files, Fly packages out, lockfile committed
+- [ ] 08.1-03-PLAN.md — e2e script for Cloud Run (GCS round trip, XFF, child-first cleanup), docs/cloud-run.md runbook, dev docs
+- [ ] 08.1-04-PLAN.md — local linux/amd64 container smoke over a unix-socket Postgres; PHI log gate; PR1
+- [ ] 08.1-05-PLAN.md — Checkpoint A: Robert's exception, PR1 merged, BAA status, org-policy read-out, tier/soft-delete/connectivity decision
+- [ ] 08.1-06-PLAN.md — APIs, SAs, IAM; Cloud SQL ENTERPRISE + backups/PITR; roles; [BLOCKING] migrations 001-005 + prisma migrate deploy
+- [ ] 08.1-07-PLAN.md — PHI bucket, Shopify secrets, first Cloud Run deploy from main, token= log exclusion + follow-up issue
+- [ ] 08.1-08-PLAN.md — URL swap to run.app (toml, liquid, extension, docs) + no-fly contract; PR2
+- [ ] 08.1-09-PLAN.md — shopify app deploy (alledrops-production) + theme app_url swap
+- [ ] 08.1-10-PLAN.md — LAUNCH-04 e2e on Cloud Run, log audit, human surface checks, Fly scaled to 0
+- [ ] 08.1-11-PLAN.md — Checkpoint B: pre-transfer app measurement, Payments off, send transfer, AOD accepts
+- [ ] 08.1-12-PLAN.md — post-transfer app/token check (+ reinstall fallback), storefront check, cancel 1mzvmx-tf
+- [ ] 08.1-13-PLAN.md — destroy Fly + Tigris, dev-project hygiene (keep project), repo/doc cleanup; PR3
