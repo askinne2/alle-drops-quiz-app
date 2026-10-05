@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 06-04-PLAN.md
-last_updated: "2026-10-05T14:46:35.065Z"
+last_updated: "2026-10-05T15:06:58.948Z"
 last_activity: 2026-10-05
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 80
-  completed_plans: 72
+  completed_plans: 73
   percent: 67
 ---
 
@@ -29,7 +29,7 @@ parallel and is older than Phase 6 — see "Open Now" below.
 ## Current Position
 
 Phase: 08.1 (AOD Infrastructure Cutover) — EXECUTING
-Plan: 3 of 13
+Plan: 4 of 13
 Status: Ready to execute
 Last activity: 2026-10-05
 
@@ -305,7 +305,7 @@ navigating away and returning. Verdict: "approved."
 Note: STATE.md previously recorded the v51 served length as 195,102 B. The live measurement is
 **195,142 B**; the older figure was wrong and the table above supersedes it.
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 91%
 
 Codebase baseline (superseded 2026-08-12 — see "Current Position" above for the live figures;
 retained because the phase narrative below is still accurate): `main` @ `86e6b50`, **677 tests / 47
@@ -722,7 +722,7 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-10-05T14:46:35.057Z
+Last session: 2026-10-05T15:06:58.941Z
 Stopped at: Completed 06-04-PLAN.md
 Resume file: None
 
