@@ -189,6 +189,14 @@ quiz-database-url:         postgresql://alledrops_app:<PW>@localhost/alledrops_q
 quiz-session-database-url: postgresql://sessions_app:<PW>@localhost/shopify_sessions?host=/cloudsql/aod-production-510006:us-east1:aod-quiz-db&connection_limit=2
 ```
 
+> Brace `${P}` and `${REGION}` when building these URLs. On 2026-10-05 version 1 of both DB secrets was
+> created with an unbraced `$P:us-east1`, which zsh expanded through its `:u` modifier into
+> `AOD-PRODUCTION-510006s-east1`. Cloud Run then could not reach Cloud SQL (every DB route returned 500).
+> `/health` does not touch the DB, so the plan 08.1-07 health check could not catch it. Fixed as version 2
+> of both secrets plus a new revision. After creating or changing either secret, read it back with the
+> password masked (`sed -E 's#(://[^:]+:)[^@]*@#\1***@#'`) and run a DB-backed request, not just `/health`.
+> Strip any trailing newline (`tr -d '\n'`) before piping a value into a secret.
+
 Create every secret from stdin, never from an argument:
 
 ```bash
