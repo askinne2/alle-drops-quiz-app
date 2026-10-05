@@ -1,9 +1,8 @@
 /**
  * GET /api/me/assessment/:id/files/:fileId — patient file retrieval.
  *
- * Auth-then-ownership-then-work order, copied line-for-line from
- * api.me.assessment.$id.pdf.tsx (the strongest analog in this phase): Bearer extraction ->
- * verifyCustomerToken -> ownership-scoped SUBMISSION lookup -> ownership-scoped FILE lookup ->
+ * Auth-then-ownership-then-work order, mirroring api.me.assessment.$id.pdf.tsx: Bearer
+ * verifyCustomerToken OR signed-link verification -> ownership-scoped SUBMISSION lookup -> ownership-scoped FILE lookup ->
  * ONLY THEN a short-lived signed GCS URL. Never invert this order; never touch GCS or the
  * submission_files table before both ownership checks pass.
  *
@@ -12,11 +11,11 @@
  * the 1GB Fly VM for retrieval; the browser fetches the signed URL directly from GCS instead.
  *
  * RESPONSE-SHAPE RESOLUTION (04-PATTERNS.md's flagged shape mismatch): the `quiz-history`
- * extension's existing PDF link is a plain `<s-link href>` navigation using a `?token=` query
- * param (QuizHistoryBlock.jsx / .jsx :69 / :804), which cannot read a JSON body. This route
- * supports BOTH token sources and BOTH response shapes so plan 04-18's extension change is a
- * one-line `<s-link href>` rather than a fetch-then-navigate rewrite:
- *   - Token: `Authorization: Bearer <token>` header (checked first) OR `?token=` query param.
+ * extension's file link is a plain `<s-link href>` navigation, which can neither send headers nor
+ * read a JSON body. This route supports two credentials and two response shapes:
+ *   - Credential: `Authorization: Bearer <session token>` header, OR a server-signed short-lived
+ *             link (`?c=&exp=&sig=`) minted by GET /api/me/assessments via
+ *             app/lib/download-links.ts. A session JWT in the query string is rejected (issue #36).
  *   - Shape: `Accept: application/json` header OR `?as=json` query param -> 200 `{ url }`.
  *             Otherwise -> 302 redirect straight to the signed URL.
  * Both shapes carry `Cache-Control: no-store` — a signed URL is itself a bearer credential
@@ -32,6 +31,7 @@ import { verifyCustomerToken } from '../lib/customer-auth'
 import { getSubmissionByIdForCustomer } from '../lib/submissions'
 import { getSubmissionFileForCustomer } from '../lib/submission-files'
 import { getSignedReadUrl } from '../lib/storage/gcs'
+import { verifyDownloadRequest } from '../lib/download-links'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -54,26 +54,30 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
   const url = new URL(request.url)
 
-  // ── 1. Extract token — Authorization: Bearer header first, ?token= fallback ──
-  const authHeader = request.headers.get('Authorization') ?? ''
-  const match = authHeader.match(/^Bearer\s+(.+)$/i)
-  const token = match?.[1]?.trim() || (url.searchParams.get('token')?.trim() ?? '')
-  if (!token) {
-    return jsonError(401, 'Unauthorized')
-  }
-
-  // ── 2. Verify token ───────────────────────────────────────────────────────
-  let customerId: string
-  try {
-    const payload = await verifyCustomerToken(token)
-    customerId = payload.customerId
-  } catch {
-    return jsonError(401, 'Unauthorized')
-  }
-
   const { id, fileId } = params
   if (!id || !fileId) {
     return jsonError(400, 'Missing assessment or file id')
+  }
+
+  // ── 1. Authenticate: Bearer session token OR a server-signed short-lived link ──
+  // A session JWT in the query string is NOT accepted (issue #36: it leaked into request logs and
+  // expired ~60 s after page load). Either path yields a customer GID before any DB query.
+  let customerId: string
+  const authHeader = request.headers.get('Authorization') ?? ''
+  const match = authHeader.match(/^Bearer\s+(.+)$/i)
+  const token = match?.[1]?.trim() ?? ''
+  if (token) {
+    try {
+      const payload = await verifyCustomerToken(token)
+      customerId = payload.customerId
+    } catch {
+      return jsonError(401, 'Unauthorized')
+    }
+  } else {
+    // ── 2. Signed link: kind, submissionId, fileId, customer and exp are all MAC-bound ──
+    const signedCustomer = verifyDownloadRequest(url, { kind: 'file', submissionId: id, fileId })
+    if (!signedCustomer) return jsonError(401, 'Unauthorized')
+    customerId = signedCustomer
   }
 
   // ── 3. Fetch submission (ownership-scoped) — auth+ownership BEFORE any file work ──

@@ -2,6 +2,7 @@ import type { LoaderFunctionArgs } from 'react-router'
 import { verifyCustomerToken } from '../lib/customer-auth'
 import { listSubmissionLedger, backfillCustomerIdByEmail } from '../lib/submissions'
 import { listFilesForSubmission } from '../lib/submission-files'
+import { appOrigin, signDownloadPath } from '../lib/download-links'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -102,16 +103,34 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // 5. Return only non-PHI fields — filenames are PHI-shaped and never appear in this route's
   //    own logs; they are returned here only inside the authenticated JSON body, matching the
   //    same posture the PDF/file routes already use for link text.
-  const ledger = entries.map((e, idx) => ({
-    id: e.id,
-    symptom_profile_id: e.symptom_profile_id,
-    completed_at: e.created_at,
-    files: filesBySubmission[idx].map((f) => ({
-      id: f.id,
-      filename: f.original_filename,
-      sizeBytes: f.size_bytes,
-    })),
-  }))
+  //    pdf_url / url are short-lived signed download links (app/lib/download-links.ts) so the
+  //    extension's plain <s-link href> navigations work without a JWT in the URL (issue #36).
+  //    Only IDs the ownership-bounded queries above returned are signed, and each is bound to
+  //    this request's authenticated customer GID.
+  const origin = appOrigin(request)
+  let ledger
+  try {
+    ledger = entries.map((e, idx) => ({
+      id: e.id,
+      symptom_profile_id: e.symptom_profile_id,
+      completed_at: e.created_at,
+      pdf_url:
+        origin + signDownloadPath({ kind: 'pdf', submissionId: e.id, customerId }),
+      files: filesBySubmission[idx].map((f) => ({
+        id: f.id,
+        filename: f.original_filename,
+        sizeBytes: f.size_bytes,
+        url:
+          origin +
+          signDownloadPath({ kind: 'file', submissionId: e.id, fileId: f.id, customerId }),
+      })),
+    }))
+  } catch {
+    return new Response(JSON.stringify({ error: 'Service unavailable' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    })
+  }
 
   return new Response(JSON.stringify(ledger), {
     status: 200,
