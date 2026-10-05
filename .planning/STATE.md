@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 6 complete (6/6 plans), deployed and approved 2026-08-13
-last_updated: "2026-08-13T00:00:00.000Z"
-last_activity: 2026-08-13 -- Phase 6 complete: alledrops-quiz-production-24 deployed, gate live, approved
+stopped_at: Completed 06-04-PLAN.md
+last_updated: "2026-10-05T13:02:28.498Z"
+last_activity: 2026-10-05 -- Phase 08.1 planning complete
 progress:
-  total_phases: 11
-  completed_phases: 9
-  total_plans: 67
+  total_phases: 12
+  completed_phases: 8
+  total_plans: 80
   completed_plans: 66
-  percent: 99
+  percent: 67
 ---
 
 # Project State
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 6 — Purchase Prerequisites & Returning Patients
+**Current focus:** Phase 08.1: AOD Infrastructure Cutover (Fly to Cloud Run + Cloud SQL/GCS in aod-production-510006; Shopify client-transfer). Next: /gsd:plan-phase 08.1
 (6 plans / 3 waves); next step is `/gsd:execute-phase 6`. Phase 8's LAUNCH-01 runs in
 parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 6 (Purchase Prerequisites & Returning Patients) — **COMPLETE**, 6/6 plans, deployed and approved 2026-08-13
-Plan: 6 of 6 — SHOP-01, SHOP-02, SHOP-03, SHOP-04 all closed; SHOP-05 and SHOP-06 stay Pending on William/AOD action
-Status: Phase 6 shipped and approved; the honor-system purchase gate is live on both SLIT PDPs and the clinical-review notice is live on thank-you and order-status. Next is Phase 7 (Telehealth Intake Path) or Phase 8 (Launch Readiness) — see Open Now
-Last activity: 2026-08-13 -- Phase 6 complete: alledrops-quiz-production-24 deployed, editor placement done, UAT approved
+Phase: 08.1 (AOD Infrastructure Cutover) — NOT PLANNED, inserted 2026-10-05
+Plan: 0 of TBD
+Status: Ready to execute
+Last activity: 2026-10-05 -- Phase 08.1 planning complete
 
 **Phase 6 deploy verification (2026-08-13), on served bytes.** Shopify app version
 **`alledrops-quiz-production-24`** (from `-23`). No Fly deploy — Phase 6 changed no Fly-served code.
@@ -124,11 +124,14 @@ CHECK ((score_bracket = ANY (ARRAY['0-2'::text, '3-6'::text, '3-8'::text, '7+'::
 - Pre-DDL backup **`1786617655419`**, `ON_DEMAND` / `SUCCESSFUL`, description
   `pre-phase52-widen-score-bracket-check` — read back via `gcloud sql backups describe`, twice, and
   distinguished from the automated daily backups rather than mistaken for one.
+
 - Row count **48 before, 48 after**. Bracket distribution unchanged at `0-2=10, 3-6=11, 7+=27` —
   **no historical row was relabelled**, which is the whole point of the union constraint.
+
 - INSERT probes both inside transactions that were rolled back: `'9+'` accepted (48→49→48),
   `'not-a-bracket'` rejected by name. Proving acceptance alone would have proven only that
   something ran.
+
 - Zero PHI values printed, logged, or written. Counts, IDs, and constraint text only.
 
 Execution deviation, recorded and correct: connected as `alledrops_app` (confirmed via
@@ -430,6 +433,7 @@ Andrew clicking. The tally is now six. Keep the human browser pass.
 - Phase 05.1 inserted after Phase 5 on 2026-08-11 (Admin-Configurable Score Scale, SCALE-01..04), then **REMOVED on 2026-08-12 during `/gsd:discuss-phase 5.1` — never planned, never built, zero code written.** The insertion rested on a wrong premise: that the clinical bracket boundaries were tunable. They are not — 0–2 / 3–6 / 7+ (`app/lib/quiz/scoring.ts:4-8`) come from the AOD medical director and are fixed. Only the *colour band stops* (how a 0–60 raw score maps to green / orange / red) were ever meant to be configurable, and those are display-only: rendered from the raw score at `ResultsDisplay.tsx:70`, never persisted, absent from the PDF. Dropping the bracket half removed the whole cost — no `submissions.scale_version`, no migration, no PHI-path review. William's colour-stop answer is a one-line edit to `score-scale.ts:28-36` plus a deploy, tracked as a go-live config item. **The 2026-08-11 unblocking of SCORE-02 and SCORE-03 still stands** — it came from separating colour from brackets, not from the phase
 - Phase 04.2 inserted after Phase 4: Resume In-Progress Intake — **browser-local `localStorage` only.** The server draft store + emailed magic link version was scoped and deliberately DROPPED (~1+ week, two new BAA surfaces); this line originally described it and is corrected here. No draft PHI table, no email provider, no BAA implication. Partially reverses the recorded out-of-scope decision on resume — browser-local is in, cross-device stays out (URGENT)
 - Phase 5.2 inserted after Phase 5: Clinical Bracket Revision — William Miller moved the clinical brackets from 0-2/3-6/7+ to 0-2/3-8/9+ on 2026-08-13, with new recommendation copy for all three and removal of the /60 denominator from the patient view. Reverses the standing 'brackets are fixed, not tunable' premise recorded when Phase 5.1 was cancelled: that was true of us, never of the medical director. Needs a CHECK-constraint migration; must precede Phase 6 Wave 2 because the purchase gate threshold moves 7 -> 9. The colour half of his answer confirmed the shipped bar and costs nothing. (URGENT)
+- Phase 08.1 inserted after Phase 8: AOD Infrastructure Cutover. AOD access arrived 2026-10-05. App moves Fly to Cloud Run in aod-production-510006 (one Google BAA). Fresh Cloud SQL (test data only). Shopify Client-transfer store goes to hostmaster@alledrops.com. Playbook: ~/Documents/Claude/Projects/AoD/policy-drafts/setup-instructions-for-google-doc.md
 
 ### Decisions
 
