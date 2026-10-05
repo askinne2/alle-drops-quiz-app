@@ -99,6 +99,7 @@ app/
 │   ├── db.ts                         # pg pool (TLS, lazy-init)
 │   ├── submissions.ts                # insertSubmission, listSubmissionLedger, getSubmissionByIdForCustomer
 │   ├── customer-auth.ts              # JWT Bearer auth for /api/me/* (HS256, SHOPIFY_API_SECRET)
+│   ├── download-links.ts             # 15-min HMAC-signed PDF/file links (?c=&exp=&sig=) for the extension
 │   ├── format.ts                     # Shared capitalize, formatDate, formatAnswerValue
 │   ├── google-sheets.ts              # DEPRECATED — throws on call (guardrail)
 │   ├── quiz-validation.ts            # Payload validation. Comment header explains PHI rules.

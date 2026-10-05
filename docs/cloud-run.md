@@ -290,8 +290,27 @@ Verify after a request with a dummy token:
 gcloud logging read 'httpRequest.requestUrl:"token=" OR textPayload:"token="' --project=${P} --freshness=1h --limit=1
 ```
 
-Expected: no output. Follow-up (separate issue): switch the extension to an Authorization header so
-tokens never travel in URLs.
+Expected: no output.
+
+**Update for signed download links (issue #36).** The extension no longer puts the customer JWT in
+URLs, and `/api/me/*` rejects `?token=`. Its download links are now server-signed and short-lived:
+`/api/me/assessment/<id>/pdf?c=<customer gid>&exp=<unix>&sig=<hmac>` (and the same for
+`/files/<fileId>`). A link is a bearer credential for its 15-minute life, so the exclusion must also
+cover `sig=`. Keep `token=` in the filter (old cached extension builds and probes still send it).
+Andrew applies this; it is not done from code:
+
+```bash
+gcloud logging sinks update _Default --project=${P} \
+  --update-exclusion=name=exclude-token-urls,filter='httpRequest.requestUrl:"token=" OR textPayload:"token=" OR httpRequest.requestUrl:"sig=" OR textPayload:"sig="'
+```
+
+Verify after one signed download:
+
+```bash
+gcloud logging read 'httpRequest.requestUrl:"sig=" OR textPayload:"sig="' --project=${P} --freshness=1h --limit=1
+```
+
+Expected: no output.
 
 ## 11. URL-swap checklist (re-runnable at LAUNCH-07)
 

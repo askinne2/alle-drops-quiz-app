@@ -3,6 +3,7 @@ import { render } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 
 const APP_BASE = 'https://alle-drops-quiz-app-502519175239.us-east1.run.app';
+const LEDGER_REFRESH_MS = 10 * 60 * 1000;
 
 function formatDate(str) {
   if (!str) return 'Date unavailable';
@@ -16,10 +17,15 @@ function formatDate(str) {
 function QuizHistory() {
   const [status, setStatus] = useState('loading');
   const [assessments, setAssessments] = useState([]);
-  const [token, setToken] = useState('');
 
+  // The ledger returns server-signed download links (pdf_url, files[].url) that expire after
+  // 15 minutes, so re-fetch every 10 minutes to keep the hrefs fresh. The session token is only
+  // ever sent as a header, never placed in a link.
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+    let loaded = false;
+
+    async function load() {
       try {
         const t = await shopify.sessionToken.get();
         const resp = await fetch(`${APP_BASE}/api/me/assessments`, {
@@ -27,13 +33,22 @@ function QuizHistory() {
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
-        setToken(t);
+        if (cancelled) return;
+        loaded = true;
         setAssessments(data);
         setStatus('done');
       } catch {
-        setStatus('error');
+        // Keep showing the last good list on a failed background refresh.
+        if (!cancelled && !loaded) setStatus('error');
       }
-    })();
+    }
+
+    load();
+    const timer = setInterval(load, LEDGER_REFRESH_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
   }, []);
 
   if (status === 'loading') {
@@ -66,13 +81,13 @@ function QuizHistory() {
         {assessments.map(a => (
           <s-stack key={a.id} direction="inline" gap="base" align-items="center">
             <s-text>{formatDate(a.completed_at)}</s-text>
-            <s-link href={`${APP_BASE}/api/me/assessment/${a.id}/pdf?token=${encodeURIComponent(token)}`}>
+            <s-link href={a.pdf_url}>
               Download PDF
             </s-link>
             {(a.files || []).map(f => (
               <s-link
                 key={f.id}
-                href={`${APP_BASE}/api/me/assessment/${a.id}/files/${f.id}?token=${encodeURIComponent(token)}`}
+                href={f.url}
               >
                 {f.filename}
               </s-link>

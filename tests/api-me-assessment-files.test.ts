@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../app/lib/customer-auth', () => ({
   verifyCustomerToken: vi.fn(),
@@ -21,6 +21,7 @@ import * as auth from '../app/lib/customer-auth'
 import * as submissions from '../app/lib/submissions'
 import * as submissionFiles from '../app/lib/submission-files'
 import * as gcs from '../app/lib/storage/gcs'
+import { signDownloadPath } from '../app/lib/download-links'
 import type { SubmissionFullRow } from '../app/lib/submissions'
 import type { SubmissionFileRow } from '../app/lib/submission-files'
 
@@ -63,8 +64,16 @@ function callLoader(request: Request, params: Record<string, string>) {
   return loader({ request, params, context: {} } as any)
 }
 
+const ORIGINAL_SECRET = process.env.SHOPIFY_API_SECRET
+
 beforeEach(() => {
   vi.clearAllMocks()
+  process.env.SHOPIFY_API_SECRET = 'test-secret-value'
+})
+
+afterEach(() => {
+  if (ORIGINAL_SECRET === undefined) delete process.env.SHOPIFY_API_SECRET
+  else process.env.SHOPIFY_API_SECRET = ORIGINAL_SECRET
 })
 
 describe('GET /api/me/assessment/:id/files/:fileId', () => {
@@ -76,7 +85,7 @@ describe('GET /api/me/assessment/:id/files/:fileId', () => {
     expect(res.status).toBe(204)
   })
 
-  it('returns 401 when there is no Authorization header and no ?token= param', async () => {
+  it('returns 401 when there is no Authorization header and no signature', async () => {
     const req = new Request('https://fly.dev/api/me/assessment/sub-1/files/file-1')
     const res = await callLoader(req, { id: 'sub-1', fileId: 'file-1' })
     expect(res.status).toBe(401)
@@ -158,38 +167,125 @@ describe('GET /api/me/assessment/:id/files/:fileId', () => {
     )
   })
 
-  it('redirects to the signed url (302) for a ?token= navigation without Accept: application/json', async () => {
+  it('rejects a legacy ?token= query param with 401 and never verifies it as a JWT', async () => {
     vi.mocked(auth.verifyCustomerToken).mockResolvedValue({
       customerId: 'gid://shopify/Customer/123',
     })
-    vi.mocked(submissions.getSubmissionByIdForCustomer).mockResolvedValue(mockSubmission)
-    vi.mocked(submissionFiles.getSubmissionFileForCustomer).mockResolvedValue(mockFile)
-    vi.mocked(gcs.getSignedReadUrl).mockResolvedValue(SENTINEL_URL)
-
     const req = new Request(
       `https://fly.dev/api/me/assessment/sub-1/files/file-1?token=${encodeURIComponent(SENTINEL_TOKEN)}`
     )
     const res = await callLoader(req, { id: 'sub-1', fileId: 'file-1' })
-    expect(res.status).toBe(302)
-    expect(res.headers.get('Location')).toBe(SENTINEL_URL)
-    expect(res.headers.get('Cache-Control')).toBe('no-store')
+    expect(res.status).toBe(401)
+    expect(await res.json()).toEqual({ error: 'Unauthorized' })
+    expect(auth.verifyCustomerToken).not.toHaveBeenCalled()
+    expect(submissions.getSubmissionByIdForCustomer).not.toHaveBeenCalled()
   })
 
-  it('honors ?as=json even when the token came from the query param', async () => {
-    vi.mocked(auth.verifyCustomerToken).mockResolvedValue({
-      customerId: 'gid://shopify/Customer/123',
-    })
+  it('redirects to the signed url (302) for a valid signed-link navigation', async () => {
     vi.mocked(submissions.getSubmissionByIdForCustomer).mockResolvedValue(mockSubmission)
     vi.mocked(submissionFiles.getSubmissionFileForCustomer).mockResolvedValue(mockFile)
     vi.mocked(gcs.getSignedReadUrl).mockResolvedValue(SENTINEL_URL)
 
-    const req = new Request(
-      `https://fly.dev/api/me/assessment/sub-1/files/file-1?token=${encodeURIComponent(SENTINEL_TOKEN)}&as=json`
-    )
-    const res = await callLoader(req, { id: 'sub-1', fileId: 'file-1' })
+    const path = signDownloadPath({
+      kind: 'file',
+      submissionId: 'sub-1',
+      fileId: 'file-1',
+      customerId: 'gid://shopify/Customer/123',
+    })
+    const res = await callLoader(new Request(`https://fly.dev${path}`), { id: 'sub-1', fileId: 'file-1' })
+    expect(res.status).toBe(302)
+    expect(res.headers.get('Location')).toBe(SENTINEL_URL)
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
+    expect(res.headers.get('Referrer-Policy')).toBe('no-referrer')
+    expect(auth.verifyCustomerToken).not.toHaveBeenCalled()
+    // Ownership-bounded lookups use the customer bound into the signature.
+    expect(submissions.getSubmissionByIdForCustomer).toHaveBeenCalledWith({
+      id: 'sub-1',
+      customer_id_shopify: 'gid://shopify/Customer/123',
+    })
+    expect(submissionFiles.getSubmissionFileForCustomer).toHaveBeenCalledWith({
+      submissionId: 'sub-1',
+      fileId: 'file-1',
+      customer_id_shopify: 'gid://shopify/Customer/123',
+    })
+  })
+
+  it('honors ?as=json on a signed link', async () => {
+    vi.mocked(submissions.getSubmissionByIdForCustomer).mockResolvedValue(mockSubmission)
+    vi.mocked(submissionFiles.getSubmissionFileForCustomer).mockResolvedValue(mockFile)
+    vi.mocked(gcs.getSignedReadUrl).mockResolvedValue(SENTINEL_URL)
+
+    const path = signDownloadPath({
+      kind: 'file',
+      submissionId: 'sub-1',
+      fileId: 'file-1',
+      customerId: 'gid://shopify/Customer/123',
+    })
+    const res = await callLoader(new Request(`https://fly.dev${path}&as=json`), { id: 'sub-1', fileId: 'file-1' })
     expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body).toEqual({ url: SENTINEL_URL })
+    expect(await res.json()).toEqual({ url: SENTINEL_URL })
+  })
+
+  it('returns 401 before any DB work for a signature bound to a different file', async () => {
+    const path = signDownloadPath({
+      kind: 'file',
+      submissionId: 'sub-1',
+      fileId: 'file-2',
+      customerId: 'gid://shopify/Customer/123',
+    })
+    const qs = path.slice(path.indexOf('?'))
+    const res = await callLoader(
+      new Request(`https://fly.dev/api/me/assessment/sub-1/files/file-1${qs}`),
+      { id: 'sub-1', fileId: 'file-1' }
+    )
+    expect(res.status).toBe(401)
+    expect(await res.json()).toEqual({ error: 'Unauthorized' })
+    expect(submissions.getSubmissionByIdForCustomer).not.toHaveBeenCalled()
+    expect(gcs.getSignedReadUrl).not.toHaveBeenCalled()
+  })
+
+  it('returns 401 before any DB work for a tampered customer id', async () => {
+    const path = signDownloadPath({
+      kind: 'file',
+      submissionId: 'sub-1',
+      fileId: 'file-1',
+      customerId: 'gid://shopify/Customer/123',
+    })
+    const tampered = path.replace(
+      encodeURIComponent('gid://shopify/Customer/123'),
+      encodeURIComponent('gid://shopify/Customer/999')
+    )
+    const res = await callLoader(new Request(`https://fly.dev${tampered}`), { id: 'sub-1', fileId: 'file-1' })
+    expect(res.status).toBe(401)
+    expect(submissions.getSubmissionByIdForCustomer).not.toHaveBeenCalled()
+  })
+
+  it('returns 401 before any DB work for an expired signed link', async () => {
+    const path = signDownloadPath({
+      kind: 'file',
+      submissionId: 'sub-1',
+      fileId: 'file-1',
+      customerId: 'gid://shopify/Customer/123',
+      now: Math.floor(Date.now() / 1000) - 3600,
+    })
+    const res = await callLoader(new Request(`https://fly.dev${path}`), { id: 'sub-1', fileId: 'file-1' })
+    expect(res.status).toBe(401)
+    expect(submissions.getSubmissionByIdForCustomer).not.toHaveBeenCalled()
+  })
+
+  it('rejects a pdf-kind signature on the files route', async () => {
+    const path = signDownloadPath({
+      kind: 'pdf',
+      submissionId: 'sub-1',
+      customerId: 'gid://shopify/Customer/123',
+    })
+    const qs = path.slice(path.indexOf('?'))
+    const res = await callLoader(
+      new Request(`https://fly.dev/api/me/assessment/sub-1/files/file-1${qs}`),
+      { id: 'sub-1', fileId: 'file-1' }
+    )
+    expect(res.status).toBe(401)
+    expect(submissions.getSubmissionByIdForCustomer).not.toHaveBeenCalled()
   })
 
   it('never logs the filename, the raw token, or the signed url', async () => {
@@ -215,6 +311,7 @@ describe('GET /api/me/assessment/:id/files/:fileId', () => {
     expect(serialized).not.toContain(SENTINEL_FILENAME)
     expect(serialized).not.toContain(SENTINEL_URL)
     expect(serialized).not.toContain(SENTINEL_TOKEN)
+    expect(serialized).not.toContain('sig=')
 
     logSpy.mockRestore()
     errSpy.mockRestore()
