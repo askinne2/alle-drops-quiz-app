@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 06-04-PLAN.md
-last_updated: "2026-10-05T13:55:04.348Z"
-last_activity: 2026-10-05 -- Phase 08.1 execution started
+last_updated: "2026-10-05T14:04:59.826Z"
+last_activity: 2026-10-05
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 80
-  completed_plans: 66
+  completed_plans: 70
   percent: 67
 ---
 
@@ -29,9 +29,9 @@ parallel and is older than Phase 6 — see "Open Now" below.
 ## Current Position
 
 Phase: 08.1 (AOD Infrastructure Cutover) — EXECUTING
-Plan: 1 of 13
-Status: Executing Phase 08.1
-Last activity: 2026-10-05 -- Phase 08.1 execution started
+Plan: 2 of 13
+Status: Ready to execute
+Last activity: 2026-10-05
 
 **Phase 6 deploy verification (2026-08-13), on served bytes.** Shopify app version
 **`alledrops-quiz-production-24`** (from `-23`). No Fly deploy — Phase 6 changed no Fly-served code.
@@ -305,7 +305,7 @@ navigating away and returning. Verdict: "approved."
 Note: STATE.md previously recorded the v51 served length as 195,102 B. The live measurement is
 **195,142 B**; the older figure was wrong and the table above supersedes it.
 
-Progress: [██████████] 100% of Phases 4, 4.1, and 4.2
+Progress: [█████████░] 88%
 
 Codebase baseline (superseded 2026-08-12 — see "Current Position" above for the live figures;
 retained because the phase narrative below is still accurate): `main` @ `86e6b50`, **677 tests / 47
@@ -722,9 +722,9 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-08-12T11:58:21.692Z
+Last session: 2026-10-05T14:04:59.816Z
 Stopped at: Completed 06-04-PLAN.md
-Resume file: .planning/phases/06-purchase-prerequisites/06-02-PLAN.md
+Resume file: None
 
 **Interrupted-execution recovery, 2026-08-10:** the session executing plan 04.1-04 was killed
 mid-plan. Task 1 (`e246391`, bundle rebuild) was committed inside worktree
