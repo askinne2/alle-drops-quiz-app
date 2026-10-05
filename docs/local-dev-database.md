@@ -19,8 +19,30 @@ SHOPIFY_APP_URL=http://localhost:3000 npx react-router dev
 DATABASE_URL="postgresql://alledrops_dev:<password>@127.0.0.1:5436/alledrops_quiz_dev?sslmode=disable"
 ```
 
-`sslmode=disable` is correct here — the proxy terminates TLS to Cloud SQL. It is **not** the same as
-Fly's connection string, which goes to the public IP with `sslmode=no-verify`.
+`sslmode=disable` is correct here — the proxy terminates TLS to Cloud SQL.
+
+This is the kept 21 ads dev project (`alledrops-quiz`): test data only, no PHI. Production runs on
+Cloud Run in AOD's project (`aod-production-510006`) with its own roles. Never point local dev at it.
+
+## Shopify sessions database
+
+Shopify sessions live in Postgres via Prisma, separate from the PHI database. Locally, use a
+throwaway container:
+
+```bash
+docker run -d --name aod-sessions -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=sessions \
+  -p 5437:5432 postgres:18-alpine
+npx prisma migrate deploy
+```
+
+`.env` needs `SESSION_DATABASE_URL="postgresql://postgres:dev@127.0.0.1:5437/sessions"`. The data is
+disposable; delete the container whenever.
+
+## Dev password rotation
+
+The dev DB passwords are rotated in 08.1-13, because the previous deployment image carried `.env`. After that, the
+new `alledrops_dev` password is read from the dev project's Secret Manager rather than from an old
+`.env`.
 
 ## Trap 1: port 5433 belongs to something else
 
@@ -64,20 +86,20 @@ googleapi: Error 403: ... missing permission cloudsql.instances.get
 ```
 
 That grant exists today on `alledrops-quiz-app@alledrops-quiz.iam.gserviceaccount.com`. It is a
-**local-dev convenience only** — the Fly app reaches Cloud SQL over the public IP with a password
-and does not use the proxy or this role. Do not replicate it in AOD's project at cutover.
+**local-dev convenience only** — the deployed app does not use the proxy or this role. Do not
+replicate it in AOD's project.
 
 ## Database roles
 
 | Role | Used by | Privileges |
 |---|---|---|
-| `alledrops_app` | Fly runtime | owner of `submissions`; full DDL |
+| `alledrops_app` | deployed app (dev) | owner of `submissions`; full DDL |
 | `alledrops_dev` | local development | SELECT/INSERT/UPDATE/DELETE on `submissions` and `submission_access_log`; **no DDL, no ownership** |
 | `postgres` | admin only | `cloudsqlsuperuser`; owns `submission_access_log` |
 
-`alledrops_dev` exists so local work can never disturb the credential Fly is running on. Resetting
-`alledrops_app`'s password would fix a laptop and simultaneously break the deployed machine until it
-was redeployed with a matching secret.
+`alledrops_dev` exists so local work can never disturb the credential the deployed app runs on.
+Resetting `alledrops_app`'s password would fix a laptop and simultaneously break the deployed service
+until it was redeployed with a matching secret.
 
 The role cannot run migrations — that is deliberate. Run DDL as `alledrops_app` or `postgres`, per
 the migration discipline in `CLAUDE.md` (migrations are committed alone and executed only after the
