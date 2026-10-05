@@ -22,7 +22,7 @@ phase, and any open blockers. Use the `/gsd:*` commands to plan and execute; don
 
 A Shopify app that hosts a clinical symptom quiz for **Allergist on Demand (AOD) / AlleDrops** — a telehealth allergy clinic serving patients in **Tennessee and Texas only**. Patients answer the questionnaire, receive a score (bracket: 0–2 / 3–6 / 7+), and depending on bracket are routed to consult / purchase / additional medical history paths.
 
-The app runs on **Google Cloud Run** (`alle-drops-quiz-app`, project `aod-production-510006`, `us-east1`) and consists of. Fly.io is scaled to 0 and is retired in 08.1-13:
+The app runs on **Google Cloud Run** (`alle-drops-quiz-app`, project `aod-production-510006`, `us-east1`) (Fly.io is scaled to 0 and retired in 08.1-13) and consists of:
 
 - **Theme App Block extension** (`extensions/quiz-block/`) — embeds the quiz on the storefront as a cross-origin iframe pointing at `https://alle-drops-quiz-app-502519175239.us-east1.run.app`.
 - **Customer Account UI extension** (`extensions/quiz-history/`) — surfaces a ledger of completed assessments to logged-in patients with a Download PDF button. Reads the Cloud Run API with a Bearer token (refactor shipped, see pitfalls).
