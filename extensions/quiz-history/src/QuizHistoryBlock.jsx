@@ -2,7 +2,7 @@ import '@shopify/ui-extensions/preact';
 import { render } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 
-const FLY_BASE = 'https://alle-drops-quiz-app.fly.dev';
+const APP_BASE = 'https://alle-drops-quiz-app-502519175239.us-east1.run.app';
 
 function formatDate(str) {
   if (!str) return 'Date unavailable';
@@ -22,7 +22,7 @@ function QuizHistory() {
     (async () => {
       try {
         const t = await shopify.sessionToken.get();
-        const resp = await fetch(`${FLY_BASE}/api/me/assessments`, {
+        const resp = await fetch(`${APP_BASE}/api/me/assessments`, {
           headers: { Authorization: `Bearer ${t}` },
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -66,13 +66,13 @@ function QuizHistory() {
         {assessments.map(a => (
           <s-stack key={a.id} direction="inline" gap="base" align-items="center">
             <s-text>{formatDate(a.completed_at)}</s-text>
-            <s-link href={`${FLY_BASE}/api/me/assessment/${a.id}/pdf?token=${encodeURIComponent(token)}`}>
+            <s-link href={`${APP_BASE}/api/me/assessment/${a.id}/pdf?token=${encodeURIComponent(token)}`}>
               Download PDF
             </s-link>
             {(a.files || []).map(f => (
               <s-link
                 key={f.id}
-                href={`${FLY_BASE}/api/me/assessment/${a.id}/files/${f.id}?token=${encodeURIComponent(token)}`}
+                href={`${APP_BASE}/api/me/assessment/${a.id}/files/${f.id}?token=${encodeURIComponent(token)}`}
               >
                 {f.filename}
               </s-link>

@@ -42,15 +42,15 @@ This app no longer uses the old US-region selector or the legacy minimal/mild/mo
 - Shopify Admin API customer + metafield updates
 - Theme app extension for storefront embedding
 - Customer account extension with theme/Liquid fallback patterns elsewhere in the stack
-- Fly.io deployment
+- Cloud Run deployment
 
 ## Tech Stack
 
 - **Framework**: React Router v7
 - **Language**: TypeScript
 - **Styling**: CSS Modules + theme-aware CSS
-- **Database**: Prisma/SQLite for app session storage
-- **Hosting**: Fly.io
+- **Database**: Prisma/Postgres for app session storage
+- **Hosting**: Google Cloud Run
 - **Shopify**: Admin API, theme app extension, customer account extension
 - **Integrations**: Google Apps Script web app for Google Sheets writes
 
@@ -59,7 +59,7 @@ This app no longer uses the old US-region selector or the legacy minimal/mild/mo
 - Node.js `>=20.19 <22 || >=22.12`
 - Shopify Partner account
 - Shopify CLI
-- Fly.io account for deployment
+- Access to the AOD Google Cloud project for deployment
 - Google Apps Script deployment for Sheets integration
 
 ## Quick Start
@@ -80,7 +80,7 @@ Create `.env` with the Shopify app credentials plus the Google Sheets endpoint:
 SHOPIFY_API_KEY=your_api_key
 SHOPIFY_API_SECRET=your_api_secret
 GOOGLE_SHEETS_WEB_APP_URL=https://script.google.com/macros/s/...
-SHOPIFY_APP_URL=https://your-app.fly.dev
+SHOPIFY_APP_URL=https://your-app.example
 ```
 
 ### 3. Run locally
@@ -185,7 +185,7 @@ When warnings occur, the route reports them in `message` and the related helper 
 
 ### `GET /health`
 
-Health check endpoint for Fly.io monitoring.
+Health check endpoint for Cloud Run monitoring.
 
 ```json
 {
@@ -197,15 +197,16 @@ Health check endpoint for Fly.io monitoring.
 
 ## Deployment
 
-### Fly.io
+### Cloud Run
+
+Deploy from a clean checkout of merged `main`; every step is in [docs/cloud-run.md](docs/cloud-run.md).
 
 ```bash
-fly deploy
-fly status
-fly logs
+gcloud run services describe alle-drops-quiz-app --project aod-production-510006 --region us-east1
+gcloud run services logs read alle-drops-quiz-app --project aod-production-510006 --region us-east1
 ```
 
-Current deployment uses the `/health` endpoint for health checks and runs in Fly region `iad`.
+The service uses the `/health` endpoint for health checks and runs in `us-east1`.
 
 ### Shopify app deployment
 
@@ -274,7 +275,7 @@ The full submission payload is written to Google Sheets, including patient info,
 - [MVP Launch Checklist](docs/MVP_LAUNCH_CHECKLIST.md)
 - [App Requirements](docs/app-requirements.md)
 - [Performance Optimization](docs/PERFORMANCE_OPTIMIZATION.md)
-- [Fly.io Migration](docs/FLY_IO_MIGRATION.md)
+- [Cloud Run Runbook](docs/cloud-run.md)
 - [HIPAA Compliance](docs/HIPAA_COMPLIANCE_ANALYSIS.md)
 
 ## Troubleshooting
@@ -301,7 +302,7 @@ The full submission payload is written to Google Sheets, including patient info,
 
 ## Links
 
-- [Production App](https://alle-drops-quiz-app.fly.dev)
+- [Production App](https://alle-drops-quiz-app-502519175239.us-east1.run.app)
 - [GitHub Repository](https://github.com/askinne2/alle-drops-quiz-app)
 - [Shopify Partner Dashboard](https://partners.shopify.com)
-- [Fly.io Dashboard](https://fly.io/apps/alle-drops-quiz-app)
+- [Cloud Run Console](https://console.cloud.google.com/run?project=aod-production-510006)

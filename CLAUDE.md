@@ -22,10 +22,10 @@ phase, and any open blockers. Use the `/gsd:*` commands to plan and execute; don
 
 A Shopify app that hosts a clinical symptom quiz for **Allergist on Demand (AOD) / AlleDrops** — a telehealth allergy clinic serving patients in **Tennessee and Texas only**. Patients answer the questionnaire, receive a score (bracket: 0–2 / 3–6 / 7+), and depending on bracket are routed to consult / purchase / additional medical history paths.
 
-The app runs on **Fly.io** (`alle-drops-quiz-app`) and consists of:
+The app runs on **Google Cloud Run** (`alle-drops-quiz-app`, project `aod-production-510006`, `us-east1`) (Fly.io is scaled to 0 and retired in 08.1-13) and consists of:
 
-- **Theme App Block extension** (`extensions/quiz-block/`) — embeds the quiz on the storefront as a cross-origin iframe pointing at `https://alle-drops-quiz-app.fly.dev`.
-- **Customer Account UI extension** (`extensions/quiz-history/`) — surfaces a ledger of completed assessments to logged-in patients with a Download PDF button. Currently shows empty state because it still reads deleted PHI metafields — refactor pending.
+- **Theme App Block extension** (`extensions/quiz-block/`) — embeds the quiz on the storefront as a cross-origin iframe pointing at `https://alle-drops-quiz-app-502519175239.us-east1.run.app`.
+- **Customer Account UI extension** (`extensions/quiz-history/`) — surfaces a ledger of completed assessments to logged-in patients with a Download PDF button. Reads the Cloud Run API with a Bearer token (refactor shipped, see pitfalls).
 - **Web app** (React Router 7 / `app/`) — hosts the quiz bundle, submission API, patient ledger + PDF endpoints, and embedded admin views.
 - **Embedded admin app** — Shopify-embedded admin at `app/quiz-results` — full submissions table, filters, detail modal, PDF download, stats dashboard.
 
@@ -33,15 +33,15 @@ The app runs on **Fly.io** (`alle-drops-quiz-app`) and consists of:
 
 ```
 Storefront page (Shopify)
-  └── Theme App Block → cross-origin iframe → https://alle-drops-quiz-app.fly.dev/quiz-embed
+  └── Theme App Block → cross-origin iframe → https://alle-drops-quiz-app-502519175239.us-east1.run.app/quiz-embed
                                                         │
                                                         ▼ POST /api/quiz/submit
-                                               Fly app
-                                                  ├─► Cloud SQL Postgres (PHI) — full submission row
+                                          Cloud Run service
+                                                  ├─► Cloud SQL Postgres via /cloudsql/ socket (PHI) — full submission row
                                                   └─► Shopify Admin API — last_completed_at + quiz_count only
 
 Logged-in patient on /account
-  └── Customer Account UI extension (refactor pending — shows empty state)
+  └── Customer Account UI extension (Bearer token to Cloud Run)
       Target: GET /api/me/assessments (JWT Bearer) → Cloud SQL ledger
               GET /api/me/assessment/{id}/pdf       → PDF download
 
@@ -53,21 +53,36 @@ Full plan: `~/Documents/Claude/Projects/AoD/aod-mvp-plan.md`
 Council verdict: `~/Documents/Claude/Projects/AoD/council-report-2026-05-06.html`
 Verbatim consent text: `~/Documents/Claude/Projects/AoD/aod-consent-text.md`
 
-## Current dev infra
+## Infra
+
+### Production (AOD)
+
+| Layer | Value |
+|---|---|
+| GCP project | `aod-production-510006` (AOD-owned, under their BAA) |
+| Region | `us-east1` |
+| Cloud Run service | `alle-drops-quiz-app` at `https://alle-drops-quiz-app-502519175239.us-east1.run.app` |
+| Cloud SQL instance | `aod-quiz-db` (connection `aod-production-510006:us-east1:aod-quiz-db`), reached via the `/cloudsql/` socket |
+| Databases | `alledrops_quiz` (PHI), `shopify_sessions` (Prisma sessions) |
+| DB roles | `alledrops_app`, `sessions_app`, `postgres` (owner/migrations only) |
+| GCS bucket | `aod-quiz-uploads-prod`, accessed via the runtime service account |
+| Service accounts | `quiz-app-runtime`, `quiz-app-build` (no keys) |
+| Secrets | `quiz-database-url`, `quiz-session-database-url`, `shopify-api-secret`, `shopify-admin-access-token`, `quiz-db-owner-password` |
+| Runbook | `docs/cloud-run.md` |
+
+Custom domain (LAUNCH-07) is not yet in place; the app origin changes again then.
+
+### Dev (21 ads, test data only, no PHI)
 
 | Layer | Value |
 |---|---|
 | GCP project (dev) | `alledrops-quiz` (under `21adsmedia.com` org, Andrew's account) |
 | Cloud SQL instance | `alledrops-quiz-data` (Postgres 18, us-east1) |
-| Cloud SQL public IPv4 | `34.139.97.17` |
 | Database | `alledrops_quiz_dev` |
 | App user | `alledrops_app` |
 | TLS mode | `ENCRYPTED_ONLY` — connect with `sslmode=no-verify` (dev) |
-| Authorized network | `216.246.40.114/32` (Fly egress) |
-| Fly app | `alle-drops-quiz-app` |
-| Fly region | `iad` |
 
-Production cutover moves all of this to AOD's own Google Cloud project under their BAA. Don't bake in 21adsmedia ownership anywhere.
+Don't bake in 21adsmedia ownership anywhere in production paths.
 
 ## Key files
 
@@ -97,7 +112,7 @@ extensions/
 └── quiz-history/                     # Customer Account UI extension (refactor pending)
 
 scripts/
-└── e2e-test.ts                       # E2E bracket test suite — runs against deployed Fly app
+└── e2e-test.ts                       # E2E bracket test suite — runs against the deployed Cloud Run app
 
 migrations/
 └── 001_create_submissions.sql        # Run in Cloud SQL Studio against alledrops_quiz_dev
@@ -115,17 +130,17 @@ npm test
 # Local dev server
 npm run dev
 
-# Deploy to Fly
-fly deploy -a alle-drops-quiz-app
+# Deploy to Cloud Run (from a clean checkout of merged main, see docs/cloud-run.md)
+gcloud run deploy alle-drops-quiz-app --source . --project aod-production-510006 --region us-east1
 
 # Watch live logs
-fly logs -a alle-drops-quiz-app
+gcloud run services logs read alle-drops-quiz-app --project aod-production-510006 --region us-east1
 
 # Set / view secrets
-fly secrets list -a alle-drops-quiz-app
-fly secrets set DATABASE_URL="..." -a alle-drops-quiz-app
+gcloud secrets list --project aod-production-510006
+gcloud secrets versions add quiz-database-url --data-file=- --project aod-production-510006
 
-# Deploy Shopify extensions only (does NOT deploy Fly)
+# Deploy Shopify extensions only (does NOT deploy Cloud Run)
 shopify app deploy
 ```
 
@@ -136,7 +151,7 @@ shopify app deploy
 - **End of work:** push the branch and propose a PR. Don't merge to main yourself — Andrew reviews and merges. The PR description should call out anything PHI-relevant (auth changes, new routes that read PHI, changes to logging, new dependencies).
 - **PR-style review is required for HIPAA-relevant changes.** That includes anything that touches `app/lib/db.ts`, `app/lib/submissions.ts`, `app/routes/api.*`, `app/routes/api.me.*`, customer auth, PDF generation, or `app/lib/shopify/metafields.ts`.
 - **Tests must pass before pushing.** Run `npm run typecheck && npm test`. If tests don't exist for the change, write them.
-- **Don't deploy from a branch.** `fly deploy` runs against `main` after the PR is merged. Claude can safely deploy with authorization from Andrew.
+- **Don't deploy from a branch.** `gcloud run deploy` runs against `main` after the PR is merged. Claude can safely deploy with authorization from Andrew.
 
 ### Self-review checklist for PHI-handling changes
 
@@ -153,10 +168,10 @@ Before opening a PR that touches anything in the PHI path, confirm:
 
 ## Common pitfalls
 
-- **`shopify app deploy` does not deploy the Fly app.** It only ships extensions and config to Shopify. Two separate deploy systems: Shopify (`shopify app deploy`) and Fly (`fly deploy`).
+- **`shopify app deploy` does not deploy the Cloud Run service.** It only ships extensions and config to Shopify. Two separate deploy systems: Shopify (`shopify app deploy`) and Fly (`fly deploy`).
 - **Customer Account UI extensions only render in Shopify's customer accounts UI** (a different surface than the storefront theme), so they don't pick up theme styles or storefront scripts.
-- ~~**The Customer Account UI extension currently still reads PHI metafields that no longer exist.** It needs refactoring to call the Fly API instead. Until that's done, the dashboard will show empty state in dev.~~ **RETRACTED 2026-05-08 — this refactor already shipped.** It landed in `ca3c3f4` and was hardened by `f762aaa`. `extensions/quiz-history/src/` contains zero `metafield` references; it calls `GET /api/me/assessments` with a Bearer token. `.planning/REQUIREMENTS.md` records it as DONE-07.
-- **Sessions are stored in SQLite via Prisma + Litestream** (see `fly.toml` mounts). PHI submissions are in Postgres (Cloud SQL). Two distinct stores, do not conflate.
+- ~~**The Customer Account UI extension currently still reads PHI metafields that no longer exist.** It needs refactoring to call the app API instead. Until that's done, the dashboard will show empty state in dev.~~ **RETRACTED 2026-05-08 — this refactor already shipped.** It landed in `ca3c3f4` and was hardened by `f762aaa`. `extensions/quiz-history/src/` contains zero `metafield` references; it calls `GET /api/me/assessments` with a Bearer token. `.planning/REQUIREMENTS.md` records it as DONE-07.
+- **Sessions are stored in Postgres via Prisma** (database `shopify_sessions`, role `sessions_app`). PHI submissions are in the separate `alledrops_quiz` database. Two distinct stores, do not conflate.
 - **`pg` and `?sslmode=require`:** if the connection string has `?sslmode=require`, Node's `pg` library tries to verify the server cert against the system CA bundle and fails for Cloud SQL. Use `?sslmode=no-verify` for dev, or pin the Cloud SQL server CA for prod.
 - **Never `git reset --hard` to retroactively branch with uncommitted modifications to tracked files.** The modifications get wiped silently. If commits landed on `main` that should have been on a branch: use `git branch <name>` to mark them, then `git reset --keep` (preserves working tree changes) or `git stash` first. Better: always create the branch *before* starting work.
 
@@ -167,7 +182,7 @@ Before opening a PR that touches anything in the PHI path, confirm:
 npx tsx scripts/e2e-test.ts
 
 # Quick manual smoke test
-curl -i -X POST https://alle-drops-quiz-app.fly.dev/api/quiz/submit \
+curl -i -X POST https://alle-drops-quiz-app-502519175239.us-east1.run.app/api/quiz/submit \
   -H "Content-Type: application/json" \
   -H "Origin: https://example.myshopify.com" \
   -d '{
@@ -192,9 +207,9 @@ See `HANDOFF.md` for Cloud SQL proxy setup and known gotchas.
 
 ## Open work (see ~/Documents/Claude/Projects/AoD/aod-mvp-plan.md for full plan)
 
-- [ ] Customer Account UI extension refactor — read submissions from Fly API, not metafields
-- [ ] Custom domain on Fly (`fly certs create quiz.allerdrops.com -a alle-drops-quiz-app`)
-- [ ] Fly.io BAA — sales conversation
+- [ ] Customer Account UI extension refactor — read submissions from the app API, not metafields (DONE, see DONE-07)
+- [ ] Custom domain via external Application Load Balancer (LAUNCH-07)
+- [x] ~~Fly.io BAA — sales conversation~~ (moot: moved to Cloud Run under AOD's Google BAA)
 - [ ] Production cutover to AOD's Google Cloud project (Andrew's GCP project is dev only)
 - [ ] In-house counsel review (parallel, AOD-side)
 - [ ] Consent text finalization — bump `CONSENT_VERSION` in `app/lib/consent-version.ts` + update `ConsentStep.tsx`
@@ -202,4 +217,4 @@ See `HANDOFF.md` for Cloud SQL proxy setup and known gotchas.
 
 ## When in doubt
 
-If a task could plausibly involve PHI, default to: route through Fly + Cloud SQL, never touch Shopify or any Google Workspace surface, never add scripts to the iframe page, ask before introducing a new third-party dependency.
+If a task could plausibly involve PHI, default to: route through Cloud Run + Cloud SQL, never touch Shopify or any Google Workspace surface, never add scripts to the iframe page, ask before introducing a new third-party dependency.

@@ -6,11 +6,13 @@ not re-derive commands. No secret values appear here, and none may be added.
 
 Set once per shell:
 
+> zsh warning: always write `${P}` with braces. Unbraced `$P:us-east1` expands `:u` as an uppercase modifier and breaks the Cloud SQL instance string.
+
 ```bash
 P=aod-production-510006
 REGION=us-east1
-RT=quiz-app-runtime@$P.iam.gserviceaccount.com
-BUILD=quiz-app-build@$P.iam.gserviceaccount.com
+RT=quiz-app-runtime@${P}.iam.gserviceaccount.com
+BUILD=quiz-app-build@${P}.iam.gserviceaccount.com
 ```
 
 ## 1. Resource names
@@ -52,26 +54,26 @@ cd ../alle-drops-deploy && git status --short   # must print nothing
 ```bash
 gcloud services enable run.googleapis.com sqladmin.googleapis.com secretmanager.googleapis.com \
   artifactregistry.googleapis.com cloudbuild.googleapis.com iamcredentials.googleapis.com \
-  --project=$P
+  --project=${P}
 ```
 
-Verify: `gcloud services list --enabled --project=$P --filter="name:(run OR sqladmin OR secretmanager OR artifactregistry OR cloudbuild OR iamcredentials)" --format="value(name)"` lists all six.
+Verify: `gcloud services list --enabled --project=${P} --filter="name:(run OR sqladmin OR secretmanager OR artifactregistry OR cloudbuild OR iamcredentials)" --format="value(name)"` lists all six.
 
 ## 4. Service accounts and IAM
 
 ```bash
-gcloud iam service-accounts create quiz-app-runtime --project=$P
-gcloud iam service-accounts create quiz-app-build   --project=$P
+gcloud iam service-accounts create quiz-app-runtime --project=${P}
+gcloud iam service-accounts create quiz-app-build   --project=${P}
 
 # Runtime: Cloud SQL socket
-gcloud projects add-iam-policy-binding $P --member=serviceAccount:$RT --role=roles/cloudsql.client
+gcloud projects add-iam-policy-binding ${P} --member=serviceAccount:${RT} --role=roles/cloudsql.client
 
 # Runtime: sign GCS URLs with no key. Resource-level binding on itself, NOT project-wide.
-gcloud iam service-accounts add-iam-policy-binding $RT --project=$P \
-  --member=serviceAccount:$RT --role=roles/iam.serviceAccountTokenCreator
+gcloud iam service-accounts add-iam-policy-binding ${RT} --project=${P} \
+  --member=serviceAccount:${RT} --role=roles/iam.serviceAccountTokenCreator
 
 # Build SA
-gcloud projects add-iam-policy-binding $P --member=serviceAccount:$BUILD --role=roles/run.builder
+gcloud projects add-iam-policy-binding ${P} --member=serviceAccount:${BUILD} --role=roles/run.builder
 ```
 
 Bucket and secret bindings are added in sections 7 and 8. Rules:
@@ -82,12 +84,12 @@ Bucket and secret bindings are added in sections 7 and 8. Rules:
 - The build SA starts with `roles/run.builder` only. Add `artifactregistry.writer`,
   `logging.logWriter` or staging-bucket roles only if a build error names the missing role, and record
   the final set here.
-- Read back: `gcloud projects get-iam-policy $P --flatten=bindings --filter="bindings.members:$RT" --format="value(bindings.role)"`.
+- Read back: `gcloud projects get-iam-policy ${P} --flatten=bindings --filter="bindings.members:${RT}" --format="value(bindings.role)"`.
 
 ## 5. Cloud SQL instance (D-02)
 
 ```bash
-gcloud sql instances create aod-quiz-db --project=$P --region=$REGION \
+gcloud sql instances create aod-quiz-db --project=${P} --region=${REGION} \
   --database-version=POSTGRES_18 --edition=enterprise --tier=db-g1-small \
   --availability-type=zonal --storage-type=SSD --storage-size=10 --storage-auto-increase \
   --backup-start-time=07:00 --retained-backups-count=14 \
@@ -102,7 +104,7 @@ gcloud sql instances create aod-quiz-db --project=$P --region=$REGION \
 - Read back, expecting `ENTERPRISE True True` and empty authorized networks:
 
 ```bash
-gcloud sql instances describe aod-quiz-db --project=$P \
+gcloud sql instances describe aod-quiz-db --project=${P} \
   --format='value(settings.edition,settings.backupConfiguration.enabled,settings.backupConfiguration.pointInTimeRecoveryEnabled,settings.ipConfiguration.sslMode,settings.ipConfiguration.authorizedNetworks,settings.deletionProtectionEnabled)'
 ```
 
@@ -115,15 +117,15 @@ Secret Manager. They are never echoed, never in shell history, never in a file:
 gen() { openssl rand -base64 48 | tr -dc A-Za-z0-9 | head -c 40; }
 
 # Owner password: Andrew-only secret, then set on the built-in postgres user
-PW=$(gen); printf %s "$PW" | gcloud secrets create quiz-db-owner-password --project=$P --data-file=-
-gcloud sql users set-password postgres --instance=aod-quiz-db --project=$P --password="$PW"; unset PW
+PW=$(gen); printf %s "$PW" | gcloud secrets create quiz-db-owner-password --project=${P} --data-file=-
+gcloud sql users set-password postgres --instance=aod-quiz-db --project=${P} --password="$PW"; unset PW
 
 # App roles: create with a generated password and store the full URL secret in the same step
 # (section 7 gives the URL shapes). Do this inside one command so the password never prints.
-gcloud sql databases create alledrops_quiz   --instance=aod-quiz-db --project=$P
-gcloud sql databases create shopify_sessions --instance=aod-quiz-db --project=$P
-gcloud sql users create alledrops_app --instance=aod-quiz-db --project=$P --password="$(gen)"
-gcloud sql users create sessions_app  --instance=aod-quiz-db --project=$P --password="$(gen)"
+gcloud sql databases create alledrops_quiz   --instance=aod-quiz-db --project=${P}
+gcloud sql databases create shopify_sessions --instance=aod-quiz-db --project=${P}
+gcloud sql users create alledrops_app --instance=aod-quiz-db --project=${P} --password="$(gen)"
+gcloud sql users create sessions_app  --instance=aod-quiz-db --project=${P} --password="$(gen)"
 ```
 
 Passwords for the two app roles must be known to build the secret URLs; generate them into a variable
@@ -190,7 +192,7 @@ quiz-session-database-url: postgresql://sessions_app:<PW>@localhost/shopify_sess
 Create every secret from stdin, never from an argument:
 
 ```bash
-printf %s "$VALUE" | gcloud secrets create quiz-database-url --project=$P --data-file=-
+printf %s "$VALUE" | gcloud secrets create quiz-database-url --project=${P} --data-file=-
 ```
 
 `shopify-api-secret` and `shopify-admin-access-token` values come from the Fly app / Dev Dashboard,
@@ -198,8 +200,8 @@ read by Andrew; they are never printed into a transcript. Grant the runtime SA a
 
 ```bash
 for S in quiz-database-url quiz-session-database-url shopify-api-secret shopify-admin-access-token; do
-  gcloud secrets add-iam-policy-binding $S --project=$P \
-    --member=serviceAccount:$RT --role=roles/secretmanager.secretAccessor
+  gcloud secrets add-iam-policy-binding $S --project=${P} \
+    --member=serviceAccount:${RT} --role=roles/secretmanager.secretAccessor
 done
 ```
 
@@ -208,11 +210,11 @@ done
 ## 8. Bucket
 
 ```bash
-gcloud storage buckets create gs://aod-quiz-uploads-prod --project=$P --location=$REGION \
+gcloud storage buckets create gs://aod-quiz-uploads-prod --project=${P} --location=${REGION} \
   --uniform-bucket-level-access --public-access-prevention
 gcloud storage buckets update gs://aod-quiz-uploads-prod --lifecycle-file=lifecycle.json
 gcloud storage buckets add-iam-policy-binding gs://aod-quiz-uploads-prod \
-  --member=serviceAccount:$RT --role=roles/storage.objectAdmin
+  --member=serviceAccount:${RT} --role=roles/storage.objectAdmin
 ```
 
 - Keep the default 7-day soft-delete (Claude's discretion, confirmed with Andrew at 08.1-05). It
@@ -238,10 +240,10 @@ GCS_PROJECT_ID: "aod-production-510006"
 ```
 
 ```bash
-gcloud run deploy alle-drops-quiz-app --project=$P --region=$REGION --source=. \
-  --build-service-account=projects/$P/serviceAccounts/$BUILD \
-  --service-account=$RT \
-  --add-cloudsql-instances=$P:$REGION:aod-quiz-db \
+gcloud run deploy alle-drops-quiz-app --project=${P} --region=${REGION} --source=. \
+  --build-service-account=projects/${P}/serviceAccounts/${BUILD} \
+  --service-account=${RT} \
+  --add-cloudsql-instances=${P}:${REGION}:aod-quiz-db \
   --port=8080 --cpu=1 --memory=2Gi --cpu-boost --concurrency=8 --timeout=120 \
   --min-instances=1 --max-instances=3 --ingress=all --no-invoker-iam-check \
   --env-vars-file=env.yaml \
@@ -256,9 +258,9 @@ follow-up, not part of this phase.
 Read back, do not trust exit codes:
 
 ```bash
-gcloud run services describe alle-drops-quiz-app --region=$REGION --project=$P \
+gcloud run services describe alle-drops-quiz-app --region=${REGION} --project=${P} \
   --format='yaml(spec.template.spec.serviceAccountName,spec.template.metadata.annotations,status.url)'
-gcloud run services describe alle-drops-quiz-app --region=$REGION --project=$P --format=json | grep -c "_SA_KEY"   # must be 0 (no key env var)
+gcloud run services describe alle-drops-quiz-app --region=${REGION} --project=${P} --format=json | grep -c "_SA_KEY"   # must be 0 (no key env var)
 curl -sI "$URL/health"; curl -sI "$URL/quiz-embed" | grep -i content-security-policy
 ```
 
@@ -267,8 +269,8 @@ Also confirm the built image contains no `.env`.
 Rollback (traffic only, instant):
 
 ```bash
-gcloud run revisions list --service=alle-drops-quiz-app --region=$REGION --project=$P
-gcloud run services update-traffic alle-drops-quiz-app --region=$REGION --project=$P --to-revisions=PREV=100
+gcloud run revisions list --service=alle-drops-quiz-app --region=${REGION} --project=${P}
+gcloud run services update-traffic alle-drops-quiz-app --region=${REGION} --project=${P} --to-revisions=PREV=100
 ```
 
 ## 10. Logging exclusion (D-09)
@@ -278,14 +280,14 @@ Cloud Run request logs record the full URL, and the customer-account extension l
 payload shapes need excluding:
 
 ```bash
-gcloud logging sinks update _Default --project=$P \
+gcloud logging sinks update _Default --project=${P} \
   --add-exclusion=name=exclude-token-urls,filter='httpRequest.requestUrl:"token=" OR textPayload:"token="'
 ```
 
 Verify after a request with a dummy token:
 
 ```bash
-gcloud logging read 'httpRequest.requestUrl:"token=" OR textPayload:"token="' --project=$P --freshness=1h --limit=1
+gcloud logging read 'httpRequest.requestUrl:"token=" OR textPayload:"token="' --project=${P} --freshness=1h --limit=1
 ```
 
 Expected: no output. Follow-up (separate issue): switch the extension to an Authorization header so

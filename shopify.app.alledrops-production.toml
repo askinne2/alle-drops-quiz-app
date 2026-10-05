@@ -3,7 +3,7 @@
 
 client_id = "1af0c030f06eea4b8b46d3c006f431d3"
 name = "AlleDrops Quiz Production"
-application_url = "https://alle-drops-quiz-app.fly.dev"
+application_url = "https://alle-drops-quiz-app-502519175239.us-east1.run.app"
 embedded = true
 
 [build]
@@ -25,8 +25,8 @@ scopes = "read_customers,write_customers"
 
 [auth]
 redirect_urls = [
-  "https://alle-drops-quiz-app.fly.dev/auth/callback",
-  "https://alle-drops-quiz-app.fly.dev/auth/shopify/callback",
-  "https://alle-drops-quiz-app.fly.dev/api/auth/callback"
+  "https://alle-drops-quiz-app-502519175239.us-east1.run.app/auth/callback",
+  "https://alle-drops-quiz-app-502519175239.us-east1.run.app/auth/shopify/callback",
+  "https://alle-drops-quiz-app-502519175239.us-east1.run.app/api/auth/callback"
 ]
 
