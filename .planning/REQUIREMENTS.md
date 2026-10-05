@@ -317,7 +317,7 @@ Set by William Miller (AOD medical director) on 2026-08-13. Source of truth for 
   >
   > **What actually remains open is unchanged:** counsel has not approved the consent copy, so the
   > version string is still a `draft-`, not a `v1.0-`. Status stays **Blocked (William / counsel)**.
-- [ ] **LAUNCH-04**: One live quiz submission has been confirmed written to and read back from
+- [x] **LAUNCH-04**: One live quiz submission has been confirmed written to and read back from
   production Cloud SQL, and `DELETE FROM submissions WHERE patient_email = 'diag+preflight@example.com';`
   has been executed (`intel/context.md#open-verification-items`) — owner: Andrew; note this writes a
   PHI row
@@ -421,7 +421,7 @@ Acknowledged, not in the v1.0 roadmap.
 | LAUNCH-01 | Phase 8 | **Klaviyo half closed 2026-08-13** (verified on served bytes, runtime requests, and the Admin pixel registry). Open: the Apntly booking pixel is still registered on the PHI quiz page and needs an explicit keep/remove decision |
 | LAUNCH-02 | Phase 8 | Satisfied (2026-08-12 — live iframe URL carries `test=0`; `enable_test_mode` defaults false in the block schema). Re-confirm on served bytes at go-live |
 | LAUNCH-03 | Phase 8 | Blocked (William / counsel) |
-| LAUNCH-04 | Phase 8 | Pending |
+| LAUNCH-04 | Phase 8 | Complete |
 | LAUNCH-05 | Phase 8 | Blocked (William / counsel) |
 | LAUNCH-06 | Phase 8 | Blocked (client — Gene PTO) |
 | LAUNCH-07 | Phase 8 | Blocked (William — domain spelling) |
