@@ -952,14 +952,14 @@ the runtime service account. Shopify: transfer the existing **Client transfer** 
 `allergist-on-demand` to `hostmaster@alledrops.com`, with no rebuild; AOD enters its own card when
 it accepts; cancel the empty `1mzvmx-tf` store afterwards.
 **Playbook:** `~/Documents/Claude/Projects/AoD/policy-drafts/setup-instructions-for-google-doc.md`
-**Plans:** 4/13 plans executed
+**Plans:** 5/13 plans executed
 
 Plans:
 - [x] 08.1-01-PLAN.md — db.ts socket TLS, gcs.ts ADC-only, trusted XFF consent IP, chunked PDFs (+ tests)
 - [x] 08.1-02-PLAN.md — Prisma sessions to Postgres baseline; Cloud Run Dockerfile, ignore files, Fly packages out, lockfile committed
 - [x] 08.1-03-PLAN.md — e2e script for Cloud Run (GCS round trip, XFF, child-first cleanup), docs/cloud-run.md runbook, dev docs
 - [x] 08.1-04-PLAN.md — local linux/amd64 container smoke over a unix-socket Postgres; PHI log gate; PR1
-- [ ] 08.1-05-PLAN.md — Checkpoint A: Robert's exception, PR1 merged, BAA status, org-policy read-out, tier/soft-delete/connectivity decision
+- [x] 08.1-05-PLAN.md — Checkpoint A: Robert's exception, PR1 merged, BAA status, org-policy read-out, tier/soft-delete/connectivity decision
 - [ ] 08.1-06-PLAN.md — APIs, SAs, IAM; Cloud SQL ENTERPRISE + backups/PITR; roles; [BLOCKING] migrations 001-005 + prisma migrate deploy
 - [ ] 08.1-07-PLAN.md — PHI bucket, Shopify secrets, first Cloud Run deploy from main, token= log exclusion + follow-up issue
 - [ ] 08.1-08-PLAN.md — URL swap to run.app (toml, liquid, extension, docs) + no-fly contract; PR2
