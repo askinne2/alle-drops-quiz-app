@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-04-PLAN.md
-last_updated: "2026-10-05T15:09:17.148Z"
+stopped_at: "08.1-11 Task 2 checkpoint (Shopify store transfer; waiting on Robert legal name/address)"
+last_updated: "2026-10-05T16:02:50.525Z"
 last_activity: 2026-10-05
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 80
-  completed_plans: 74
+  completed_plans: 76
   percent: 67
 ---
 
@@ -22,15 +22,15 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 08.1 — AOD Infrastructure Cutover
-(6 plans / 3 waves); next step is `/gsd:execute-phase 6`. Phase 8's LAUNCH-01 runs in
-parallel and is older than Phase 6 — see "Open Now" below.
+**Current focus:** Phase 08.1 — AOD Infrastructure Cutover. 10 of 13 plans done; the app,
+PHI database and uploads run on Cloud Run / Cloud SQL / GCS in aod-production-510006 under the
+Google Cloud BAA (accepted 2026-10-05). Next: 08.1-11 Task 2 (Shopify store transfer). See HANDOFF.md.
 
 ## Current Position
 
 Phase: 08.1 (AOD Infrastructure Cutover) — EXECUTING
-Plan: 5 of 13
-Status: Ready to execute
+Plan: 11 of 13 (10 complete)
+Status: Paused at 08.1-11 Task 2 human checkpoint — Payments off, AOD legal info (waiting on Robert), send transfer to hostmaster@alledrops.com, AOD accepts
 Last activity: 2026-10-05
 
 **Phase 6 deploy verification (2026-08-13), on served bytes.** Shopify app version
@@ -305,7 +305,7 @@ navigating away and returning. Verdict: "approved."
 Note: STATE.md previously recorded the v51 served length as 195,102 B. The live measurement is
 **195,142 B**; the older figure was wrong and the table above supersedes it.
 
-Progress: [█████████░] 93%
+Progress: [██████████] 95%
 
 Codebase baseline (superseded 2026-08-12 — see "Current Position" above for the live figures;
 retained because the phase narrative below is still accurate): `main` @ `86e6b50`, **677 tests / 47
@@ -722,7 +722,7 @@ likelier abandonment point. Resume persistence is explicitly out of scope.
 
 ## Session Continuity
 
-Last session: 2026-10-05T15:06:58.941Z
+Last session: 2026-10-05T16:02:50.517Z
 Stopped at: Completed 06-04-PLAN.md
 Resume file: None
 
