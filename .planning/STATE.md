@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 06-04-PLAN.md
-last_updated: "2026-10-05T13:02:28.498Z"
-last_activity: 2026-10-05 -- Phase 08.1 planning complete
+last_updated: "2026-10-05T13:55:04.348Z"
+last_activity: 2026-10-05 -- Phase 08.1 execution started
 progress:
   total_phases: 12
   completed_phases: 8
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 08.1: AOD Infrastructure Cutover (Fly to Cloud Run + Cloud SQL/GCS in aod-production-510006; Shopify client-transfer). Next: /gsd:plan-phase 08.1
+**Current focus:** Phase 08.1 — AOD Infrastructure Cutover
 (6 plans / 3 waves); next step is `/gsd:execute-phase 6`. Phase 8's LAUNCH-01 runs in
 parallel and is older than Phase 6 — see "Open Now" below.
 
 ## Current Position
 
-Phase: 08.1 (AOD Infrastructure Cutover) — NOT PLANNED, inserted 2026-10-05
-Plan: 0 of TBD
-Status: Ready to execute
-Last activity: 2026-10-05 -- Phase 08.1 planning complete
+Phase: 08.1 (AOD Infrastructure Cutover) — EXECUTING
+Plan: 1 of 13
+Status: Executing Phase 08.1
+Last activity: 2026-10-05 -- Phase 08.1 execution started
 
 **Phase 6 deploy verification (2026-08-13), on served bytes.** Shopify app version
 **`alledrops-quiz-production-24`** (from `-23`). No Fly deploy — Phase 6 changed no Fly-served code.
