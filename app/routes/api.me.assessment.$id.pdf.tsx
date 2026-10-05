@@ -86,7 +86,6 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="assessment-${id}.pdf"; filename*=UTF-8''assessment-${encodeURIComponent(id)}.pdf`,
-      'Content-Length': String(pdfBuffer.length),
       'Cache-Control': 'no-store',
       ...corsHeaders,
     },
