@@ -12,7 +12,7 @@ function getToken(): string {
   if (!token) {
     console.error('ERROR: SHOPIFY_ADMIN_ACCESS_TOKEN is not set.');
     console.error(
-      'Set it in your environment or pull from Fly: fly secrets list -a alle-drops-quiz-app',
+      'Set it in your environment from Secret Manager: gcloud secrets versions access latest --secret=shopify-admin-access-token --project=aod-production-510006',
     );
     process.exit(1);
   }

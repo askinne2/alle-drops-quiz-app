@@ -1,7 +1,7 @@
 # GCS Lifecycle and Retention — AlleDrops Upload Bucket
 
 **Plan:** 04-17 · **Applied:** 2026-08-10 · **Bucket/project identity source:** `GCS_BUCKET_NAME` /
-`GCS_PROJECT_ID` (Fly secrets), never hardcoded in application source — see
+`GCS_PROJECT_ID` (Cloud Run env, see `docs/cloud-run.md`), never hardcoded in application source — see
 `app/lib/storage/gcs.ts`'s own header comment. This document names the specific dev values in
 effect at the time this plan ran (below), but every value here traces back to those two env vars,
 not to a literal string in code.
@@ -204,8 +204,8 @@ someone to run the SQL/`gcloud storage ls` pair by hand.
 
 This dev lifecycle rule lives on `alledrops-quiz-uploads-dev` in Andrew's `alledrops-quiz` project
 per the interim dev-storage decision (04-UPLOAD-DECISIONS.md §Ratified item 2) — it is not
-production-ready storage and no real patient PHI may transit it until Blockers 2 (Fly.io BAA) and
-3 (AOD GCP project cutover) both clear in Phase 8.
+production-ready storage and no real patient PHI may transit it until the AOD GCP project cutover
+clears. (Cleared in phase 08.1: production uses `aod-quiz-uploads-prod` in `aod-production-510006`; Fly is retired.)
 
 **When the cutover happens, this exact rule — one Delete action, `condition: { age:
 PENDING_OLM_AGE_DAYS, matchesPrefix: ["pending/"] }`, and nothing else — must be re-applied to the

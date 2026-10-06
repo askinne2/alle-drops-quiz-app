@@ -14,20 +14,12 @@ All PHI values and definitions are deleted except for the two allowed non-PHI fl
 Set the Admin API token before running any script:
 
 ```bash
-export SHOPIFY_ADMIN_ACCESS_TOKEN=<token from Fly secrets or password manager>
+export SHOPIFY_ADMIN_ACCESS_TOKEN="$(gcloud secrets versions access latest --secret=shopify-admin-access-token --project=aod-production-510006)"
 export SHOPIFY_SHOP_DOMAIN=allergist-on-demand.myshopify.com  # optional — this is the default
 ```
 
-The token is stored in Fly secrets as `SHOPIFY_ADMIN_ACCESS_TOKEN`. To retrieve it, check your
-password manager (the token was set when the app was first configured).
-
-Alternatively, run scripts inside the Fly app where secrets are already injected:
-
-```bash
-fly ssh console -a alle-drops-quiz-app
-cd /app
-npx tsx scripts/phi-cleanup-inventory.ts
-```
+The token lives in Secret Manager (`shopify-admin-access-token`, project `aod-production-510006`). Read it
+into the variable as above; never echo it or paste it into a file.
 
 ---
 
