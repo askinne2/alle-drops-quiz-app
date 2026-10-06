@@ -351,6 +351,8 @@ Checks:
 
 ## 12. Retirement (order matters)
 
+**Done 2026-10-06 (phase 08.1-13)**, except step 6, which is open and needs Robert. Fly app, volume and Tigris bucket destroyed; dev hygiene applied; dev DB passwords live in dev-project secrets `dev-db-alledrops-dev-password` and `dev-db-alledrops-app-password`. Kept for the record.
+
 1. Gate: LAUNCH-04 e2e passes (`scripts/e2e-test.ts`), the storefront embed is served from Cloud Run,
    and quiz-history is verified in a real customer account. Remove the promoted test objects the
    script prints (`gcloud storage rm -r gs://aod-quiz-uploads-prod/submissions/<id>/`).

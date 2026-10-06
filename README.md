@@ -128,7 +128,6 @@ alle-drops-quiz-app/
 │   └── quiz-history/
 ├── docs/
 ├── prisma/
-├── fly.toml
 └── shopify.app.toml
 ```
 

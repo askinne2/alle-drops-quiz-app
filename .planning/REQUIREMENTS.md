@@ -335,7 +335,7 @@ Set by William Miller (AOD medical director) on 2026-08-13. Source of truth for 
   escalate to Robert
 - [ ] **LAUNCH-07**: The production domain spelling is confirmed with William directly, ownership of
   the registration is established, and DNS plus `fly certs create quiz.<domain>` are configured
-  — ⚠ **blocked on the domain-spelling decision; live `ALLERDROPS®` Class 044 trademark exposure**
+  — ⚠ **blocked on the domain-spelling decision; live `ALLERDROPS®` Class 044 trademark exposure** (after 08.1: custom domain = Cloud Run behind an external Application Load Balancer + certificate; re-run the URL-swap checklist in docs/cloud-run.md)
 - [ ] **LAUNCH-08**: No repo document describes Google Sheets as the live PHI store — correct
   `docs/HIPAA_COMPLIANCE_ANALYSIS.md` and `docs/app-requirements.md`, and keep
   `app/lib/google-sheets.ts` as the throwing tripwire (zero imports, verified 2026-07-29)

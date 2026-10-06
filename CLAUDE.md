@@ -22,7 +22,7 @@ phase, and any open blockers. Use the `/gsd:*` commands to plan and execute; don
 
 A Shopify app that hosts a clinical symptom quiz for **Allergist on Demand (AOD) / AlleDrops** — a telehealth allergy clinic serving patients in **Tennessee and Texas only**. Patients answer the questionnaire, receive a score (bracket: 0–2 / 3–6 / 7+), and depending on bracket are routed to consult / purchase / additional medical history paths.
 
-The app runs on **Google Cloud Run** (`alle-drops-quiz-app`, project `aod-production-510006`, `us-east1`) (Fly.io is scaled to 0 and retired in 08.1-13) and consists of:
+The app runs on **Google Cloud Run** (`alle-drops-quiz-app`, project `aod-production-510006`, `us-east1`) and consists of:
 
 - **Theme App Block extension** (`extensions/quiz-block/`) — embeds the quiz on the storefront as a cross-origin iframe pointing at `https://alle-drops-quiz-app-502519175239.us-east1.run.app`.
 - **Customer Account UI extension** (`extensions/quiz-history/`) — surfaces a ledger of completed assessments to logged-in patients with a Download PDF button. Reads the Cloud Run API with a Bearer token (refactor shipped, see pitfalls).
@@ -169,7 +169,7 @@ Before opening a PR that touches anything in the PHI path, confirm:
 
 ## Common pitfalls
 
-- **`shopify app deploy` does not deploy the Cloud Run service.** It only ships extensions and config to Shopify. Two separate deploy systems: Shopify (`shopify app deploy`) and Fly (`fly deploy`).
+- **`shopify app deploy` does not deploy the Cloud Run service.** It only ships extensions and config to Shopify. Two separate deploy systems: Shopify (`shopify app deploy`) and Cloud Run (`gcloud run deploy`, see `docs/cloud-run.md`).
 - **Customer Account UI extensions only render in Shopify's customer accounts UI** (a different surface than the storefront theme), so they don't pick up theme styles or storefront scripts.
 - ~~**The Customer Account UI extension currently still reads PHI metafields that no longer exist.** It needs refactoring to call the app API instead. Until that's done, the dashboard will show empty state in dev.~~ **RETRACTED 2026-05-08 — this refactor already shipped.** It landed in `ca3c3f4` and was hardened by `f762aaa`. `extensions/quiz-history/src/` contains zero `metafield` references; it calls `GET /api/me/assessments` with a Bearer token. `.planning/REQUIREMENTS.md` records it as DONE-07.
 - **Sessions are stored in Postgres via Prisma** (database `shopify_sessions`, role `sessions_app`). PHI submissions are in the separate `alledrops_quiz` database. Two distinct stores, do not conflate.
