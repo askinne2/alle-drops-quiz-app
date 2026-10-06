@@ -1,214 +1,45 @@
-# AlleDrops Quiz App Requirements
+# AlleDrops Quiz App: Requirements (current)
 
-## Overview
+Rewritten 2026-10-06 (LAUNCH-08). Earlier versions of this file described Google Sheets as the store for full
+intake data and Shopify metafields holding quiz scores. **Both are wrong and must never come back.** The
+authoritative rules are the compliance block at the top of `CLAUDE.md`. Detailed requirements live in
+`.planning/REQUIREMENTS.md`.
 
-The AlleDrops app now serves a clinical intake flow, not the legacy regional quiz. The current requirements are:
+## What the app does
 
-- Gate the quiz to patients whose primary address is in Tennessee or Texas
-- Collect required patient information before the questionnaire begins
-- Render the clinical questionnaire in ordered parts
-- Calculate the quiz score and map it into the current clinical brackets:
-  - `0-2`
-  - `3-6`
-  - `7+`
-- Route patients through the correct next step:
-  - consultation guidance
-  - product continuation
-  - allergy testing / medical history / consent flow
-- Store summary data in Shopify customer metafields
-- Send the full intake payload to Google Sheets
+- Gates the quiz to patients whose primary address is in Tennessee or Texas.
+- Collects patient identity, the allergy-testing split with required uploads, the clinical questionnaire,
+  and mandatory medical history, then consent.
+- Scores the questionnaire into the clinical brackets `0-2`, `3-8`, `9+` (Phase 5.2) and shows the
+  Preliminary Score page. Results link to the $99 telehealth consult (`/products/allergy-consultation`,
+  booked through the Appointly app in the store) or to the TN/TX product pages.
+- Lets logged-in patients see their completed assessments and download PDFs (Customer Account extension).
+- Gives providers an embedded admin (`/app/quiz-results`) with the submissions table, detail, files and PDFs.
 
-## Current Clinical Flow
+## Where data goes
 
-### Frontend requirements
+| Data | Store |
+|---|---|
+| Full submission (identity, answers, score, bracket, history, consent) | Cloud SQL Postgres `alledrops_quiz` in `aod-production-510006` (Google Cloud BAA) |
+| Uploaded test-result files | GCS `aod-quiz-uploads-prod`, server-side only; downloads are `attachment` |
+| Shopify customer metafields | Non-PHI only: `alledrops.last_completed_at`, `alledrops.quiz_count` |
+| Shopify app sessions | Cloud SQL Postgres `shopify_sessions` (Prisma) |
+| Google Sheets / Drive / Docs | **Never.** `app/lib/google-sheets.ts` is a tripwire that throws if called; nothing imports it |
 
-- `StateGate` must be the first decision point
-- `PatientInfoStep` must collect:
-  - name
-  - DOB
-  - email
-  - phone
-- `QuizPartRenderer` must render Parts 1-5 of the clinical questionnaire from `app/lib/quiz/questions.ts`
-- `ResultsDisplay` must branch by score bracket, not by legacy severity labels
-- Patients in the `7+` branch can continue into Part 6 medical history and `ConsentStep`
-- `QuizContainer` owns the end-to-end state machine and submits the final payload
+## Routes
 
-### Backend requirements
+- `POST /api/quiz/submit`, `POST /api/quiz/upload`: storefront quiz (embedded as a cross-origin iframe from `/quiz-embed`).
+- `GET /api/me/assessments`, `/api/me/assessment/:id/pdf`, `/api/me/assessment/:id/files/:fileId`: patient, JWT Bearer, ownership-checked.
+- `GET /api/admin/submissions`, `/api/admin/submission/:id` (+ file, PDF): provider, Shopify session auth.
 
-`POST /api/quiz/submit` must accept the live `QuizSubmissionData` shape:
+## Key files
 
-```json
-{
-  "state": "tennessee",
-  "name": "Jane Patient",
-  "dob": "1990-05-14",
-  "email": "jane@example.com",
-  "phone": "6155551212",
-  "symptom_profile_id": "AOD_1764505955675",
-  "quiz_score": 8,
-  "score_bracket": "7+",
-  "quiz_date": "2026-04-23T14:30:00.000Z",
-  "completion_time": 412,
-  "answers": {
-    "symptoms_nasal": ["sneezing", "runny_nose"]
-  },
-  "personal_history": ["asthma"],
-  "family_history": ["rhinitis"]
-}
-```
+- `app/routes/`: the routes above, plus `quiz-embed.tsx` and `app.quiz-results.tsx`.
+- `app/lib/submissions.ts`, `app/lib/db.ts`: PHI reads and writes (ownership-bounded helpers).
+- `app/lib/storage/gcs.ts`: uploads (ADC only, no key).
+- `app/lib/shopify/metafields.ts`: the two non-PHI metafields, nothing else.
+- `app/components/quiz/`: the quiz UI. `migrations/001`-`005`: schema.
 
-Required behavior:
+## Infrastructure
 
-- Validate `state` as `tennessee` or `texas`
-- Validate patient identity/contact fields
-- Validate `score_bracket` as `0-2`, `3-6`, or `7+`
-- Never write DOB into Shopify customer metafields
-- Write summary quiz data to Shopify
-- Write the full intake record to Google Sheets
-
-## App Architecture
-
-```text
-AlleDrops Quiz App
-├── Frontend
-│   ├── Theme app block for quiz embedding
-│   ├── React clinical questionnaire
-│   └── Results + consent flows
-├── Backend
-│   ├── /api/quiz/submit
-│   ├── Shopify customer + metafield helpers
-│   └── Google Sheets submission helper
-├── Admin
-│   ├── /app
-│   ├── /app/quiz
-│   └── /app/quiz-results
-└── Data
-    ├── Shopify customer metafields (summary)
-    └── Google Sheets (full submission payload)
-```
-
-## Key Files
-
-### Frontend
-
-- `app/components/quiz/QuizContainer.tsx`
-- `app/components/quiz/StateGate.tsx`
-- `app/components/quiz/PatientInfoStep.tsx`
-- `app/components/quiz/QuizPartRenderer.tsx`
-- `app/components/quiz/ConsentStep.tsx`
-- `app/components/quiz/ResultsDisplay.tsx`
-- `app/components/quiz/QuizProgress.tsx`
-- `app/lib/quiz/questions.ts`
-- `app/lib/quiz/scoring.ts`
-- `app/lib/quiz/types.ts`
-- `app/styles/quiz.module.css`
-
-### Backend
-
-- `app/routes/api.quiz.submit.tsx`
-- `app/lib/quiz-validation.ts`
-- `app/lib/google-sheets.ts`
-- `app/lib/shopify/customers.ts`
-- `app/lib/shopify/metafields.ts`
-
-### Admin
-
-- `app/routes/app._index.tsx`
-- `app/routes/app.quiz.tsx`
-- `app/routes/app.quiz-results.tsx`
-
-## Data Storage Strategy
-
-### Shopify metafields
-
-Namespace: `alledrops`
-
-| Key | Type | Purpose |
-|-----|------|---------|
-| `symptom_profile_id` | `single_line_text_field` | Opaque profile identifier |
-| `quiz_score` | `number_integer` | Numeric total score |
-| `state` | `single_line_text_field` | `tennessee` or `texas` |
-| `score_bracket` | `single_line_text_field` | `0-2`, `3-6`, or `7+` |
-| `quiz_date` | `date_time` | Submission timestamp |
-| `quiz_history` | `json` | Array of prior attempts |
-
-`quiz_history` entries use `profile_id`, `date`, `score`, `score_bracket`, and `state`. Legacy records may still contain `severity` and `region`, and some older customers may still have top-level `severity_level` / `quiz_region` metafields.
-
-### Google Sheets
-
-Google Sheets stores the full intake data:
-
-- profile ID
-- patient info
-- state
-- score
-- score bracket
-- completion time
-- full answers JSON
-- optional personal and family history arrays
-
-## Current Status Checklist
-
-### Backend
-
-- [x] Validate the live clinical payload
-- [x] Find or create Shopify customers
-- [x] Read and update `alledrops` customer metafields
-- [x] Store `state` and `score_bracket`
-- [x] Preserve quiz history with legacy fallback support
-- [x] Submit the full response to Google Sheets
-
-### Frontend
-
-- [x] Tennessee/Texas state gate
-- [x] Patient info step with 18+ validation
-- [x] Clinical questionnaire parts 1-5
-- [x] Score bracket results for `0-2`, `3-6`, `7+`
-- [x] Optional Part 6 medical history for higher-score flow
-- [x] Consent step before final submission where required
-- [x] Theme app block integration
-
-### Admin
-
-- [x] Admin home page
-- [x] Quiz results list
-- [x] Search by name, email, or profile ID
-- [x] Filtering by score bracket, state, and date range
-- [ ] Customer detail drill-down
-- [ ] Export workflow
-
-### Verification and launch
-
-- [ ] Confirm Google Sheets deployment is current
-- [ ] Run end-to-end storefront tests for TN and TX
-- [ ] Verify Shopify customer metafields on fresh submissions
-- [ ] Verify legacy fallback display remains readable in admin
-- [ ] Keep app block pointed at the app endpoint instead of any legacy proxy
-
-## Data Flow
-
-```text
-StateGate
-  ↓
-PatientInfoStep
-  ↓
-Quiz Parts 1-5
-  ↓
-Score calculation + score bracket
-  ↓
-ResultsDisplay
-  ↓
-Optional Part 6 medical history + ConsentStep
-  ↓
-POST /api/quiz/submit
-  ↓
-Shopify metafields + Google Sheets
-```
-
-## Resources
-
-- [Shopify App Development](https://shopify.dev/docs/apps)
-- [React Router + Shopify](https://shopify.dev/docs/apps/tools/cli/react-router)
-- [Customer Account UI Extensions](https://shopify.dev/docs/api/customer-account-ui-extensions)
-- [Admin API GraphQL](https://shopify.dev/docs/api/admin-graphql)
-- [Polaris Design System](https://polaris.shopify.com/)
+Cloud Run `alle-drops-quiz-app` in `aod-production-510006`, `us-east1`. Runbook: `docs/cloud-run.md`.
