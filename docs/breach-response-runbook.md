@@ -12,9 +12,9 @@ Under HIPAA, a "breach" is unauthorized access, use, disclosure, or loss of unse
 Treat **any** of the following as a potential breach until confirmed otherwise:
 
 - Unauthorized access to Cloud SQL (alledrops_quiz_dev or prod)
-- PHI appearing in Fly.io logs, error messages, or any system not in our BAA chain
+- PHI appearing in Cloud Logging (Cloud Run logs), error messages, or any system not in our BAA chain
 - PHI written to Shopify metafields, Shopify Admin API, Google Sheets, or Google Drive
-- Lost or stolen device with access to Cloud SQL credentials or Fly secrets
+- Lost or stolen device with access to Cloud SQL credentials or Secret Manager secrets
 - Compromised Shopify Admin token (SHOPIFY_ADMIN_ACCESS_TOKEN)
 - Compromised DATABASE_URL secret
 - Accidental public commit of secrets
@@ -31,9 +31,9 @@ Treat **any** of the following as a potential breach until confirmed otherwise:
    ORDER BY created_at;
    ```
 2. **Revoke compromised credentials immediately.**
-   - Fly secret: `fly secrets set DATABASE_URL="..." -a alle-drops-quiz-app` (rotate the password in Cloud SQL first, then update Fly)
+   - Database: rotate the password in Cloud SQL first (`gcloud sql users set-password ...`), then pipe the new URL into Secret Manager without echoing it (`gcloud secrets versions add quiz-database-url --data-file=- --project=aod-production-510006`), then roll a new revision so it is picked up (`gcloud run services update alle-drops-quiz-app --region=us-east1 --project=aod-production-510006 --update-secrets=DATABASE_URL=quiz-database-url:latest`). Same pattern for `shopify-admin-access-token` and `shopify-api-secret`. Full commands: `docs/cloud-run.md`.
    - Shopify token: Shopify Partners → App → API credentials → rotate
-3. **Preserve evidence.** Export Fly logs before they roll: `fly logs -a alle-drops-quiz-app > breach-logs-$(date +%Y%m%d).txt`
+3. **Preserve evidence.** Export Cloud Run logs before retention expires: `gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="alle-drops-quiz-app"' --project=aod-production-510006 --freshness=30d --format=json > breach-logs-$(date +%Y%m%d).json`. Store the export only inside AOD's BAA-covered systems; it may contain PHI-adjacent data.
 4. **Do not delete data.** HIPAA requires a 6-year retention minimum.
 
 ---
@@ -71,7 +71,7 @@ If any factor points toward unauthorized access of real patient data: **proceed 
 - Submit at: https://www.hhs.gov/hipaa/for-professionals/breach-notification/breach-reporting/index.html
 
 **Business Associate notification (if applicable):**
-- If Fly.io or Google Cloud is the source, notify them per their BAA terms.
+- If Google Cloud is the source, notify Google per the Google Cloud BAA (accepted 2026-10-05 on aod-production-510006).
 
 ---
 
@@ -100,15 +100,14 @@ Store in: AOD's designated HIPAA records location (TBD — William to designate)
 | Engineering | Andrew Skinner | andrew@21adsmedia.com |
 | In-house counsel | TBD | TBD |
 | HHS OCR | — | https://www.hhs.gov/hipaa/filing-a-complaint/index.html |
-| Fly.io security | — | security@fly.io |
 | Google Cloud | — | cloud.google.com/support |
 
 ---
 
 ## Prevention checklist (run after any incident)
 
-- [ ] Rotate all Fly secrets: DATABASE_URL, SHOPIFY_ADMIN_ACCESS_TOKEN, SHOPIFY_API_SECRET
-- [ ] Audit Fly log retention settings — confirm request bodies are not logged
+- [ ] Rotate all Secret Manager secrets in aod-production-510006: `quiz-database-url`, `quiz-session-database-url`, `shopify-admin-access-token`, `shopify-api-secret`, and roll a new Cloud Run revision
+- [ ] Audit Cloud Logging: retention, the `exclude-token-urls` exclusion on `_Default`, and confirm request bodies are not logged
 - [ ] Run `npx tsx scripts/phi-cleanup-verify.ts` — confirm no PHI in Shopify metafields
 - [ ] Audit `submission_access_log` for anomalous patterns
 - [ ] Review Cloud SQL authorized networks — remove any stale IP entries

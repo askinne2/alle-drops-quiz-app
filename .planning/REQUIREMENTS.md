@@ -328,7 +328,7 @@ Set by William Miller (AOD medical director) on 2026-08-13. Source of truth for 
   name, and HIPAA workforce training is complete
   (`CON-baa-chain-required-for-every-phi-surface`, `CON-legal-content-prerequisites-before-first-patient`)
   — owner: William / counsel
-- [ ] **LAUNCH-06**: Production runs on AOD-owned infrastructure — AOD Google Workspace (BAA opted
+- [x] **LAUNCH-06**: Production runs on AOD-owned infrastructure — AOD Google Workspace (BAA opted
   in), AOD Shopify (Basic/Grow, ~$30/mo), Andrew granted admin on both, Cloud SQL migrated off the
   cross-client *Beautiful Rescues* billing account, and the Shopify site transferred
   (`DEC-migrate-phi-to-aod-owned-gcp-under-baa`) — owner: William; currently blocked on Gene (PTO),
@@ -423,7 +423,7 @@ Acknowledged, not in the v1.0 roadmap.
 | LAUNCH-03 | Phase 8 | Blocked (William / counsel) |
 | LAUNCH-04 | Phase 8 | Complete |
 | LAUNCH-05 | Phase 8 | Blocked (William / counsel) |
-| LAUNCH-06 | Phase 8 | Blocked (client — Gene PTO) |
+| LAUNCH-06 | Phase 08.1 | Complete (2026-10-06) |
 | LAUNCH-07 | Phase 8 | Blocked (William — domain spelling) |
 | LAUNCH-08 | Phase 8 | Pending |
 
