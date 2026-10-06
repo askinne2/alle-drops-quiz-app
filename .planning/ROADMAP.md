@@ -934,7 +934,7 @@ exposures today.
 | 4. Mandatory Allergy Testing | 19/19 | Complete   | 2026-08-10 |
 | 5. Preliminary Score Page | 6/6 | Complete   | 2026-08-11 |
 | 5.2 Clinical Bracket Revision *(INSERTED)* | 5/5 | Complete | 2026-08-13 |
-| 6. Purchase Prerequisites | 2/6 | Executing | - |
+| 6. Purchase Prerequisites | 6/6 | Plans complete 2026-08-13; SHOP-05/06 open (AOD-owned) | - |
 | 7. Telehealth Intake Path | 0/0 | Complete (no plans; store config + descope) | 2026-10-06 |
 | 8. Launch Readiness | 0/TBD | Not started | - |
 

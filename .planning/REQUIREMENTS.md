@@ -92,7 +92,7 @@ Shipped and confirmed by the 2026-07-29 audit. Not part of v1.0 phase coverage.
   (`REQ-mandatory-allergy-testing-split`)
 - [x] **TEST-03**: "I've already had allergy testing" collects Year, Location, and "What Allergens
   Did You React To?", persisted into `answers_json` (`REQ-mandatory-allergy-testing-split`)
-- [ ] **TEST-04**: The `had_testing` branch requires the patient to upload at least one copy of
+- [x] **TEST-04**: The `had_testing` branch requires the patient to upload at least one copy of
   their allergy test results before they can continue — no optional-with-email-fallback (D-02). The
   upload allowlist is PDF, JPEG, PNG, and HEIC, with multiple files per submission supported (D-03).
   Uploaded files never touch Shopify and never leave the BAA chain (D-04). Files must be retrievable
@@ -339,7 +339,7 @@ Set by William Miller (AOD medical director) on 2026-08-13. Source of truth for 
 - [ ] **LAUNCH-07**: The production domain spelling is confirmed with William directly, ownership of
   the registration is established, and DNS plus `fly certs create quiz.<domain>` are configured
   — ⚠ **blocked on the domain-spelling decision; live `ALLERDROPS®` Class 044 trademark exposure** (after 08.1: custom domain = Cloud Run behind an external Application Load Balancer + certificate; re-run the URL-swap checklist in docs/cloud-run.md)
-- [ ] **LAUNCH-08**: No repo document describes Google Sheets as the live PHI store — correct
+- [x] **LAUNCH-08**: No repo document describes Google Sheets as the live PHI store — correct
   `docs/HIPAA_COMPLIANCE_ANALYSIS.md` and `docs/app-requirements.md`, and keep
   `app/lib/google-sheets.ts` as the throwing tripwire (zero imports, verified 2026-07-29)
 
@@ -399,7 +399,7 @@ Acknowledged, not in the v1.0 roadmap.
 | TEST-01 | Phase 4 | Complete |
 | TEST-02 | Phase 4 | Complete |
 | TEST-03 | Phase 4 | Complete |
-| TEST-04 | Phase 4 | Pending |
+| TEST-04 | Phase 4 | Complete (2026-10-06 reconciliation) — plan 04-19 never got a SUMMARY, but its substance landed later: migration 004 is applied in prod, and 08.1-10 proved upload → promotion → patient ledger file download → admin on Cloud Run (e2e + Andrew's manual run with an image). Inline-in-PDF rendering was not separately re-verified there |
 | TEST-05 | Phase 4 | Complete |
 | TEST-06 | Phase 8 (reassigned 2026-08-09 from Phase 4 — content is Shopify Admin-managed, not in either repo; see requirement note) | Pending |
 | TEST-07 | Phase 4 | Complete |
@@ -428,7 +428,7 @@ Acknowledged, not in the v1.0 roadmap.
 | LAUNCH-05 | Phase 8 | Blocked (William / counsel) |
 | LAUNCH-06 | Phase 08.1 | Complete (2026-10-06) |
 | LAUNCH-07 | Phase 8 | Blocked (William — domain spelling) |
-| LAUNCH-08 | Phase 8 | Pending |
+| LAUNCH-08 | Phase 8 | Complete (2026-10-06: both docs rewritten; tripwire kept, zero imports) |
 
 ## Removed Requirements
 
