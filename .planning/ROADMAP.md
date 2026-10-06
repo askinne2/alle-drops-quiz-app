@@ -29,7 +29,7 @@ clinical copy, BAAs, and the handoff to AOD-owned infrastructure. Go-live requir
 - [x] **Phase 5: Preliminary Score Page** - Retitle, review copy, derived ceiling, severity scale (completed 2026-08-11)
 - [x] **Phase 5.2: Clinical Bracket Revision** *(INSERTED)* - Medical director moved the brackets to 0–2 / 3–8 / 9+; new recommendation copy, no `/60` denominator (URGENT — must precede Phase 6 Wave 2)
 - [ ] **Phase 6: Purchase Prerequisites** - Honor-system checkboxes and returning-patient state
-- [ ] **Phase 7: Telehealth Intake Path** - Booking-capable consult page and telehealth branching
+- [x] **Phase 7: Telehealth Intake Path** - Booking-capable consult page and telehealth branching (closed 2026-10-06: booking via Appointly; TELE-02 descoped, quiz-first flow)
 - [ ] **Phase 8: Launch Readiness** - Trackers, clinical copy, BAAs, AOD infrastructure handoff
 
 ## Sequencing Constraints (hard — from the code audit, not preferences)
@@ -782,7 +782,11 @@ pre-appointment paperwork rather than a SLIT recommendation
 
 **Plans**: TBD
 **UI hint**: yes
-**Notes**: ~1.5–2 days. TELE-01 is storefront plus scheduling-app configuration and depends on the
+**Closed 2026-10-06 without plans.** TELE-01 is met by the Appointly booking app on `/products/allergy-consultation`,
+which the quiz CTA already targets. TELE-02 descoped by Andrew: patients take the quiz first, then book, so there is no
+separate telehealth intake to record or brand.
+
+**Notes** (original): ~1.5–2 days. TELE-01 is storefront plus scheduling-app configuration and depends on the
 AOD Shopify account existing (LAUNCH-06) if it is to be built on AOD's store rather than the
 current one. `/pages/consult` is also the target of one of Phase 1's four fixed redirects — fixing
 the mechanism (DEF-02) does not make the destination exist. Requires a migration plus a validator
@@ -931,7 +935,7 @@ exposures today.
 | 5. Preliminary Score Page | 6/6 | Complete   | 2026-08-11 |
 | 5.2 Clinical Bracket Revision *(INSERTED)* | 5/5 | Complete | 2026-08-13 |
 | 6. Purchase Prerequisites | 2/6 | Executing | - |
-| 7. Telehealth Intake Path | 0/TBD | Not started | - |
+| 7. Telehealth Intake Path | 0/0 | Complete (no plans; store config + descope) | 2026-10-06 |
 | 8. Launch Readiness | 0/TBD | Not started | - |
 
 ### Phase 08.1: AOD Infrastructure Cutover: port the app Fly to Cloud Run, Cloud SQL and GCS in AOD aod-production-510006, then Shopify client-transfer of the existing store (INSERTED)

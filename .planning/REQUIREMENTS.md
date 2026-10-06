@@ -253,10 +253,13 @@ Set by William Miller (AOD medical director) on 2026-08-13. Source of truth for 
 
 ### Telehealth Intake Path
 
-- [ ] **TELE-01**: `/pages/consult` resolves and a patient can actually book the $99 telehealth
+- [x] **TELE-01**: `/pages/consult` resolves and a patient can actually book the $99 telehealth
   consultation, with format details present (duration, video vs phone, what the allergist can
-  prescribe) (`REQ-consult-landing-page`) — **blocks TELE-02**
-- [ ] **TELE-02**: A persisted field distinguishes SLIT from telehealth intake, and telehealth
+  prescribe) (`REQ-consult-landing-page`) — **DONE 2026-10-06:** booking runs in the store through the Appointly app at
+  `/products/allergy-consultation`; the quiz consult CTA already targets it (`ResultsDisplay.tsx` `getConsultUrl`,
+  `redirects.ts`). `/pages/consult` is retired as a destination. Confirmed by Andrew; not fetched by Claude (password page).
+- [x] ~~**TELE-02**~~ **DESCOPED 2026-10-06 (Andrew):** the flow is quiz-first, so every patient takes the quiz before
+  booking and no separate telehealth intake path exists. Original text: A persisted field distinguishes SLIT from telehealth intake, and telehealth
   patients see the Preliminary Score with the pre-appointment closing copy about Dr. Sullivan
   reviewing their information, not the SLIT copy (`REQ-telehealth-intake-path`)
 
@@ -416,8 +419,8 @@ Acknowledged, not in the v1.0 roadmap.
 | SHOP-04 | Phase 6 | Complete |
 | SHOP-05 | Phase 6 | Pending — draft ready (`06-SHOP-05-COPY-DRAFT.md`); closes when William pastes and the refund policy is written |
 | SHOP-06 | Phase 6 | Pending — checklist drafted (`06-SHOP-06-FULFILLMENT-PROCESS.md`); closes on AOD adoption |
-| TELE-01 | Phase 7 | Pending |
-| TELE-02 | Phase 7 | Pending |
+| TELE-01 | Phase 7 | Complete (2026-10-06, Appointly in store) |
+| TELE-02 | Phase 7 | Descoped (2026-10-06, quiz-first flow) |
 | LAUNCH-01 | Phase 8 | **Klaviyo half closed 2026-08-13** (verified on served bytes, runtime requests, and the Admin pixel registry). Open: the Apntly booking pixel is still registered on the PHI quiz page and needs an explicit keep/remove decision |
 | LAUNCH-02 | Phase 8 | Satisfied (2026-08-12 — live iframe URL carries `test=0`; `enable_test_mode` defaults false in the block schema). Re-confirm on served bytes at go-live |
 | LAUNCH-03 | Phase 8 | Blocked (William / counsel) |
