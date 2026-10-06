@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: milestone_complete
-stopped_at: Milestone complete (Phase 08.1 was final phase)
+status: phase_complete
+stopped_at: "Phase 08.1 complete 2026-10-06; milestone NOT complete: phases 6, 7, 8 still open"
 last_updated: 2026-10-06T10:01:48.840Z
-last_activity: 2026-10-05
+last_activity: 2026-10-06
 progress:
   total_phases: 12
   completed_phases: 8
@@ -22,15 +22,15 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Milestone complete
-PHI database and uploads run on Cloud Run / Cloud SQL / GCS in aod-production-510006 under the
-Google Cloud BAA (accepted 2026-10-05). 08.1-11 Task 2: store transfer sent 2026-10-05, waiting on AOD (Robert) to accept. See HANDOFF.md.
+**Current focus:** Phase 08.1 COMPLETE (2026-10-06): app, PHI database and uploads on Cloud Run / Cloud SQL / GCS in
+aod-production-510006 under the Google Cloud BAA; store transferred to AOD (accepted 2026-10-05); Fly destroyed. Milestone
+is NOT complete: phases 6, 7 and 8 remain open. See HANDOFF.md.
 
 ## Current Position
 
 Phase: 08.1
-Plan: Not started
-Status: Milestone complete
+Plan: 13 of 13 complete
+Status: Phase 08.1 complete; milestone open (phases 6, 7, 8)
 Last activity: 2026-10-06
 
 **Phase 6 deploy verification (2026-08-13), on served bytes.** Shopify app version
