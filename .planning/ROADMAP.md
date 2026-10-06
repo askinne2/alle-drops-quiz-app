@@ -952,7 +952,7 @@ the runtime service account. Shopify: transfer the existing **Client transfer** 
 `allergist-on-demand` to `hostmaster@alledrops.com`, with no rebuild; AOD enters its own card when
 it accepts; cancel the empty `1mzvmx-tf` store afterwards.
 **Playbook:** `~/Documents/Claude/Projects/AoD/policy-drafts/setup-instructions-for-google-doc.md`
-**Plans:** 10/13 plans executed
+**Plans:** 13/13 plans complete
 
 Plans:
 - [x] 08.1-01-PLAN.md — db.ts socket TLS, gcs.ts ADC-only, trusted XFF consent IP, chunked PDFs (+ tests)
@@ -965,6 +965,6 @@ Plans:
 - [x] 08.1-08-PLAN.md — URL swap to run.app (toml, liquid, extension, docs) + no-fly contract; PR2
 - [x] 08.1-09-PLAN.md — shopify app deploy (alledrops-production) + theme app_url swap
 - [x] 08.1-10-PLAN.md — LAUNCH-04 e2e on Cloud Run, log audit, human surface checks, Fly scaled to 0
-- [ ] 08.1-11-PLAN.md — Checkpoint B: pre-transfer app measurement, Payments off, send transfer, AOD accepts
-- [ ] 08.1-12-PLAN.md — post-transfer app/token check (+ reinstall fallback), storefront check, cancel 1mzvmx-tf
-- [ ] 08.1-13-PLAN.md — destroy Fly + Tigris, dev-project hygiene (keep project), repo/doc cleanup; PR3
+- [x] 08.1-11-PLAN.md — Checkpoint B: pre-transfer app measurement, Payments off, send transfer, AOD accepts
+- [x] 08.1-12-PLAN.md — post-transfer app/token check (+ reinstall fallback), storefront check, cancel 1mzvmx-tf
+- [x] 08.1-13-PLAN.md — destroy Fly + Tigris, dev-project hygiene (keep project), repo/doc cleanup; PR3

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: "08.1-11 Task 2 checkpoint (transfer SENT to info@allergistondemand.com 2026-10-05; waiting on AOD to accept)"
-last_updated: "2026-10-05T17:00:00.000Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 08.1 was final phase)
+last_updated: 2026-10-06T10:01:48.840Z
 last_activity: 2026-10-05
 progress:
   total_phases: 12
   completed_phases: 8
   total_plans: 80
-  completed_plans: 76
+  completed_plans: 79
   percent: 67
 ---
 
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-07-29)
 
 **Core value:** A patient in TN or TX can complete a clinical intake Dr. Sullivan can treat from, on
 AOD-owned infrastructure, without PHI leaving the BAA chain.
-**Current focus:** Phase 08.1 — AOD Infrastructure Cutover. 10 of 13 plans done; the app,
+**Current focus:** Milestone complete
 PHI database and uploads run on Cloud Run / Cloud SQL / GCS in aod-production-510006 under the
 Google Cloud BAA (accepted 2026-10-05). 08.1-11 Task 2: store transfer sent 2026-10-05, waiting on AOD (Robert) to accept. See HANDOFF.md.
 
 ## Current Position
 
-Phase: 08.1 (AOD Infrastructure Cutover) — EXECUTING
-Plan: 11 of 13 (10 complete)
-Status: Paused at 08.1-11 Task 2 human checkpoint — Payments off, apps + distribution recorded, transfer SENT to info@allergistondemand.com (2026-10-05); waiting on Robert to accept (plan + AOD card), then add legal name/address himself
-Last activity: 2026-10-05
+Phase: 08.1
+Plan: Not started
+Status: Milestone complete
+Last activity: 2026-10-06
 
 **Phase 6 deploy verification (2026-08-13), on served bytes.** Shopify app version
 **`alledrops-quiz-production-24`** (from `-23`). No Fly deploy — Phase 6 changed no Fly-served code.
@@ -385,7 +385,7 @@ Andrew clicking. The tally is now six. Keep the human browser pass.
 
 **Velocity:**
 
-- Total plans completed: 11
+- Total plans completed: 24
 - Average duration: —
 - Total execution time: 0 hours
 
@@ -395,6 +395,7 @@ Andrew clicking. The tally is now six. Keep the human browser pass.
 |-------|-------|-------|----------|
 | 01 | 6 | - | - |
 | 2 | 4 | - | - |
+| 08.1 | 13 | - | - |
 
 **Recent Trend:** No data yet.
 | Phase 03 P01 | 45min | 3 tasks | 5 files |
