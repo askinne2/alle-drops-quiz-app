@@ -3,6 +3,8 @@
  * Migrated from Cloudflare Worker findOrCreateCustomer()
  */
 
+import { reportError, reportShopifyUserErrors } from "../error-reporting.server";
+
 export interface Customer {
   id: string;
   email: string;
@@ -70,13 +72,13 @@ export async function findOrCreateCustomer(
     const createData = await createResponse.json();
 
     if (createData.data?.customerCreate?.userErrors?.length > 0) {
-      console.error("Customer creation errors:", createData.data.customerCreate.userErrors);
+      reportShopifyUserErrors("shopify.customerCreate", createData.data.customerCreate.userErrors);
       return null;
     }
 
     return createData.data?.customerCreate?.customer || null;
   } catch (error) {
-    console.error("Error in findOrCreateCustomer:", error);
+    reportError(error, { source: "shopify.findOrCreateCustomer" });
     throw error;
   }
 }

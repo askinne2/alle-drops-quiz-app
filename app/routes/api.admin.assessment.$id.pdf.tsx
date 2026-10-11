@@ -3,6 +3,7 @@ import { authenticate } from '../shopify.server'
 import { getSubmissionByIdForAdmin, logSubmissionAccess } from '../lib/submissions'
 import type { SubmissionFullRow } from '../lib/submissions'
 import { generateVisitSummaryPdf } from '../lib/pdf'
+import { reportError } from '../lib/error-reporting.server'
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   let shop: string
@@ -46,11 +47,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   try {
     pdfBuffer = await generateVisitSummaryPdf(row)
   } catch (err) {
-    console.error(
-      '[admin-pdf] generation error for submission',
-      id,
-      err instanceof Error ? err.message : 'unknown'
-    )
+    reportError(err, { source: 'admin.pdf.generate', request, params, status: 500 })
     return new Response(JSON.stringify({ error: 'Could not generate PDF' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -59,7 +56,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 
   console.log(`[admin] generated PDF id=${id} shop=${shop}`)
   logSubmissionAccess({ submission_id: id, actor_shop: shop, action: 'pdf' }).catch(
-    (err) => console.error('[admin] access log write failed:', err)
+    (err) => reportError(err, { source: 'admin.accessLog', request, params })
   )
 
   return new Response(new Uint8Array(pdfBuffer), {

@@ -17,6 +17,7 @@
  * value computed here is the single source of truth.
  */
 import pg from "pg";
+import { reportError } from "./error-reporting.server";
 
 const { Pool } = pg;
 
@@ -56,7 +57,7 @@ export function getPool(): pg.Pool {
   });
 
   _pool.on("error", (err) => {
-    console.error("[db] unexpected pool error:", err);
+    reportError(err, { source: "db.pool" });
   });
 
   return _pool;
@@ -69,7 +70,7 @@ export async function pingDatabase(): Promise<boolean> {
     await pool.query("SELECT 1");
     return true;
   } catch (err) {
-    console.error("[db] ping failed:", err);
+    reportError(err, { source: "db.ping" });
     return false;
   }
 }

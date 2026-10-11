@@ -20,6 +20,7 @@ import { authenticate } from '../shopify.server'
 import { getSubmissionByIdForAdmin, logSubmissionAccess } from '../lib/submissions'
 import { getSubmissionFileForAdmin } from '../lib/submission-files'
 import { getSignedReadUrl } from '../lib/storage/gcs'
+import { reportError } from '../lib/error-reporting.server'
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   // ── 1. Verify admin session — throws Response on failure ──────────────────
@@ -80,7 +81,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   // ── 4. ID-only audit trail, fire-and-forget ────────────────────────────────
   console.log(`[admin] fetched file id=${fileId} submission=${id} shop=${shop}`)
   logSubmissionAccess({ submission_id: id, actor_shop: shop, action: 'file' }).catch((err) =>
-    console.error('[admin] access log write failed:', err)
+    reportError(err, { source: 'admin.accessLog', request, params })
   )
 
   // ── 5. Short-lived signed read URL ─────────────────────────────────────────
