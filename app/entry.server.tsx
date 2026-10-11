@@ -2,11 +2,38 @@ import { PassThrough } from "stream";
 import { renderToPipeableStream } from "react-dom/server";
 import { ServerRouter } from "react-router";
 import { createReadableStreamFromReadable } from "@react-router/node";
-import { type EntryContext } from "react-router";
+import { type EntryContext, type HandleErrorFunction, isRouteErrorResponse } from "react-router";
 import { isbot } from "isbot";
 import { addDocumentResponseHeaders } from "./shopify.server";
+import {
+  installProcessErrorHandlers,
+  reportError,
+  reportWarning,
+} from "./lib/error-reporting.server";
 
 export const streamTimeout = 5000;
+
+installProcessErrorHandlers();
+
+/**
+ * Central handler for errors thrown from loaders, actions and rendering. Replaces React Router's
+ * default `console.error(error)`, which printed the whole error object (including Postgres
+ * `detail`, which can echo PHI row values) as multi-line plain text. See error-reporting.server.ts.
+ */
+export const handleError: HandleErrorFunction = (error, { request, params }) => {
+  if (request.signal.aborted) return;
+  if (isRouteErrorResponse(error)) {
+    // Router-generated responses (e.g. 404 "No route matches URL") carry the real error inside.
+    const inner = (error as { error?: unknown }).error ?? new Error(`${error.status} ${error.statusText}`);
+    if (error.status < 500) {
+      reportWarning(inner, { request, params, status: error.status, source: "handleError" });
+      return;
+    }
+    reportError(inner, { request, params, status: error.status, source: "handleError" });
+    return;
+  }
+  reportError(error, { request, params, status: 500, source: "handleError" });
+};
 
 export default async function handleRequest(
   request: Request,
@@ -45,7 +72,7 @@ export default async function handleRequest(
         },
         onError(error) {
           responseStatusCode = 500;
-          console.error(error);
+          reportError(error, { request, status: 500, source: "renderToPipeableStream" });
         },
       }
     );
