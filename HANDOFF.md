@@ -1,5 +1,21 @@
 # HANDOFF — AlleDrops Symptom Quiz
 
+## 2026-10-11 — error alerts, PHI log fixes, session-storage hardening
+
+**Prod:** Cloud Run revision `alle-drops-quiz-app-00005-c4r` (main @ `eebc372`), 964/964 tests at deploy.
+
+- **#45** structured server errors to stderr (`app/lib/error-reporting.server.ts`): Cloud Error Reporting picks them up; PHI scrubbed; `handleError` + uncaught-exception monitor in `app/entry.server.tsx`; admin smoke route `/app/error-reporting-test`.
+- **#48** every raw `console.error(err)` in Shopify/db/admin paths routed through the scrubber (pg errors reduced to code + constraint).
+- **#47** Verify Metafields lookup is a POST; no email in URLs. Andrew verified in the embedded admin 10/11.
+- **#49** `PrismaSessionStorage` retries 12x5s at startup, stays up and re-checks every 30 s instead of crash-looping, logs the real DB cause as `session.storage.ready`. (The "session table does not exist" errors on 10/5 and 10/7 were DB connection failures, not a missing table.)
+- **Alerting (GCP `aod-production-510006`, not in repo):** email channel `notificationChannels/2847501256251355583`, log-based policy "AlleDrops quiz: server errors" (`alertPolicies/12399884260945739375`), Cloud Run severity>=ERROR, max 1 email / 30 min. Test email received 10/11.
+- Issue #46 closed. Left: `app/lib/shopify/products.ts:46,53` still logs raw errors (product data only).
+- Not Sentry on purpose: the 21 ads Sentry org has no BAA.
+
+**Watch:** next cold start's logs for `session.storage.ready`.
+
+---
+
 **Written:** 2026-10-06, end of phase 08.1 execution (all 13 plans run)
 **Repo:** `/Users/andrewskinner/Local Sites/alle-drops-quiz-app`
 **Sister:** `/Users/andrewskinner/Local Sites/allergist-on-demand` (theme)
