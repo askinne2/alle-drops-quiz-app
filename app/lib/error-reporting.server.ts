@@ -300,3 +300,50 @@ export function installProcessErrorHandlers(): void {
     reportError(error, { source: origin });
   });
 }
+
+const QUOTED_RE = /"[^"]*"|'[^']*'|\u201c[^\u201d]*\u201d/g;
+
+/** One Shopify GraphQL `userErrors` item, reduced to non-PHI fields. */
+export interface UserErrorSummary {
+  field?: string;
+  code?: string;
+  message?: string;
+}
+
+/**
+ * Reduce a Shopify `userErrors` array to field path + code + scrubbed message. Input values are
+ * never copied; quoted values, emails, dates and phone numbers echoed in `message` are redacted.
+ */
+export function summarizeUserErrors(userErrors: unknown): UserErrorSummary[] {
+  if (!Array.isArray(userErrors)) return [];
+  return userErrors.slice(0, 20).map((raw) => {
+    const e = (raw ?? {}) as Record<string, unknown>;
+    const out: UserErrorSummary = {};
+    const field = Array.isArray(e.field)
+      ? e.field.map((f) => safeIdentifier(String(f)) ?? "?").join(".")
+      : safeIdentifier(e.field);
+    if (field) out.field = field;
+    const code = safeIdentifier(e.code);
+    if (code) out.code = code;
+    if (typeof e.message === "string") {
+      // Shopify echoes submitted values in quotes (`Value "..." is invalid`); drop them first.
+      out.message = scrubText(e.message.replace(QUOTED_RE, "[value]"))
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 200);
+    }
+    return out;
+  });
+}
+
+/**
+ * Report a Shopify mutation's `userErrors` as one structured ERROR entry tagged with `source`.
+ * Carries only the summarized errors (see summarizeUserErrors), never the mutation input.
+ */
+export function reportShopifyUserErrors(source: string, userErrors: unknown): void {
+  const summary = summarizeUserErrors(userErrors);
+  reportError(new Error(`Shopify userErrors (${summary.length})`), {
+    source,
+    extra: { userErrors: summary },
+  });
+}

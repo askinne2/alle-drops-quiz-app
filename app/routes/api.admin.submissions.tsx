@@ -2,6 +2,7 @@ import type { LoaderFunctionArgs } from 'react-router'
 import { authenticate } from '../shopify.server'
 import { listAdminSubmissions, logSubmissionAccess } from '../lib/submissions'
 import type { AdminSubmissionsPage } from '../lib/submissions'
+import { reportError } from '../lib/error-reporting.server'
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   // 1. Verify admin session — throws Response on failure
@@ -52,7 +53,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     `[admin] fetched submissions shop=${shop} count=${page.rows.length} hasNextPage=${page.hasNextPage}`
   )
   logSubmissionAccess({ submission_id: null, actor_shop: shop, action: 'list' }).catch(
-    (err) => console.error('[admin] access log write failed:', err)
+    (err) => reportError(err, { source: 'admin.accessLog', request })
   )
 
   return new Response(JSON.stringify(page), {

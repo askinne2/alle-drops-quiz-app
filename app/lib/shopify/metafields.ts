@@ -14,6 +14,8 @@
  * Everything else (PHI) is in Cloud SQL via app/lib/submissions.ts.
  */
 
+import { reportError, reportShopifyUserErrors } from "../error-reporting.server";
+
 interface AdminLike {
   graphql: (query: string, opts?: { variables?: Record<string, unknown> }) => Promise<{
     json: () => Promise<unknown>;
@@ -52,7 +54,7 @@ export async function getCustomerMetafield(
     };
     return data.data?.customer?.metafield?.value ?? null;
   } catch (error) {
-    console.error("[metafields] read failed:", error);
+    reportError(error, { source: "metafields.read" });
     return null;
   }
 }
@@ -114,7 +116,7 @@ export async function updateNonPhiQuizMetafields(
 
     const userErrors = data.data?.metafieldsSet?.userErrors ?? [];
     if (userErrors.length > 0) {
-      console.error("[metafields] write errors:", userErrors);
+      reportShopifyUserErrors("metafields.write", userErrors);
       return {
         success: false,
         error: userErrors.map((e) => `${e.field}: ${e.message}`).join("; "),
@@ -123,7 +125,7 @@ export async function updateNonPhiQuizMetafields(
 
     return { success: true, quizCount: newCount };
   } catch (error) {
-    console.error("[metafields] write failed:", error);
+    reportError(error, { source: "metafields.write" });
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

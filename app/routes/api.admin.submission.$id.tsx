@@ -4,6 +4,7 @@ import { getSubmissionByIdForAdmin, logSubmissionAccess } from '../lib/submissio
 import type { SubmissionFullRow } from '../lib/submissions'
 import { listFilesForSubmission } from '../lib/submission-files'
 import type { SubmissionFileRow } from '../lib/submission-files'
+import { reportError } from '../lib/error-reporting.server'
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   let shop: string
@@ -50,15 +51,12 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   try {
     files = await listFilesForSubmission(row.id)
   } catch (err) {
-    console.error(
-      '[admin] file list fetch failed:',
-      err instanceof Error ? err.message : 'unknown'
-    )
+    reportError(err, { source: 'admin.fileList', request, params })
   }
 
   console.log(`[admin] fetched submission id=${id} shop=${shop}`)
   logSubmissionAccess({ submission_id: id, actor_shop: shop, action: 'detail' }).catch(
-    (err) => console.error('[admin] access log write failed:', err)
+    (err) => reportError(err, { source: 'admin.accessLog', request, params })
   )
 
   return new Response(JSON.stringify({ ...row, files }), {
