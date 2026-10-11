@@ -3,10 +3,16 @@
  * Query and display customer metafields to verify they're being set correctly
  */
 
-import type { LoaderFunctionArgs } from "react-router";
-import { useLoaderData, useSearchParams } from "react-router";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { Form, useActionData } from "react-router";
 import { authenticate } from "../shopify.server";
 
+/*
+ * PHI note (#46): the lookup value can be a patient email, so it must never
+ * travel in the URL (Cloud Run logs the full request line). The lookup is a
+ * POST `action`; the value lives in the form body only. The loader reads no
+ * query parameters, and nothing here redirects with the value in the URL.
+ */
 const CUSTOMER_METAFIELDS_QUERY = `
   query GetCustomerMetafields($customerId: ID!) {
     customer(id: $customerId) {
@@ -27,19 +33,52 @@ const CUSTOMER_METAFIELDS_QUERY = `
   }
 `;
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
-  const url = new URL(request.url);
-  const customerId = url.searchParams.get("customerId") || url.searchParams.get("email");
+type MetafieldNode = {
+  id: string;
+  namespace: string;
+  key: string;
+  value: string;
+  type: string;
+};
 
-  if (!customerId) {
-    return { customer: null, error: null };
+type CustomerWithMetafields = {
+  id: string;
+  email: string | null;
+  metafields: { edges: Array<{ node: MetafieldNode }> } | null;
+};
+
+type LookupResult = {
+  customer: CustomerWithMetafields | null;
+  error: string | null;
+  lookup: string;
+};
+
+/** Normalize a numeric Shopify customer ID or a Customer GID to a GID. */
+export function toCustomerGid(value: string): string | null {
+  if (/^\d+$/.test(value)) return `gid://shopify/Customer/${value}`;
+  if (/^gid:\/\/shopify\/Customer\/\d+$/.test(value)) return value;
+  return null;
+}
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  await authenticate.admin(request);
+  // Deliberately reads no searchParams: the lookup value is POST-only.
+  return null;
+};
+
+export const action = async ({ request }: ActionFunctionArgs): Promise<LookupResult> => {
+  const { admin } = await authenticate.admin(request);
+  const formData = await request.formData();
+  const raw = formData.get("lookup");
+  const lookup = typeof raw === "string" ? raw.trim() : "";
+
+  if (!lookup) {
+    return { customer: null, error: "Enter a customer ID or email.", lookup: "" };
   }
 
   try {
-    // If customerId is an email, find the customer first
-    let customerGid = customerId;
-    if (customerId.includes("@")) {
+    let customerGid: string | null;
+    if (lookup.includes("@")) {
       const searchQuery = `
         query FindCustomerByEmail($query: String!) {
           customers(first: 1, query: $query) {
@@ -53,54 +92,62 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         }
       `;
       const searchResult = await admin.graphql(searchQuery, {
-        variables: { query: `email:${customerId}` },
+        variables: { query: `email:${JSON.stringify(lookup)}` },
       });
       const data = await searchResult.json();
-      
-      if (data.data?.customers?.edges?.length > 0) {
-        customerGid = data.data.customers.edges[0].node.id;
-      } else {
-        return { customer: null, error: "Customer not found" };
+      customerGid = data.data?.customers?.edges?.[0]?.node?.id ?? null;
+      if (!customerGid) {
+        return { customer: null, error: "Customer not found", lookup };
+      }
+    } else {
+      customerGid = toCustomerGid(lookup);
+      if (!customerGid) {
+        return {
+          customer: null,
+          error: "Enter a numeric customer ID, a gid://shopify/Customer/... ID, or an email.",
+          lookup,
+        };
       }
     }
 
-    // Query metafields
     const result = await admin.graphql(CUSTOMER_METAFIELDS_QUERY, {
       variables: { customerId: customerGid },
     });
-    
     const metafieldsData = await result.json();
-    return { customer: metafieldsData.data?.customer || null, error: null };
+    const customer = metafieldsData.data?.customer || null;
+    return { customer, error: customer ? null : "Customer not found", lookup };
   } catch (error) {
-    console.error("Error fetching metafields:", error);
-    return { 
-      customer: null, 
-      error: error instanceof Error ? error.message : "Unknown error" 
-    };
+    // Log the error name only; never the object or message (either can echo
+    // request variables, i.e. the email being looked up).
+    const name = error instanceof Error ? error.name : "UnknownError";
+    console.error("Error fetching metafields:", name);
+    return { customer: null, error: "Failed to fetch metafields", lookup };
   }
 };
 
 export default function VerifyMetafieldsPage() {
-  const { customer, error } = useLoaderData<typeof loader>();
-  const [searchParams] = useSearchParams();
-  const customerId = searchParams.get("customerId") || searchParams.get("email");
+  const actionData = useActionData<typeof action>();
+  const customer = actionData?.customer ?? null;
+  const error = actionData?.error ?? null;
+  const lookup = actionData?.lookup ?? "";
 
   return (
     <div style={{ padding: "2rem", maxWidth: "1200px", margin: "0 auto" }}>
       <h1>Verify Customer Metafields</h1>
       
       <div style={{ marginBottom: "2rem", padding: "1rem", background: "#f5f5f5", borderRadius: "8px" }}>
-        <form method="get" style={{ display: "flex", gap: "1rem", alignItems: "flex-end" }}>
+        <Form method="post" style={{ display: "flex", gap: "1rem", alignItems: "flex-end" }}>
           <div>
-            <label htmlFor="customerId" style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>
+            <label htmlFor="lookup" style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>
               Customer ID or Email:
             </label>
             <input
-              id="customerId"
-              name="customerId"
+              id="lookup"
+              name="lookup"
               type="text"
-              defaultValue={customerId || ""}
-              placeholder="gid://shopify/Customer/123 or test@example.com"
+              autoComplete="off"
+              defaultValue={lookup}
+              placeholder="6942938497230, gid://shopify/Customer/123, or email"
               style={{ padding: "0.5rem", fontSize: "1rem", width: "300px", borderRadius: "4px", border: "1px solid #ccc" }}
             />
           </div>
@@ -118,7 +165,7 @@ export default function VerifyMetafieldsPage() {
           >
             Query Metafields
           </button>
-        </form>
+        </Form>
       </div>
 
       {error && (
@@ -131,7 +178,7 @@ export default function VerifyMetafieldsPage() {
         <div>
           <h2>Customer: {customer.email || customer.id}</h2>
           
-          {customer.metafields?.edges?.length > 0 ? (
+          {customer.metafields && customer.metafields.edges.length > 0 ? (
             <div>
               <h3>Metafields (namespace: alledrops)</h3>
               <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "1rem" }}>
@@ -143,7 +190,7 @@ export default function VerifyMetafieldsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {customer.metafields.edges.map((edge: any) => {
+                  {customer.metafields.edges.map((edge) => {
                     let displayValue = edge.node.value;
                     // Pretty print JSON values
                     if (edge.node.type === "json" || edge.node.key === "quiz_history") {
@@ -173,7 +220,7 @@ export default function VerifyMetafieldsPage() {
             </div>
           ) : (
             <div style={{ padding: "1rem", background: "#fff3cd", borderRadius: "8px", marginTop: "1rem" }}>
-              ⚠️ No metafields found for this customer in the "alledrops" namespace.
+              ⚠️ No metafields found for this customer in the &quot;alledrops&quot; namespace.
             </div>
           )}
         </div>
