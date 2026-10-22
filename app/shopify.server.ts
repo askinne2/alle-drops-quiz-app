@@ -4,29 +4,30 @@ import {
   AppDistribution,
   shopifyApp,
 } from "@shopify/shopify-app-react-router/server";
+import type { PrismaClient } from "@prisma/client";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import prisma from "./db.server";
-import { reportError } from "./lib/error-reporting.server";
+import { reportError, reportWarning } from "./lib/error-reporting.server";
 
 /**
- * Session storage startup budget.
+ * Session storage readiness budget, used both for the startup check and for each on-request
+ * re-check (`isReady()` polls with the same settings).
  *
  * `PrismaSessionStorage` (v7.0.3) runs a readiness check in its constructor: `session.count()`
  * up to `connectionRetries` times, sleeping `connectionRetryIntervalMs` after each failure.
- * Library defaults are 2 x 5000 ms, so a ~10 s DB blip at container start (Cloud SQL pool
- * timeout on 10/7, unreachable socket on 10/5) exhausted it. 12 x 5000 ms covers ~1-2 minutes.
  *
- * The check is async and does not block `listen`: the constructor only starts the promise, and
- * react-router-serve imports the server build and then listens, so the TCP startup probe still
- * passes while the check retries in the background.
+ * Cloud Run only allocates CPU while a request is in flight. A min-instance that Cloud Run starts
+ * with no traffic runs this check starved of CPU, so Prisma's 10 s pool timeout fires before the
+ * engine can connect (10/14-10/22: every replacement min-instance failed it, took 9-14 min to
+ * spend a 12 x 5 s budget, and a 30 s background re-poll then failed ~2,800 times a day). Retrying
+ * longer in the background cannot fix that, so the startup check stays short and the real check
+ * happens on the first request that needs a session, when the instance has CPU
+ * (`ReadyOnRequestSessionStorage`).
  */
 export const SESSION_STORAGE_STARTUP_OPTIONS = {
-  connectionRetries: 12,
-  connectionRetryIntervalMs: 5000,
+  connectionRetries: 3,
+  connectionRetryIntervalMs: 2000,
 } as const;
-
-/** After the startup budget is spent, how often to try `isReady()` again in the background. */
-export const SESSION_STORAGE_RECOVERY_INTERVAL_MS = 30_000;
 
 export const SESSION_STORAGE_READY_SOURCE = "session.storage.ready";
 
@@ -58,88 +59,167 @@ export function sanitizeDbError(error: unknown): unknown {
   return copy;
 }
 
+type ReadinessOptions = {
+  connectionRetries: number;
+  connectionRetryIntervalMs: number;
+};
+
+/** `ready` is private in the library's types but is the promise its constructor creates. */
+function libraryReady(storage: unknown): Promise<boolean> | undefined {
+  const ready = (storage as { ready?: Promise<boolean> }).ready;
+  return ready && typeof ready.then === "function" ? ready : undefined;
+}
+
 /**
- * Handle the storage's readiness promise so a failure can't become an unhandled rejection that
- * exits the process (and crash-loops the Cloud Run instance).
- *
  * The library replaces the real DB error with "Prisma session table does not exist" and its
- * `cause` is also generic, so on failure we run one `session.count()` ourselves to capture the
- * real cause and report it once as a structured ERROR (Error Reporting + email alert).
+ * `cause` is also generic, so run one `session.count()` ourselves to capture the real cause.
+ * Returns `undefined` if the DB answered.
+ */
+async function probeDbCause(client: SessionCountClient): Promise<unknown> {
+  try {
+    await client.session.count();
+    return undefined;
+  } catch (probeError) {
+    return probeError;
+  }
+}
+
+/**
+ * Handle the storage's startup readiness promise so a failure can't become an unhandled
+ * rejection that exits the process (and crash-loops the Cloud Run instance).
  *
- * Exhausted-retries choice: keep the process up. The library does not recover on its own after a
- * failed `ready` (every session call rethrows it), but its public `isReady()` re-polls and resets
- * `ready`, so we call it in the background until the DB answers. Until then, session calls fail
- * with "session storage is not ready" and those failures surface through the normal request error
- * path. Exiting would only restart into the same dead DB.
+ * A failed startup check is logged once as a scrubbed WARNING with the real DB cause, not an
+ * ERROR: with no request in flight the instance has almost no CPU, so this is expected on idle
+ * min-instances and is not an outage. Nothing polls in the background afterwards; the next
+ * session call re-checks (`ReadyOnRequestSessionStorage`) and reports an ERROR if the DB is
+ * really down while a request is waiting on it.
  *
- * Resolves `true` if storage became ready during startup, `false` if the startup budget was spent
- * (recovery continues in the background).
+ * Resolves `true` if storage became ready during startup, `false` if the startup budget was spent.
  */
 export function watchSessionStorageReadiness(
   storage: ReadinessStorage,
   client: SessionCountClient,
-  {
-    recoveryIntervalMs = SESSION_STORAGE_RECOVERY_INTERVAL_MS,
-    options = SESSION_STORAGE_STARTUP_OPTIONS as {
-      connectionRetries: number;
-      connectionRetryIntervalMs: number;
-    },
-  } = {},
+  { options = SESSION_STORAGE_STARTUP_OPTIONS as ReadinessOptions } = {},
 ): Promise<boolean> {
-  // `ready` is private in the library's types but is the promise its constructor creates.
-  const ready = (storage as unknown as { ready?: Promise<boolean> }).ready;
-  if (!ready || typeof ready.then !== "function") return Promise.resolve(true);
-
-  const scheduleRecovery = () => {
-    const timer = setTimeout(async () => {
-      let ok = false;
-      try {
-        ok = await storage.isReady();
-      } catch {
-        ok = false;
-      }
-      if (ok) {
-        console.log(
-          JSON.stringify({
-            severity: "INFO",
-            message: "Session storage ready after startup failure",
-            source: SESSION_STORAGE_READY_SOURCE,
-          }),
-        );
-      } else {
-        scheduleRecovery();
-      }
-    }, recoveryIntervalMs);
-    timer.unref?.();
-  };
+  const ready = libraryReady(storage);
+  if (!ready) return Promise.resolve(true);
 
   return ready.then(
     () => true,
     async (libraryError: unknown) => {
-      let cause: unknown = libraryError;
-      try {
-        await client.session.count();
-        // DB answered right after the budget ran out: re-poll so `ready` becomes true.
-        if (await storage.isReady()) return true;
-      } catch (probeError) {
-        cause = probeError;
-      }
-      reportError(sanitizeDbError(cause), {
+      const cause = await probeDbCause(client);
+      // DB answered right after the budget ran out: re-poll so `ready` becomes true.
+      if (cause === undefined && (await storage.isReady().catch(() => false)))
+        return true;
+      reportWarning(sanitizeDbError(cause ?? libraryError), {
         source: SESSION_STORAGE_READY_SOURCE,
         extra: {
+          phase: "startup",
           connectionRetries: options.connectionRetries,
           connectionRetryIntervalMs: options.connectionRetryIntervalMs,
-          libraryError: libraryError instanceof Error ? libraryError.name : typeof libraryError,
-          recoveryIntervalMs,
+          libraryError:
+            libraryError instanceof Error
+              ? libraryError.name
+              : typeof libraryError,
         },
       });
-      scheduleRecovery();
       return false;
     },
   );
 }
 
-const prismaSessionStorage = new PrismaSessionStorage(prisma, SESSION_STORAGE_STARTUP_OPTIONS);
+/**
+ * `PrismaSessionStorage` that re-checks readiness on the session call that needs it, instead of
+ * in a background loop that an idle Cloud Run instance has no CPU to run.
+ *
+ * When storage is ready this costs nothing extra (one resolved-promise await). When it is not,
+ * concurrent calls share one `isReady()` poll; on success an INFO line is logged, on failure the
+ * real DB cause is reported as an ERROR (which pages) and the library's own "session storage is
+ * not ready" error propagates through the normal request error path.
+ */
+export class ReadyOnRequestSessionStorage extends PrismaSessionStorage<PrismaClient> {
+  private recovery: Promise<void> | null = null;
+
+  constructor(
+    // The library keeps its client private; keep our own reference for the cause probe.
+    private readonly sessionClient: PrismaClient,
+    options?: ConstructorParameters<typeof PrismaSessionStorage>[1],
+  ) {
+    super(sessionClient, options);
+  }
+
+  private async readyForRequest(): Promise<void> {
+    const ready = libraryReady(this);
+    if (ready && (await ready.catch(() => false))) return;
+    this.recovery ??= this.recover().finally(() => {
+      this.recovery = null;
+    });
+    await this.recovery;
+  }
+
+  private async recover(): Promise<void> {
+    if (await this.isReady().catch(() => false)) {
+      console.log(
+        JSON.stringify({
+          severity: "INFO",
+          message: "Session storage ready after startup failure",
+          source: SESSION_STORAGE_READY_SOURCE,
+        }),
+      );
+      return;
+    }
+    const cause = await probeDbCause(this.sessionClient);
+    reportError(
+      sanitizeDbError(cause ?? new Error("Session storage is not ready")),
+      {
+        source: SESSION_STORAGE_READY_SOURCE,
+        extra: { phase: "request" },
+      },
+    );
+  }
+
+  override async storeSession(
+    ...args: Parameters<PrismaSessionStorage<PrismaClient>["storeSession"]>
+  ) {
+    await this.readyForRequest();
+    return super.storeSession(...args);
+  }
+
+  override async loadSession(
+    ...args: Parameters<PrismaSessionStorage<PrismaClient>["loadSession"]>
+  ) {
+    await this.readyForRequest();
+    return super.loadSession(...args);
+  }
+
+  override async deleteSession(
+    ...args: Parameters<PrismaSessionStorage<PrismaClient>["deleteSession"]>
+  ) {
+    await this.readyForRequest();
+    return super.deleteSession(...args);
+  }
+
+  override async deleteSessions(
+    ...args: Parameters<PrismaSessionStorage<PrismaClient>["deleteSessions"]>
+  ) {
+    await this.readyForRequest();
+    return super.deleteSessions(...args);
+  }
+
+  override async findSessionsByShop(
+    ...args: Parameters<
+      PrismaSessionStorage<PrismaClient>["findSessionsByShop"]
+    >
+  ) {
+    await this.readyForRequest();
+    return super.findSessionsByShop(...args);
+  }
+}
+
+const prismaSessionStorage = new ReadyOnRequestSessionStorage(
+  prisma,
+  SESSION_STORAGE_STARTUP_OPTIONS,
+);
 void watchSessionStorageReadiness(prismaSessionStorage, prisma);
 
 const shopify = shopifyApp({
