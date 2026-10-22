@@ -11,6 +11,24 @@
 
 **Watch (around 10/27):** the next replacement min-instance on rev 00006 should log a `session.storage.ready` WARNING with `phase: "startup"` and send no alert email. Query: `gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="alle-drops-quiz-app" AND jsonPayload.source="session.storage.ready"' --project aod-production-510006 --limit 20`.
 
+**No chase (Andrew, 10/22).** The last email was Andrew's 10/6 ask to Robert, cc William (registrar access, Shopify Payments). No reply since, and nothing sent since. Do not nudge, do not draft a "final look" email. Wait for them to come back on their own; the vault `next_check` is 2026-12-01.
+
+**Leftover launch items (live store + admin checked 10/22).** Storefront copy is done: TEST-06 clause gone from both product pages, `/pages/test-options` says testing is required, purchase checkboxes on both products, no trackers, no placeholders. Left:
+
+| # | Item | State | Owner |
+|---|---|---|---|
+| 1 | Shopify Payments | Not set up (bank + tax info) | William / Robert |
+| 2 | Registrar access (allergistondemand.com, alledrops.com) | Not granted; blocks sender email on info@ + CNAMEs + DMARC | Robert |
+| 3 | Return and refund policy (SHOP-05) | Not set; `/policies/refund-policy` 404 | William |
+| 4 | Contact information policy | Not set; Shopify marks it Required | AOD |
+| 5 | Terms of service, shipping policy | Not set | AOD / counsel |
+| 6 | Order confirmation email (SHOP-05) | Stock template, no "won't ship until quiz + testing" line | Andrew, after #3 |
+| 7 | Home copy "no appointments required" / "no clinic visits required" | Questionable for untested patients; raise with William | William |
+| 8 | SHOP-06 fulfillment step, LAUNCH-05 NPP/officers/training, LAUNCH-03 consent sign-off | AOD side | William / counsel |
+| 9 | LAUNCH-07 domain spelling | Waiting | William |
+
+Vault mirror: `~/Vaults/ads-os/20-Projects/AlleDrops-Shopify-Quiz.md` § Leftover launch items.
+
 **Diagnosis method (PHI-safe):** read only log metadata, redact emails and digits in Python before printing, strip query strings from URLs. In zsh, use a function for repeated `gcloud logging read` windows: `set -- $w` does not word-split.
 
 ---
