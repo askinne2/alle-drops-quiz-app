@@ -1,5 +1,38 @@
 # HANDOFF — AlleDrops Symptom Quiz
 
+## 2026-10-22 — alert emails diagnosed: CPU-starved session check (PR #55)
+
+**Prod:** Cloud Run revision `alle-drops-quiz-app-00006-c6j` (main @ `be80a91`), 100% traffic, `/health` 200, service config unchanged, clean startup logs.
+
+- **Cause of the "server errors" emails** (10/14 00:48, 10/16 00:32, 10/21 23:15, 10/22 00:09 UTC, rev 00005): Cloud Run started a replacement min-instance (`MANUAL_OR_CUSTOMER_MIN_INSTANCE`) with no request in flight. CPU is only allocated during requests, so the Prisma session-storage startup check ran starved, hit the 10 s pool timeout (P2024) and reported ERROR 9-14 min after start (nominal budget ~3 min). The #49 30 s background re-poll then failed ~2,800 times/day on that instance and never recovered. Cloud SQL had no restarts or maintenance. 10/11 09:10 (rev 00004) was the old crash-loop that #49 already fixed.
+- **Impact:** none. 23 requests since 10/11 (22x 200, 1x 404), zero 5xx.
+- **Fix (#55, Andrew picked option B over always-on CPU, ~$45-55/mo, and alert tuning):** startup check 3x2 s, failure logs a scrubbed WARNING (does not page). No background re-poll. `ReadyOnRequestSessionStorage` in `app/shopify.server.ts` re-checks on the session call that needs it (CPU available), one shared poll. Success logs INFO; failure logs ERROR `phase: "request"`, so a real outage with a waiting request still pages.
+- **Tests:** `tests/session-storage-startup.test.ts` 10/10, typecheck clean, build OK. Full suite 966/968. `quiz-resume-payload-parity` (2) and `quiz-file-upload-dom` (1) fail under full-suite load on main too and pass alone. That is pre-existing flakiness.
+
+**Watch (around 10/27):** the next replacement min-instance on rev 00006 should log a `session.storage.ready` WARNING with `phase: "startup"` and send no alert email. Query: `gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="alle-drops-quiz-app" AND jsonPayload.source="session.storage.ready"' --project aod-production-510006 --limit 20`.
+
+**No chase (Andrew, 10/22).** The last email was Andrew's 10/6 ask to Robert, cc William (registrar access, Shopify Payments). No reply since, and nothing sent since. Do not nudge, do not draft a "final look" email. Wait for them to come back on their own; the vault `next_check` is 2026-12-01.
+
+**Leftover launch items (live store + admin checked 10/22).** Storefront copy is done: TEST-06 clause gone from both product pages, `/pages/test-options` says testing is required, purchase checkboxes on both products, no trackers, no placeholders. Left:
+
+| # | Item | State | Owner |
+|---|---|---|---|
+| 1 | Shopify Payments | Not set up (bank + tax info) | William / Robert |
+| 2 | Registrar access (allergistondemand.com, alledrops.com) | Not granted; blocks sender email on info@ + CNAMEs + DMARC | Robert |
+| 3 | Return and refund policy (SHOP-05) | Not set; `/policies/refund-policy` 404 | William |
+| 4 | Contact information policy | Not set; Shopify marks it Required | AOD |
+| 5 | Terms of service, shipping policy | Not set | AOD / counsel |
+| 6 | Order confirmation email (SHOP-05) | Stock template, no "won't ship until quiz + testing" line | Andrew, after #3 |
+| 7 | Home copy "no appointments required" / "no clinic visits required" | Questionable for untested patients; raise with William | William |
+| 8 | SHOP-06 fulfillment step, LAUNCH-05 NPP/officers/training, LAUNCH-03 consent sign-off | AOD side | William / counsel |
+| 9 | LAUNCH-07 domain spelling | Waiting | William |
+
+Vault mirror: `~/Vaults/ads-os/20-Projects/AlleDrops-Shopify-Quiz.md` § Leftover launch items.
+
+**Diagnosis method (PHI-safe):** read only log metadata, redact emails and digits in Python before printing, strip query strings from URLs. In zsh, use a function for repeated `gcloud logging read` windows: `set -- $w` does not word-split.
+
+---
+
 ## 2026-10-11 — error alerts, PHI log fixes, session-storage hardening
 
 **Prod:** Cloud Run revision `alle-drops-quiz-app-00005-c4r` (main @ `eebc372`), 964/964 tests at deploy.
