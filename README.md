@@ -56,7 +56,7 @@ This app no longer uses the old US-region selector or the legacy minimal/mild/mo
 
 ## Prerequisites
 
-- Node.js `>=20.19 <22 || >=22.12`
+- Node.js 24 LTS (`>=24.0.0`; see `.nvmrc`)
 - Shopify Partner account
 - Shopify CLI
 - Access to the AOD Google Cloud project for deployment

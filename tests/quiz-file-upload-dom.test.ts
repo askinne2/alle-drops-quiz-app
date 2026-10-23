@@ -41,7 +41,7 @@ function jsonResponse(status: number, body: unknown): Response {
   } as Response;
 }
 
-function renderPart7(answers: QuizAnswers, onAnswerChange: ReturnType<typeof vi.fn> = vi.fn()) {
+function renderPart7(answers: QuizAnswers, onAnswerChange: ReturnType<typeof vi.fn<(...args: unknown[]) => void>> = vi.fn()) {
   const utils = render(
     React.createElement(QuizPartRenderer, { items: PART_7_ITEMS, answers, onAnswerChange })
   );
@@ -63,7 +63,7 @@ function ControlledPart7({
   onAnswerChangeSpy,
 }: {
   initialAnswers: QuizAnswers;
-  onAnswerChangeSpy: ReturnType<typeof vi.fn>;
+  onAnswerChangeSpy: ReturnType<typeof vi.fn<(...args: unknown[]) => void>>;
 }) {
   const [answers, setAnswers] = React.useState<QuizAnswers>(initialAnswers);
   const handleChange = (id: string, value: string | string[] | number) => {
@@ -73,7 +73,7 @@ function ControlledPart7({
   return React.createElement(QuizPartRenderer, { items: PART_7_ITEMS, answers, onAnswerChange: handleChange });
 }
 
-function renderPart7Controlled(initialAnswers: QuizAnswers, onAnswerChangeSpy: ReturnType<typeof vi.fn> = vi.fn()) {
+function renderPart7Controlled(initialAnswers: QuizAnswers, onAnswerChangeSpy: ReturnType<typeof vi.fn<(...args: unknown[]) => void>> = vi.fn()) {
   const utils = render(React.createElement(ControlledPart7, { initialAnswers, onAnswerChangeSpy }));
   const input = utils.container.querySelector('input[type="file"]') as HTMLInputElement;
   return { onAnswerChange: onAnswerChangeSpy, input, ...utils };

@@ -41,8 +41,8 @@ describe("Dockerfile contract", () => {
     expect(hasLine(DOCKERFILE, "USER node")).toBe(true);
   });
 
-  it("uses a node 20.19+ alpine base", () => {
-    expect(/^FROM node:20\.(19|[2-9]\d)[\w.]*-alpine/m.test(DOCKERFILE)).toBe(true);
+  it("uses a node 24 LTS alpine base", () => {
+    expect(/^FROM node:24(\.[\d.]+)?-alpine/m.test(DOCKERFILE)).toBe(true);
   });
 
   it("exposes 8080 and starts via npm run start", () => {
