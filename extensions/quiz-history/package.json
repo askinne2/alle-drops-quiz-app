@@ -3,8 +3,8 @@
   "private": true,
   "version": "1.0.0",
   "dependencies": {
-    "@preact/signals": "^2.9.0",
-    "@shopify/ui-extensions": "*",
-    "preact": "*"
+    "@preact/signals": "^2.11.3",
+    "@shopify/ui-extensions": "^2025.11.0",
+    "preact": "^10.29.8"
   }
 }
