@@ -531,7 +531,14 @@ None captured yet.
   trademark exposure. Gates LAUNCH-07 (DNS, Workspace domain, Fly cert) and the TEST-04 copy string.
   **2026-10-26:** registrar access is no longer a blocker. Andrew has GoDaddy "Domains Only" access
   (granted by Dick Wright, ASA) to both `alledrops.com` and `allergistondemand.com`, so DNS edits are
-  possible. The spelling decision itself is still AOD's. See HANDOFF.md 2026-10-26.
+  possible. The spelling decision itself is still AOD's, and Andrew took it off the launch list
+  10/26: the store goes live without it and the quiz keeps its run.app URL. See HANDOFF.md 2026-10-26.
+
+**Go-live gates (Andrew's call, 2026-10-26):** only Shopify Payments and the store policies (refund,
+contact, terms, shipping), both AOD's, asked 10/26. Everything else to go live is Andrew's: sender
+email + DNS, removing the storefront password, Appointly consult setup, quiz walkthrough, order
+confirmation copy. NPP/officers/training/consent (LAUNCH-05, LAUNCH-03) stay AOD + counsel, required
+before the first real patient but not a gate on our work.
 
 **Blocked on client action:**
 
