@@ -5,7 +5,7 @@ milestone_name: milestone
 status: phase_complete
 stopped_at: "Phase 08.1 complete 2026-10-06; milestone NOT complete: phases 6, 7, 8 still open"
 last_updated: 2026-10-06T10:01:48.840Z
-last_activity: 2026-10-06
+last_activity: 2026-10-26
 progress:
   total_phases: 12
   completed_phases: 8
@@ -529,6 +529,9 @@ None captured yet.
 
 - Domain spelling — `alledrops.com` (no R) vs `allerdrops.com`, with live `ALLERDROPS®` Class 044
   trademark exposure. Gates LAUNCH-07 (DNS, Workspace domain, Fly cert) and the TEST-04 copy string.
+  **2026-10-26:** registrar access is no longer a blocker. Andrew has GoDaddy "Domains Only" access
+  (granted by Dick Wright, ASA) to both `alledrops.com` and `allergistondemand.com`, so DNS edits are
+  possible. The spelling decision itself is still AOD's. See HANDOFF.md 2026-10-26.
 
 **Blocked on client action:**
 

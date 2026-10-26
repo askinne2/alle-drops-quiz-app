@@ -1,5 +1,15 @@
 # HANDOFF — AlleDrops Symptom Quiz
 
+## 2026-10-26 — registrar (GoDaddy) access granted
+
+- **Access:** GoDaddy "Account Access" invite from Richard (Dick) Wright, Founder/Chairman of Allergy Services of America (not Robert). Level **Domains Only**, so DNS edits are possible. Andrew accepted 10/26.
+- **Domains:** 12 in the account, all active and locked. The two that matter: `allergistondemand.com` (expires 2028-11-22) and `alledrops.com` (expires 2028-11-05). Others: aod.services, allergistondemand.net, allergywell.org/.net, allergygone.org, mobileallergyservices .com/.net/.org, cardiovascularscreening.net, spallc.info.
+- **Clears** leftover launch item #2 (registrar access). Nothing changed in DNS or Shopify yet.
+- **Next (Andrew, ~30 min):** switch the Shopify sender from andrew@21adsmedia.com to info@allergistondemand.com, then add Shopify's domain-auth CNAMEs and a DMARC record in GoDaddy DNS. This is the sender half of step 7 below.
+- **Still AOD's:** Shopify Payments, refund policy, domain spelling and the other leftover items. No chasing William/Robert.
+
+---
+
 ## 2026-10-11 — error alerts, PHI log fixes, session-storage hardening
 
 **Prod:** Cloud Run revision `alle-drops-quiz-app-00005-c4r` (main @ `eebc372`), 964/964 tests at deploy.
