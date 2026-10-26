@@ -17,6 +17,7 @@
 | 3 | Shopify sender to info@allergistondemand.com, plus domain-auth CNAMEs and DMARC in GoDaddy | Andrew | Promised "this week", ~30 min |
 | 4 | Take the store live (remove the storefront password) | Andrew | After 1 and 2 |
 | 5 | Set up Appointly for the allergy consult | Andrew | Needs from AOD: who takes consults (which email to connect), days and times |
+| 5b | Appointly loads on the PHI quiz page (CLAUDE.md rule 4) | Andrew | Open since 10/22: take it off that page or get Appointly's BAA, before go-live |
 | 6 | Walk AOD through the quiz: admin results, PDF download, patient view (45-min call offered) | Andrew | Offered 10/26 |
 | 7 | Order confirmation email: "won't ship until quiz + testing on file" line | Andrew | After AOD's refund wording (#2) |
 
@@ -31,7 +32,7 @@
 **Next steps, in order:**
 1. Do #3: sender switch, CNAMEs, DMARC (~30 min).
 2. Run the 10/27 watch query from the 10/22 entry below: expect a `session.storage.ready` WARNING and no alert email.
-3. When AOD replies with the consult details: set up Appointly (#5).
+3. Decide #5b (Appointly on the quiz page), then, when AOD replies with the consult details, set up Appointly (#5).
 4. When #1 and #2 are done: take the store live (#4), then the walkthrough call (#6) and the confirmation email (#7).
 
 ---
