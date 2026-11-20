@@ -5,7 +5,7 @@ milestone_name: milestone
 status: phase_complete
 stopped_at: "Phase 08.1 complete 2026-10-06; milestone NOT complete: phases 6, 7, 8 still open"
 last_updated: 2026-10-06T10:01:48.840Z
-last_activity: 2026-10-26
+last_activity: 2026-11-19
 progress:
   total_phases: 12
   completed_phases: 8
@@ -539,6 +539,10 @@ contact, terms, shipping), both AOD's, asked 10/26. Everything else to go live i
 email + DNS, removing the storefront password, Appointly consult setup, quiz walkthrough, order
 confirmation copy. NPP/officers/training/consent (LAUNCH-05, LAUNCH-03) stay AOD + counsel, required
 before the first real patient but not a gate on our work.
+**2026-11-02:** sender auth shows Authenticated (closed). Draft refund, privacy, terms, shipping and
+contact policies plus a Hidden NPP page are loaded in Shopify for AOD + counsel to edit (Andrew's call),
+so policy approval is the remaining store-policy gate. Payments still unfinished; Appointly on the quiz
+page still undecided. Store still password protected. See HANDOFF.md 2026-11-02.
 
 **Blocked on client action:**
 

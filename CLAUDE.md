@@ -10,6 +10,19 @@
 > 6. Non-PHI flags allowed in Shopify metafields: `alledrops.last_completed_at` (date), `alledrops.quiz_count` (int). Nothing else.
 
 ---
+## Internal Workspace — AlleDrops Workspace (Claude Doc)
+
+**The working plan lives in one Claude Doc: [AlleDrops Workspace](https://claude.ai/code/artifact/1d86dbfd-1886-4c7f-afbc-0823a5007f7c)** (doc id `1d86dbfd-1886-4c7f-afbc-0823a5007f7c`). Read and write it through the Claude Docs connector, using the `project-workspace` skill.
+
+- **Main tab:** how we work, order of work (status dropdowns), decisions made, questions parked for William, what changes by system, links. Update step statuses and decisions here as work lands.
+- **Sessions tab:** one sub-tab per working session, named `YYYY-MM-DD` (add `-2`, `-3` for a second session the same day), newest first.
+- **Archive tab:** older AlleDrops pages folded in for history. Not updated.
+
+**Every new session opens a new tab.** At the start of each session, after reading `HANDOFF.md`, add a sub-tab under **Sessions** for today with the session's goal; fill in Done / Decided / Next before ending. Never write a new session into an old session's tab.
+
+Roles: this doc = plan, decisions, questions for William. `HANDOFF.md` = the detailed log agents read first. Build the groundwork first, then send William one batched email from the "Parked for William" list; don't email William mid-build. **Never put PHI, passwords or keys in the doc**; refer to secrets by 1Password item name only.
+
+---
 ## This project is GSD-managed
 
 Planning state is committed under `.planning/` — `PROJECT.md`, `ROADMAP.md`, `REQUIREMENTS.md`,
@@ -219,3 +232,9 @@ See `HANDOFF.md` for Cloud SQL proxy setup and known gotchas.
 ## When in doubt
 
 If a task could plausibly involve PHI, default to: route through Cloud Run + Cloud SQL, never touch Shopify or any Google Workspace surface, never add scripts to the iframe page, ask before introducing a new third-party dependency.
+
+## End of Session
+
+1. Fill in today's session tab in AlleDrops Workspace (Done / Decided / Next) and update step statuses on the main tab.
+2. Write or update `HANDOFF.md`.
+3. GSD work: align `.planning/STATE.md` with reality (don't hand-edit it while a phase is mid-execution).
