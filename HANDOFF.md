@@ -1,5 +1,41 @@
 # HANDOFF — AlleDrops Symptom Quiz
 
+## 2026-11-24 — go-live list sent to William; Appointly free plan confirmed locked; Payments live
+
+**Now:** Andrew sent a reply-all to William and Robert on 11/24. Thread `1a0e8ef49d10b532` ("Re: AOD Info"), draft `draft00ae9c48036baa4d`. It answers William's 11/23 question, "What else is needed to go live?" We're waiting on AOD. Nothing in Shopify, Appointly or Cloud Run was changed. No code changed.
+
+**Since the 11/20 handoff (mail, 11/23):**
+- William said "go with free version" and asked Robert to write Dr. Sullivan's calendar instructions. Robert agreed.
+- William said Dr. Sullivan will use his ASA email, `ryan.sullivan@asallc.net`. He also wrote "We are ready to roll."
+- The senders are at `asallc.net`. An earlier mail search filtered on `allergistondemand` / `aod.services` and found nothing. Search on `asallc.net` too.
+
+**Checked 11/24 (Dia, AOD admin, read-only):**
+- **Shopify Payments is live:** "Accepting payments" and "Receiving payouts" are both green (Andrew's screenshot, 11/24). The older "Payments not finished" lines below are stale.
+- **On Appointly Free:**
+  - **Calendar:** Team → Edit Dr. Sullivan shows Google Calendar and Outlook Calendar connect both locked behind "Upgrade to Pro".
+  - **Video:** Settings → Integrations shows Zoom and Google Meet both locked, including the default meeting-URL fallback.
+  - So the free plan can't sync a calendar or create video links.
+- **Pro calendars:** Pro offers **Outlook** calendar sync, not just Google. Only Teams video is missing.
+- **Team profile:** still shows `info@aod.services`. Plan still Free. 1 booking total, $0.
+
+**What the sent reply said:** Payments is live, and three things are left:
+1. Approve the store policies and fill in the blanks.
+2. Appointly Pro ($9/mo). The screenshot of the locked calendar/Zoom was attached.
+3. Change Dr. Sullivan's Appointly email to `ryan.sullivan@asallc.net`.
+
+After those, Andrew runs one test booking and one test order, then removes the store password.
+
+**Dropped for good (Andrew, 11/24):** the video-tool BAA (Workspace/M365) and #5b (Appointly on the PHI quiz page). Andrew: these are "not our responsibility to advise to the client," and they are never to be brought up again. Ignore them wherever they appear in older sections below.
+
+**Next steps, in order:**
+1. Wait for AOD: policies approved, Pro switched on, Dr. Sullivan's email changed, and Robert's calendar instructions. No chase.
+2. When those land, run one test booking of the $99 consult through checkout, then cancel it.
+3. Run one test order. Confirm the policy DRAFT lines and [brackets] are gone, then remove the store password.
+
+**Resume context:** branch `main` (docs-only handoff commits go straight to main, as in `5bc1587`). Key places: thread `1a0e8ef49d10b532`; Shopify admin → Apps → Apntly (Team, Settings → Integrations, Billing); Settings → Policies.
+
+---
+
 ## 2026-11-20 — video for consults: Google Meet, not Zoom; Cowlendar offered as the alternative (reply sent)
 
 **Now:** Andrew sent a reply-all to William, cc Robert, on 11/20 (thread `1a0e8ef49d10b532`, answering William's 11/19 10:03 PM "We have a Teams account - would that work? Or does it have to be Zoom?"). Waiting on AOD to pick an app and video tool. Nothing in Shopify or Appointly was changed. No code changed.
