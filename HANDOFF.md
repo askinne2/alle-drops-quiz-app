@@ -1,5 +1,36 @@
 # HANDOFF — AlleDrops Symptom Quiz
 
+## 2026-11-24 (session 2) — alledrops.com is the store address; GA4 + Search Console set up; policy Doc holds all 6 policies
+
+**Now:** Store is still behind its password. `https://alledrops.com` is the primary Shopify domain, HTTPS live (302 → `/password`); `allergist-on-demand.myshopify.com` 301s to it. GA4 tracking is connected but **no real hit verified** (password on; Claude can't enter it). allergistondemand.com and aod.services are **untouched** and still redirect to each other in a loop (checked with `curl -L`, 8 hops). No code changed; Cloud Run untouched. Session tab: AlleDrops Workspace → Sessions → 2026-11-24-2.
+
+**Mail since session 1:** William replied 11/24: loops Dr. Sullivan in on a new thread `1a20d458e8870c85` ("AOD connection for appointments"), policies "approved asap", Pro after Sullivan's email is confirmed, GA/GSC fine "as long as no cost". He asked Dr. Sullivan to approve the policies via "the link I sent you" (the Google Doc).
+
+**Policy Doc = Shopify (checked paragraph-hash diff in Dia).** Doc `1qSViJDO37OAERtK4we8ODGSFXTlZfUVYqinLcISrYo4`. Privacy Policy and NPP already matched word for word (only the DRAFT header and the Doc's attorney notes differ, on purpose). Added 4 tabs with Shopify's current text (hash-verified equal): Return and Refund Policy (Shopify) `t.zeeiyu6aonrr`, Terms of Service (Shopify) `t.ugvo71lqwr16`, Shipping Policy (Shopify) `t.wgjm7o1qy1li`, Contact Information (Shopify) `t.v7kx4v79mxuf`. Doc is "anyone with link can comment". Approved Doc text must be pasted back into Shopify by hand: they are two copies.
+
+**Sent 11/24 (Andrew):** reply-all to Dr. Sullivan + William, cc Robert, on `1a20d458e8870c85` (draft `draft00d20bbda1b33647`): links to the 6 policy tabs, brackets, comment/suggest in the Doc, Appointly calendar connect + weekly hours (Mon to Fri 10 to 5). Then on AOD Info `1a0e8ef49d10b532` (draft `draft00e7c6a6020cfb47`): should allergistondemand.com and aod.services forward to alledrops.com? Andrew's call: don't point the other two domains anywhere until William confirms.
+
+**GA4 (under andrew@21adsmedia.com, Andrew's call: create under his login, invite client, transfer later).** Account "Allergist on Demand" `a417347437`, property "AlleDrops Store (alledrops.com)" `p565679456`, web stream `16405006984`, Measurement ID `G-Z549JD64CB`. Industry Health, time zone New York, all account data sharing off, Google Signals off, ads personalization disallowed in 307/307 regions. `hostmaster@alledrops.com` invited as account Administrator (only invitee, Andrew's call).
+
+**Shopify custom pixel** "Google Analytics 4 (no quiz pa" (30-char name limit), id `71925966`, **Connected** (Andrew OK'd). Source lives only in Shopify (Settings → Customer events → this pixel); not in the repo. Skips paths starting `/pages/allergy-quiz`, `/pages/quiz`, `/pages/symptom-quiz`, `/pages/quiz-history`, `/account`, `/apps/`; sends `origin + pathname` only; purchase = transaction id, value, currency, no items. Permission: Required → Analytics only; data sale: "qualifies" (honors opt-outs). Only quiz page found: `/pages/allergy-quiz` (template `quiz`, page `97260732622`).
+
+**Search Console:** domain property `sc-domain:alledrops.com`, verified by TXT `google-site-verification=IUUs…UOY` (added in GoDaddy; GoDaddy now texts a code to Andrew's phone …0285 on DNS saves). Owners: Andrew + `hostmaster@alledrops.com` (shows Verified: the older `HusF…` TXT is AOD's own token). Sitemap not submitted (store password-protected).
+
+**alledrops.com → Shopify** via Shopify "Connect automatically" (GoDaddy Domain Connect, Andrew clicked, worked under delegate access). `dig` on ns35 + 8.8.8.8: A `@` 23.227.38.65, CNAME `www` shops.myshopify.com, TXT `shopify_verification` 4VIXEOXA; MX (Google), SPF and both Google TXT untouched. Shopify Domains: alledrops.com Primary, www and myshopify Connected. HTTPS live ~2 min after.
+
+**Invoice (not in the doc):** Stripe checked 11/24: only `N5FWZFZI-0001` "Website Deposit" $1,800 paid 9/29/2025; second $1,800 never invoiced. Recommended: text William a heads-up, send the invoice the day the password comes off. Andrew hasn't said which.
+
+**Not done / not tested:** no GA4 Realtime hit seen; no test booking or test order; sitemap not submitted; quiz page exclusion not observed live.
+
+**Next steps, in order:**
+1. Wait for Dr. Sullivan's policy sign-off (comments in the Doc) and William's answer on the two old domains. No chase.
+2. When approved: paste approved Doc text into Shopify policies, remove DRAFT lines and [brackets] (~30 min).
+3. If William says forward: in GoDaddy, forward allergistondemand.com and aod.services (web records only, never MX/SPF/DKIM) to alledrops.com (~15 min, SMS code to Andrew's phone).
+4. Launch day: test booking + test order, remove password, submit `alledrops.com/sitemap.xml`, check GA4 Realtime shows a store page and not `/pages/allergy-quiz` (~30 min).
+5. Invoice the $1,800 balance at launch (Andrew's decision on the heads-up text still open).
+
+---
+
 ## 2026-11-24 — go-live list sent to William; Appointly free plan confirmed locked; Payments live
 
 **Now:** Andrew sent a reply-all to William and Robert on 11/24. Thread `1a0e8ef49d10b532` ("Re: AOD Info"), draft `draft00ae9c48036baa4d`. It answers William's 11/23 question, "What else is needed to go live?" We're waiting on AOD. Nothing in Shopify, Appointly or Cloud Run was changed. No code changed.
